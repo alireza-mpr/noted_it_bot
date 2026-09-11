@@ -1,0 +1,23 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    needs: []
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # TODO: pick a hosting target and fill this in, e.g.:
+      #   - Fly.io:   flyctl deploy --remote-only (needs FLY_API_TOKEN secret)
+      #   - Railway:  railway up (needs RAILWAY_TOKEN secret)
+      #   - SSH host: rsync/scp + restart the systemd/docker service
+      #
+      # The bot token itself should never live in this repo — set it as a
+      # GitHub Actions secret (e.g. BOT_TOKEN) and pass it to whatever
+      # environment actually runs bot/main.py.
+      - name: Deploy (placeholder)
+        run: echo "No deploy target configured yet — see TODO above."
