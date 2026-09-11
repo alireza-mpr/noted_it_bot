@@ -18,6 +18,6 @@ jobs:
       #
       # The bot token itself should never live in this repo — set it as a
       # GitHub Actions secret (e.g. BOT_TOKEN) and pass it to whatever
-      # environment actually runs bot/main.py.
+      # environment actually runs src/index.ts (built to dist/index.js).
       - name: Deploy (placeholder)
         run: echo "No deploy target configured yet — see TODO above."
