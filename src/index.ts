@@ -7,7 +7,11 @@ if (!token) {
 
 const bot = new Telegraf(token);
 
-bot.start((ctx) => ctx.reply("Hello, world!"));
+bot.command("hi", (ctx) => {
+  const userName = ctx.from.first_name;
+  const currentTime = new Date().toLocaleString();
+  ctx.reply(`Hi ${userName}, current time is: ${currentTime}`);
+});
 
 bot.launch();
 console.log("Bot starting (polling)...");
