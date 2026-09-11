@@ -3,10 +3,13 @@ name: Deploy
 on:
   push:
     branches: [main]
+    tags: ["v*.*.*"]
 
 jobs:
-  deploy:
+  deploy-dev:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -18,11 +21,52 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Deploy to Cloudflare Workers
+      - name: Deploy to Cloudflare Workers (dev)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env dev
+          environment: dev
+          secrets: |
+            BOT_TOKEN
+            WEBHOOK_SECRET
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+
+      - name: Point the Telegram webhook at the Worker
+        run: |
+          curl -sf "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+            -d "url=${WORKER_URL}" \
+            -d "secret_token=${WEBHOOK_SECRET}"
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+
+  deploy-prod:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Cloudflare Workers (prod)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env prod
+          environment: prod
           secrets: |
             BOT_TOKEN
             WEBHOOK_SECRET
