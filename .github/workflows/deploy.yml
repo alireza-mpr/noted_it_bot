@@ -6,18 +6,36 @@ on:
 
 jobs:
   deploy:
-    needs: []
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # TODO: pick a hosting target and fill this in, e.g.:
-      #   - Fly.io:   flyctl deploy --remote-only (needs FLY_API_TOKEN secret)
-      #   - Railway:  railway up (needs RAILWAY_TOKEN secret)
-      #   - SSH host: rsync/scp + restart the systemd/docker service
-      #
-      # The bot token itself should never live in this repo — set it as a
-      # GitHub Actions secret (e.g. BOT_TOKEN) and pass it to whatever
-      # environment actually runs src/index.ts (built to dist/index.js).
-      - name: Deploy (placeholder)
-        run: echo "No deploy target configured yet — see TODO above."
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          secrets: |
+            BOT_TOKEN
+            WEBHOOK_SECRET
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+
+      - name: Point the Telegram webhook at the Worker
+        run: |
+          curl -sf "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+            -d "url=${WORKER_URL}" \
+            -d "secret_token=${WEBHOOK_SECRET}"
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
