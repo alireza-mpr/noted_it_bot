@@ -60,3 +60,15 @@ export async function resolveLanguageCode(env: LanguageEnv, input: string): Prom
     return null;
   }
 }
+
+// The autonym — a language's own name for itself (e.g. "fa" -> "فارسی",
+// "de" -> "Deutsch") — via the platform's built-in Intl.DisplayNames rather
+// than a Gemini call: deterministic, free, and instant. Falls back to the
+// raw code if it's not a recognized BCP47 tag.
+export function getLanguageDisplayName(code: string): string {
+  try {
+    return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}

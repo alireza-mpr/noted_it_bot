@@ -16,7 +16,7 @@ binding = "MESSAGE_LOG"
 id = "f1a94b61a6ea499ba534adab79d3b3fc"
 [[env.dev.kv_namespaces]]
 binding = "WHITELIST"
-id = "REPLACE_WITH_DEV_WHITELIST_KV_ID" # `npx wrangler kv namespace create WHITELIST --env dev`
+id = "6b921bb296ca46bf95c7340852fabc67"
 
 [env.prod]
 name = "noted-it-bot"

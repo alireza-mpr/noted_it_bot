@@ -4,7 +4,7 @@ import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
 import { computeEventUid } from "./lib/eventUid";
 import { translateText } from "./lib/translate";
-import { resolveLanguageCode } from "./lib/language";
+import { resolveLanguageCode, getLanguageDisplayName } from "./lib/language";
 import { getUserLanguageOverride, setUserLanguageOverride, clearUserLanguageOverride } from "./lib/userLanguage";
 import { logMessage } from "./lib/messageLog";
 import { isWhitelisted } from "./lib/whitelist";
@@ -231,7 +231,8 @@ export default {
 
         if (!arg) {
           const template = langOverride ? LANG_STATUS_MANUAL : LANG_STATUS_AUTO;
-          const text = (await translateText(env, template, lang)).replace("{0}", lang ?? "en");
+          const displayName = getLanguageDisplayName(lang ?? "en");
+          const text = (await translateText(env, template, lang)).replace("{0}", displayName);
           await sendMessage(env, message.chat.id, text);
         } else if (arg.toLowerCase() === "auto") {
           await clearUserLanguageOverride(env, message.chat.id);
@@ -243,7 +244,8 @@ export default {
             await sendMessage(env, message.chat.id, text);
           } else {
             await setUserLanguageOverride(env, message.chat.id, resolved);
-            const text = (await translateText(env, LANG_SET_CONFIRMATION, resolved)).replace("{0}", resolved);
+            const displayName = getLanguageDisplayName(resolved);
+            const text = (await translateText(env, LANG_SET_CONFIRMATION, resolved)).replace("{0}", displayName);
             await sendMessage(env, message.chat.id, text);
           }
         }
