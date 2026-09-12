@@ -54,5 +54,8 @@ export const LANG_RESET_CONFIRMATION =
 export const LANG_NOT_UNDERSTOOD =
   'I couldn\'t figure out what language "{0}" refers to. Try a language name (e.g. "Persian") or a code (e.g. "fa").';
 
+// {0} is the user's numeric Telegram id — included so it can be relayed to
+// get added, since a whitelist-by-username entry isn't possible for someone
+// with no public username.
 export const NOT_WHITELISTED_MESSAGE =
-  "This bot is invite-only right now, and I don't have you on the list. Ask Alireza to add you.";
+  "This bot is invite-only right now, and I don't have you on the list. Ask Alireza to add you — your ID is {0}.";

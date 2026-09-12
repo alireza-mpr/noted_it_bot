@@ -43,7 +43,7 @@ interface TelegramUpdate {
     text?: string;
     caption?: string; // set instead of `text` when the message carries media (photo, video, ...)
     chat: { id: number };
-    from?: { first_name?: string; username?: string; language_code?: string };
+    from?: { id?: number; first_name?: string; username?: string; language_code?: string };
   };
 }
 
@@ -289,9 +289,18 @@ export default {
       const langOverride = message ? await getUserLanguageOverride(env, message.chat.id) : null;
       lang = langOverride ?? message?.from?.language_code;
 
-      if (message && !(await isWhitelisted(env, message.from?.username))) {
-        console.warn("Rejected non-whitelisted user", message.from?.username ?? "(no username)", message.chat.id);
-        await sendMessage(env, message.chat.id, await translateText(env, NOT_WHITELISTED_MESSAGE, lang));
+      if (message && !(await isWhitelisted(env, message.from?.username, message.from?.id))) {
+        console.warn(
+          "Rejected non-whitelisted user",
+          message.from?.username ?? "(no username)",
+          message.from?.id,
+          message.chat.id
+        );
+        const text = (await translateText(env, NOT_WHITELISTED_MESSAGE, lang)).replace(
+          "{0}",
+          String(message.from?.id ?? "unknown")
+        );
+        await sendMessage(env, message.chat.id, text);
         return new Response("OK");
       }
 

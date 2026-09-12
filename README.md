@@ -168,10 +168,18 @@ npx wrangler kv namespace create MESSAGE_LOG --env prod
 
 ### Access control (whitelist)
 
-The bot is invite-only: `src/lib/whitelist.ts` checks the sender's Telegram
-`username` against a `WHITELIST` KV namespace before processing *anything*
-(including `/start`) — a non-whitelisted user gets a polite rejection message
-instead. There's no admin command for this; usernames are added manually:
+The bot is invite-only: `src/lib/whitelist.ts` checks the sender against a
+`WHITELIST` KV namespace before processing *anything* (including `/start`) —
+a non-whitelisted user gets a polite rejection message instead. There's no
+admin command for this; entries are added manually, and a user passes if
+**either** of these is whitelisted:
+
+- **By username** (lowercase, no `@`) — lets you proactively whitelist
+  someone before they've ever messaged the bot, just from knowing their `@handle`.
+- **By numeric Telegram user id**, stored as `id:<numeric id>` — the only
+  option for a user with no public username (it's optional in Telegram, so
+  there's nothing to whitelist them by otherwise). The bot's own rejection
+  message includes the user's id, so it can be relayed to you for this.
 
 ```bash
 npx wrangler kv namespace create WHITELIST --env dev
@@ -179,13 +187,13 @@ npx wrangler kv namespace create WHITELIST --env prod
 
 # --remote is required — kv key put/get/list default to a LOCAL simulated
 # store otherwise, which silently does nothing to the real deployed bot.
-# Add someone (value is unused, just needs to exist; username lowercase, no @)
-npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env dev --remote
-npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env prod --remote
-```
 
-Note: a Telegram user with no public `@username` set can never pass this
-check (there's nothing to whitelist them by) — they'd need to set one first.
+# By username (value is unused, just needs to exist)
+npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env dev --remote
+
+# By id (get the number from the bot's own rejection message)
+npx wrangler kv key put --binding=WHITELIST "id:123456789" "1" --env dev --remote
+```
 
 ### Rolling back
 
