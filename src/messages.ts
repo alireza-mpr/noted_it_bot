@@ -4,18 +4,19 @@
 // substitute real values locally after translation instead of re-translating
 // per-message content.
 
-export const START_MESSAGE = `Noted.
+export const START_MESSAGE = `Heya! I am {0} bot 👋.
 
-Forward me any message with an event in it.
+📆 Forward me any message with an event in it.
 I'll pull out the date and send you a calendar file.
 
-Right now I read explicit dates only
+💭 Right now I read explicit dates only
 ("19 Sep, 8pm"), not "tomorrow".
 Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne).
 
-I reply in your Telegram language by default — send /lang to change it.
+🌎 I reply in your Telegram language by default. To change the language, simple send /lang to change it.
+Example: /lang fa - to receive my messages in Farsi.
 
-Beta.`;
+🤓 Beta.`;
 
 export const CALENDAR_CAPTION_TEMPLATE =
   "📅 To add to Google Calendar, click {0}.\n\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.";
