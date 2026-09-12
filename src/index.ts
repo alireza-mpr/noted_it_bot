@@ -212,7 +212,7 @@ export default {
       lang = langOverride ?? message?.from?.language_code;
 
       if (message && !(await isWhitelisted(env, message.from?.username))) {
-        console.log("Rejected non-whitelisted user", message.from?.username ?? "(no username)", message.chat.id);
+        console.warn("Rejected non-whitelisted user", message.from?.username ?? "(no username)", message.chat.id);
         await sendMessage(env, message.chat.id, await translateText(env, NOT_WHITELISTED_MESSAGE, lang));
         return new Response("OK");
       }
