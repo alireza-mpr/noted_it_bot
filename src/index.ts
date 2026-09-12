@@ -42,29 +42,39 @@ const GEMINI_FAILURE: DownstreamResult = {
   message: "Sorry! I couldn't speak with Gemini",
 };
 
+const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
+
 async function askGemini(env: Env, prompt: string, temperature?: number): Promise<DownstreamResult> {
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          ...(temperature !== undefined && { generationConfig: { temperature } }),
-        }),
-      }
-    );
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        model: GEMINI_MODEL,
+        input: prompt,
+        ...(temperature !== undefined && { generation_config: { temperature } }),
+      }),
+    });
 
     if (!response.ok) {
       return GEMINI_FAILURE;
     }
 
     const data = await response.json<{
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      steps?: { type?: string; content?: { type?: string; text?: string }[] }[];
     }>();
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = data.steps
+      ?.filter((step) => step.type === "model_output")
+      .flatMap((step) => step.content ?? [])
+      .filter((block) => block.type === "text")
+      .map((block) => block.text ?? "")
+      .join("")
+      .trim();
+
     return text ? { result: "ok", message: text } : GEMINI_FAILURE;
   } catch {
     return GEMINI_FAILURE;
