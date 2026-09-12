@@ -12,6 +12,25 @@ interface TelegramUpdate {
   };
 }
 
+const START_MESSAGE = `Noted.
+
+Forward me any message with an event in it.
+I'll pull out the date and send you a calendar file.
+
+Right now I read explicit dates only
+("19 Sep, 8pm"), not "tomorrow".
+Times are assumed to be Melbourne.
+
+Beta. I keep your messages to fix bugs.`;
+
+async function sendMessage(env: Env, chatId: number, text: string): Promise<void> {
+  await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text }),
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method !== "POST") {
@@ -26,15 +45,12 @@ export default {
     const update = await request.json<TelegramUpdate>();
     const message = update.message;
 
+    if (message?.text === "/start") {
+      await sendMessage(env, message.chat.id, START_MESSAGE);
+    }
+
     if (message?.text === "/version") {
-      await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: message.chat.id,
-          text: env.APP_VERSION,
-        }),
-      });
+      await sendMessage(env, message.chat.id, env.APP_VERSION);
     }
 
     if (message?.text === "/hi") {
@@ -50,14 +66,7 @@ export default {
         second: "2-digit",
       });
 
-      await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: message.chat.id,
-          text: `Hi ${userName}, current time is: ${currentTime} UTC`,
-        }),
-      });
+      await sendMessage(env, message.chat.id, `Hi ${userName}, current time is: ${currentTime} UTC`);
     }
 
     return new Response("OK");
