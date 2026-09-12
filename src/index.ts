@@ -5,6 +5,16 @@ import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
 import { computeEventUid } from "./lib/eventUid";
 import { translateText } from "./lib/translate";
+import {
+  START_MESSAGE,
+  HI_TEMPLATE,
+  CALENDAR_CAPTION_TEMPLATE,
+  LINK_LABEL,
+  ALL_DAY_NOTE,
+  NO_CALENDAR_EVENT_MESSAGE,
+  NO_TEXT_MESSAGE,
+  GENERIC_ERROR_MESSAGE,
+} from "./messages";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
 
@@ -24,30 +34,6 @@ interface TelegramUpdate {
     from?: { first_name?: string; language_code?: string };
   };
 }
-
-const START_MESSAGE = `Noted.
-
-Forward me any message with an event in it.
-I'll pull out the date and send you a calendar file.
-
-Right now I read explicit dates only
-("19 Sep, 8pm"), not "tomorrow".
-Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne).
-
-Beta. I keep your messages to fix bugs.`;
-
-// Templates translated (and cached) via translateText() — {0}, {1} etc. are
-// preserved verbatim by the translation prompt and substituted afterward, so
-// per-event dynamic content (a name, a URL) never needs its own translation
-// call or cache entry.
-const HI_TEMPLATE = "Hi {0}, current time is: {1} UTC";
-const CALENDAR_CAPTION_TEMPLATE =
-  "📅 To add to Google Calendar, click {0}.\n\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.";
-const LINK_LABEL = "here";
-const ALL_DAY_NOTE = "<i>🤔 No specific time was mentioned, so this was added as an all-day event.</i>";
-const NO_CALENDAR_EVENT_MESSAGE = "⚠️ I couldn't turn this into a calendar event yet.";
-const NO_TEXT_MESSAGE = "⚠️ I couldn't find any text in that message.";
-const GENERIC_ERROR_MESSAGE = "⚠️ Something went wrong on my end — I've logged it to fix later.";
 
 async function sendMessage(
   env: Env,
