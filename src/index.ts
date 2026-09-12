@@ -1,3 +1,5 @@
+import dateTimeExtractPrompt from "../prompts/DateTimeExtract.txt";
+
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
 
 export interface Env {
