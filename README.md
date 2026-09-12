@@ -22,6 +22,7 @@ API directly to reply.
 npm install
 npx wrangler secret put BOT_TOKEN --env dev      # paste noted_it_dev_bot_token from secrets/dev.json
 npx wrangler secret put WEBHOOK_SECRET --env dev # any random string
+npx wrangler secret put GEMINI_API_KEY --env dev # your Gemini API key
 npx wrangler dev --env dev
 ```
 
@@ -54,6 +55,7 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
 | `BOT_TOKEN`        | the matching `secrets/{dev,prod}.json` token                                |
 | `WEBHOOK_SECRET`   | a random string you generate once per env (e.g. `openssl rand -hex 32`)     |
 | `WORKER_URL`       | `https://<worker-name>.<your-subdomain>.workers.dev` (visible after first deploy) |
+| `GEMINI_API_KEY`   | your Gemini API key                                                          |
 
 Using GitHub *Environments* (not plain repo secrets) means `dev` and `prod` never
 share a `BOT_TOKEN` by accident, and prod can later get a required-reviewers

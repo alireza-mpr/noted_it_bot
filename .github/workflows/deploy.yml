@@ -35,9 +35,11 @@ jobs:
           secrets: |
             BOT_TOKEN
             WEBHOOK_SECRET
+            GEMINI_API_KEY
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Point the Telegram webhook at the Worker
         run: |
@@ -78,9 +80,11 @@ jobs:
           secrets: |
             BOT_TOKEN
             WEBHOOK_SECRET
+            GEMINI_API_KEY
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Point the Telegram webhook at the Worker
         run: |

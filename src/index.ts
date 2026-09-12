@@ -2,6 +2,7 @@ export interface Env {
   BOT_TOKEN: string;
   WEBHOOK_SECRET: string;
   APP_VERSION: string;
+  GEMINI_API_KEY: string;
 }
 
 interface TelegramUpdate {
@@ -29,6 +30,29 @@ async function sendMessage(env: Env, chatId: number, text: string): Promise<void
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text }),
   });
+}
+
+async function askGemini(env: Env, prompt: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Gemini API error ${response.status}: ${await response.text()}`);
+  }
+
+  const data = await response.json<{
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  }>();
+
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "(no response from Gemini)";
 }
 
 export default {
@@ -67,6 +91,11 @@ export default {
       });
 
       await sendMessage(env, message.chat.id, `Hi ${userName}, current time is: ${currentTime} UTC`);
+    }
+
+    if (message?.text && !message.text.startsWith("/")) {
+      const reply = await askGemini(env, "Hello, what day is today?");
+      await sendMessage(env, message.chat.id, reply);
     }
 
     return new Response("OK");
