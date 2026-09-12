@@ -27,14 +27,23 @@ export default {
 
     if (message?.text === "/hi") {
       const userName = message.from?.first_name ?? "there";
-      const currentTime = new Date().toLocaleString();
+      const currentTime = new Date().toLocaleString("en-US", {
+        timeZone: "UTC",
+        hour12: false,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
 
       await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: message.chat.id,
-          text: `Hi ${userName}, current time is: ${currentTime}`,
+          text: `Hi ${userName}, current time is: ${currentTime} UTC`,
         }),
       });
     }
