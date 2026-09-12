@@ -15,7 +15,7 @@ const cases: [message: string, expected: Partial<ExtractedEvent>][] = [
       date_kind: "absolute",
       month: 9,
       day: 19,
-      start_time: "20:00:00",
+      start_time: "20:00",
     },
   ],
   [
@@ -43,13 +43,20 @@ const cases: [message: string, expected: Partial<ExtractedEvent>][] = [
       year: null,
       month: 9,
       day: 27,
-      start_time: "17:00:00",
-      end_time: "19:00:00",
+      start_time: "17:00",
+      end_time: "19:00",
       timezone_hint: "Australia/Melbourne",
       location: "Nunawading Community Hub | اتاق شماره دو",
     },
   ],
 ];
+
+// Gemini isn't always consistent about including seconds ("17:00" vs
+// "17:00:00") even at temperature 0 — normalize to "HH:MM" before comparing
+// so the test isn't flaky on a distinction we don't care about.
+function normalizeTime(time: string | null): string | null {
+  return time?.slice(0, 5) ?? time;
+}
 
 describe("extractEvent", () => {
   it.each(cases)("extracts from: %s", async (message, expected) => {
@@ -57,6 +64,11 @@ describe("extractEvent", () => {
     expect(downstream.result).toBe("ok");
 
     const parsed = JSON.parse(downstream.message) as ExtractedEvent;
-    expect(parsed).toMatchObject(expected);
+    const normalized = {
+      ...parsed,
+      start_time: normalizeTime(parsed.start_time),
+      end_time: normalizeTime(parsed.end_time),
+    };
+    expect(normalized).toMatchObject(expected);
   });
 });

@@ -30,7 +30,7 @@ I'll pull out the date and send you a calendar file.
 
 Right now I read explicit dates only
 ("19 Sep, 8pm"), not "tomorrow".
-Times are assumed to be Melbourne.
+Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne).
 
 Beta. I keep your messages to fix bugs.`;
 
@@ -47,12 +47,16 @@ async function sendDocument(
   chatId: number,
   filename: string,
   content: string,
-  caption?: string
+  caption?: string,
+  parseMode?: "HTML"
 ): Promise<void> {
   const form = new FormData();
   form.set("chat_id", String(chatId));
   if (caption) {
     form.set("caption", caption);
+  }
+  if (parseMode) {
+    form.set("parse_mode", parseMode);
   }
   form.set("document", new Blob([content], { type: "text/calendar" }), filename);
 
@@ -60,6 +64,12 @@ async function sendDocument(
     method: "POST",
     body: form,
   });
+}
+
+// Escapes a URL for safe use inside an HTML href="..." attribute (Telegram's
+// HTML parse_mode). Google Calendar links contain `&` between query params.
+function escapeHtmlAttribute(url: string): string {
+  return url.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 interface DownstreamResult {
@@ -264,12 +274,18 @@ export default {
           const calendarEvent = buildCalendarEvent(event, uid);
 
           if (calendarEvent) {
+            const googleUrl = escapeHtmlAttribute(calendarEvent.googleCalendarUrl);
+            const caption =
+              `📅 To add to Google Calendar, click <a href="${googleUrl}">here</a>.\n` +
+              `📎 For Apple Calendar, Outlook, or anything else — tap the attached file.`;
+
             await sendDocument(
               env,
               message.chat.id,
               calendarEvent.icsFilename,
               calendarEvent.icsContent,
-              `Add to Google Calendar: ${calendarEvent.googleCalendarUrl}`
+              caption,
+              "HTML"
             );
           } else {
             await sendMessage(
