@@ -6,14 +6,13 @@
 
 export const START_MESSAGE = `Heya! I am {0} bot 👋.
 
-📆 Forward me any message with an event in it.
-I'll pull out the details and send you a one-tap link to add it to Google Calendar, plus a file for Apple Calendar, Outlook, or anywhere else.
+📆 Forward me any message with an event in it. I'll pull out the details and send you a one-tap link to add it to Google Calendar, plus a file for Apple Calendar, Outlook, or anywhere else.
 
-🌎 Right now I read explicit dates only
-("19 Sep, 8pm"), not "tomorrow".
-Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne).
+🌎 For now I read explicit dates only
+("19 Sep - 8pm"), not "tomorrow".
+Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne). I'll support that in future.
 
-💭 I reply in your Telegram language by default. To change the language, simple send /lang to change it.
+💭 I reply in your Telegram language by default. To change the language, simply send /lang command.
 Example: /lang fa - to receive my messages in Farsi.
 
 🤓 Beta.`;
