@@ -17,8 +17,6 @@ I reply in your Telegram language by default — send /lang to change it.
 
 Beta.`;
 
-export const HI_TEMPLATE = "Hi {0}, current time is: {1} UTC";
-
 export const CALENDAR_CAPTION_TEMPLATE =
   "📅 To add to Google Calendar, click {0}.\n\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.";
 

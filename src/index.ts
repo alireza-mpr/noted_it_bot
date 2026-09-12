@@ -10,7 +10,6 @@ import { getUserLanguageOverride, setUserLanguageOverride, clearUserLanguageOver
 import { logMessage } from "./lib/messageLog";
 import {
   START_MESSAGE,
-  HI_TEMPLATE,
   CALENDAR_CAPTION_TEMPLATE,
   LINK_LABEL,
   ALL_DAY_NOTE,
@@ -293,24 +292,6 @@ export default {
 
       if (message?.text === "/ver") {
         await sendMessage(env, message.chat.id, env.APP_VERSION);
-      }
-
-      if (message?.text === "/hi") {
-        const userName = message.from?.first_name ?? "there";
-        const currentTime = new Date().toLocaleString("en-US", {
-          timeZone: "UTC",
-          hour12: false,
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        });
-
-        const hiTemplate = await translateText(env, HI_TEMPLATE, lang);
-        const hiText = hiTemplate.replace("{0}", userName).replace("{1}", currentTime);
-        await sendMessage(env, message.chat.id, hiText);
       }
 
       if (message?.text === "/diag") {
