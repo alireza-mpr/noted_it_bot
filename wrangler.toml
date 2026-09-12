@@ -10,7 +10,7 @@ binding = "I18N"
 id = "e0e7f8d9713349c5ae59be6961935109"
 [[env.dev.kv_namespaces]]
 binding = "USER_LANG"
-id = "REPLACE_WITH_DEV_USER_LANG_KV_ID" # `npx wrangler kv namespace create USER_LANG --env dev`
+id = "d05a28ba60ae461e935926195327875d"
 
 [env.prod]
 name = "noted-it-bot"
