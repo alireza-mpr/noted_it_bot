@@ -209,7 +209,8 @@ export default {
       lang = langOverride ?? message?.from?.language_code;
 
       if (message?.text === "/start") {
-        await sendMessage(env, message.chat.id, await translateText(env, START_MESSAGE, lang));
+        const startText = (await translateText(env, START_MESSAGE, lang)).replace("{0}", "Noted");
+        await sendMessage(env, message.chat.id, startText);
       }
 
       if (message?.text === "/ver") {

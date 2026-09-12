@@ -45,6 +45,40 @@ function escapeIcsText(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
 
+const FOLD_LIMIT = 75; // octets per physical line, per RFC 5545 §3.1
+
+// RFC 5545 §3.1: a content line SHOULD NOT exceed 75 octets; longer lines
+// are folded across multiple physical lines via CRLF + a single leading
+// space. A strict/non-lenient parser can misbehave on an unfolded long
+// line (e.g. a long title in another script, which is multiple bytes per
+// character in UTF-8) — this folds by octet count without ever splitting a
+// multi-byte UTF-8 character across the boundary.
+function foldIcsLine(line: string): string {
+  const bytes = new TextEncoder().encode(line);
+  if (bytes.length <= FOLD_LIMIT) {
+    return line;
+  }
+
+  const decoder = new TextDecoder();
+  const parts: string[] = [];
+  let start = 0;
+  let limit = FOLD_LIMIT;
+
+  while (start < bytes.length) {
+    let end = Math.min(start + limit, bytes.length);
+    // Back off while `end` lands mid-character (a UTF-8 continuation byte
+    // has the high bits 10xxxxxx).
+    while (end > start && end < bytes.length && (bytes[end] & 0xc0) === 0x80) {
+      end--;
+    }
+    parts.push(decoder.decode(bytes.slice(start, end)));
+    start = end;
+    limit = FOLD_LIMIT - 1; // continuation lines reserve 1 octet for the leading space
+  }
+
+  return parts.join("\r\n ");
+}
+
 // Only absolute Gregorian dates with a resolved month/day can become a
 // calendar event — relative/weekday dates are deliberately left unresolved
 // upstream (event_extract.txt), and non-Gregorian calendars aren't supported
@@ -114,7 +148,7 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCal
     ...(location ? [`LOCATION:${location}`] : []),
     "END:VEVENT",
     "END:VCALENDAR",
-  ];
+  ].map(foldIcsLine);
 
   return {
     icsFilename: "event.ics",
