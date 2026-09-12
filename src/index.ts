@@ -5,6 +5,8 @@ import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
 import { computeEventUid } from "./lib/eventUid";
 import { translateText } from "./lib/translate";
+import { resolveLanguageCode } from "./lib/language";
+import { getUserLanguageOverride, setUserLanguageOverride, clearUserLanguageOverride } from "./lib/userLanguage";
 import {
   START_MESSAGE,
   HI_TEMPLATE,
@@ -14,6 +16,11 @@ import {
   NO_CALENDAR_EVENT_MESSAGE,
   NO_TEXT_MESSAGE,
   GENERIC_ERROR_MESSAGE,
+  LANG_STATUS_AUTO,
+  LANG_STATUS_MANUAL,
+  LANG_SET_CONFIRMATION,
+  LANG_RESET_CONFIRMATION,
+  LANG_NOT_UNDERSTOOD,
 } from "./messages";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
@@ -24,6 +31,7 @@ export interface Env {
   APP_VERSION: string;
   GEMINI_API_KEY: string;
   I18N: KVNamespace;
+  USER_LANG: KVNamespace;
 }
 
 interface TelegramUpdate {
@@ -273,7 +281,9 @@ export default {
       const update = await request.json<TelegramUpdate>();
       const message = update.message;
       chatId = message?.chat.id;
-      lang = message?.from?.language_code;
+
+      const langOverride = message ? await getUserLanguageOverride(env, message.chat.id) : null;
+      lang = langOverride ?? message?.from?.language_code;
 
       if (message?.text === "/start") {
         await sendMessage(env, message.chat.id, await translateText(env, START_MESSAGE, lang));
@@ -304,6 +314,29 @@ export default {
       if (message?.text === "/diag") {
         const report = await runDiagnostics(env);
         await sendMessage(env, message.chat.id, report);
+      }
+
+      if (message?.text?.startsWith("/lang")) {
+        const arg = message.text.slice("/lang".length).trim();
+
+        if (!arg) {
+          const template = langOverride ? LANG_STATUS_MANUAL : LANG_STATUS_AUTO;
+          const text = (await translateText(env, template, lang)).replace("{0}", lang ?? "en");
+          await sendMessage(env, message.chat.id, text);
+        } else if (arg.toLowerCase() === "auto") {
+          await clearUserLanguageOverride(env, message.chat.id);
+          await sendMessage(env, message.chat.id, await translateText(env, LANG_RESET_CONFIRMATION, message.from?.language_code));
+        } else {
+          const resolved = await resolveLanguageCode(env, arg);
+          if (!resolved) {
+            const text = (await translateText(env, LANG_NOT_UNDERSTOOD, lang)).replace("{0}", arg);
+            await sendMessage(env, message.chat.id, text);
+          } else {
+            await setUserLanguageOverride(env, message.chat.id, resolved);
+            const text = (await translateText(env, LANG_SET_CONFIRMATION, resolved)).replace("{0}", resolved);
+            await sendMessage(env, message.chat.id, text);
+          }
+        }
       }
 
       // A media message (photo, video, ...) carries its text as `caption`

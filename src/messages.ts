@@ -13,7 +13,9 @@ Right now I read explicit dates only
 ("19 Sep, 8pm"), not "tomorrow".
 Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne).
 
-Beta. I keep your messages to fix bugs.`;
+I reply in your Telegram language by default — send /lang to change it.
+
+Beta.`;
 
 export const HI_TEMPLATE = "Hi {0}, current time is: {1} UTC";
 
@@ -22,10 +24,27 @@ export const CALENDAR_CAPTION_TEMPLATE =
 
 export const LINK_LABEL = "here";
 
-export const ALL_DAY_NOTE = "<i>🤔 No specific time was mentioned, so this was added as an all-day event.</i>";
+export const ALL_DAY_NOTE =
+  "<i>🤔 No specific time was mentioned, so this was added as an all-day event.</i>";
 
-export const NO_CALENDAR_EVENT_MESSAGE = "⚠️ I couldn't turn this into a calendar event yet.";
+export const NO_CALENDAR_EVENT_MESSAGE =
+  "⚠️ I couldn't turn this into a calendar event yet.";
 
 export const NO_TEXT_MESSAGE = "⚠️ I couldn't find any text in that message.";
 
-export const GENERIC_ERROR_MESSAGE = "⚠️ Something went wrong on my end — I've logged it to fix later.";
+export const GENERIC_ERROR_MESSAGE =
+  "⚠️ Something went wrong on my end — I've logged it to fix later.";
+
+export const LANG_STATUS_AUTO =
+  "I'm currently replying in {0}, auto-detected from your Telegram settings.\n\nSend /lang <language> to set it manually (e.g. /lang Persian or /lang fa).";
+
+export const LANG_STATUS_MANUAL =
+  "I'm currently replying in {0}, which you set manually.\n\nSend /lang <language> to change it, or /lang auto to go back to auto-detecting from your Telegram settings.";
+
+export const LANG_SET_CONFIRMATION = "Got it — I'll reply in {0} from now on.";
+
+export const LANG_RESET_CONFIRMATION =
+  "Back to auto-detecting your language from Telegram settings.";
+
+export const LANG_NOT_UNDERSTOOD =
+  'I couldn\'t figure out what language "{0}" refers to. Try a language name (e.g. "Persian") or a code (e.g. "fa").';

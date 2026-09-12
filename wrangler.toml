@@ -8,6 +8,9 @@ APP_VERSION = "0.0.0-dev-local"
 [[env.dev.kv_namespaces]]
 binding = "I18N"
 id = "e0e7f8d9713349c5ae59be6961935109"
+[[env.dev.kv_namespaces]]
+binding = "USER_LANG"
+id = "REPLACE_WITH_DEV_USER_LANG_KV_ID" # `npx wrangler kv namespace create USER_LANG --env dev`
 
 [env.prod]
 name = "noted-it-bot"
@@ -16,3 +19,6 @@ APP_VERSION = "0.0.0-dev-local"
 [[env.prod.kv_namespaces]]
 binding = "I18N"
 id = "REPLACE_WITH_PROD_I18N_KV_ID" # `npx wrangler kv namespace create I18N --env prod`
+[[env.prod.kv_namespaces]]
+binding = "USER_LANG"
+id = "REPLACE_WITH_PROD_USER_LANG_KV_ID" # `npx wrangler kv namespace create USER_LANG --env prod`
