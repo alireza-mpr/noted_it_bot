@@ -28,7 +28,7 @@ export const ALL_DAY_NOTE =
   "<i>🤔 No specific time was mentioned, so this was added as an all-day event.</i>";
 
 export const NO_CALENDAR_EVENT_MESSAGE =
-  "⚠️ I couldn't turn this into a calendar event yet.";
+  "⚠️ I couldn't turn this into a calendar event.";
 
 export const NO_TEXT_MESSAGE = "⚠️ I couldn't find any text in that message.";
 
