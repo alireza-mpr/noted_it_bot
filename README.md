@@ -5,16 +5,30 @@ Telegram bot running on Cloudflare Workers, in two environments:
 | Env  | Telegram bot          | Worker name        | Deploys on                          |
 |------|------------------------|---------------------|--------------------------------------|
 | dev  | `@noted_it_dev_bot`    | `noted-it-dev-bot`  | every push to `main`                 |
-| prod | `@noted_it_bot`        | `noted-it-bot`      | pushing a version tag (`v1.2.0`)     |
+| prod | `@noted_it_bot`        | `noted-it-bot`      | manually, via a pushed `v*.*.*` tag (see [Promoting to prod](#promoting-a-commit-to-prod)) |
 
-Replies to `/hi` with `Hi {userName}, current time is: {current time}`.
+Forward it any message with an event in it (a flyer photo with a caption
+works too), and it replies with a one-tap "add to Google Calendar" link plus
+an `.ics` file for Apple Calendar/Outlook/anywhere else.
+
+## Commands
+
+| Command       | What it does                                                         |
+|---------------|------------------------------------------------------------------------|
+| `/start`      | Intro message                                                        |
+| `/lang`       | Show or set the reply language (`/lang fa`, `/lang auto`)            |
+| `/ver`        | Show the running version                                             |
+| `/diag`       | Gemini connectivity check — functional but intentionally not listed in Telegram's `/` autocomplete menu |
+
+Any other message is treated as event content and sent to Gemini for extraction.
 
 ## How it works
 
 Telegram calls the Worker's URL as a webhook for every update (no polling, no
 always-on process). [src/index.ts](src/index.ts) verifies the request came from
-Telegram (via a shared secret token), and if the message is `/hi`, calls the Bot
-API directly to reply.
+Telegram (via a shared secret token), checks the sender against the
+[whitelist](#access-control-whitelist), then routes to a command handler or
+(for anything else) event extraction via Gemini.
 
 ## Local dev
 
@@ -55,10 +69,36 @@ for `wrangler dev` and for these tests.
   suite (against the real Gemini API, using the `dev` environment's
   `GEMINI_API_KEY`) on every push/PR.
 - `.github/workflows/deploy.yml` — two jobs:
-  - `deploy-dev` runs on every push to `main`.
-  - `deploy-prod` runs only when a `v*.*.*` tag is pushed (e.g. `git tag v1.0.0 && git push origin v1.0.0`).
+  - `deploy-dev` runs automatically on every push to `main`.
+  - `deploy-prod` **never runs automatically** — it's `workflow_dispatch`-only
+    (manually triggered), gated to only run against a `v*.*.*` tag. See
+    [Promoting a commit to prod](#promoting-a-commit-to-prod).
   - Each deploys via `wrangler` to its own Worker and re-points that environment's
-    Telegram webhook at it.
+    Telegram webhook + command list at it.
+
+### Promoting a commit to prod
+
+GitHub's native "Required reviewers" approval gate for Environments isn't
+available on private repos on the Free plan, so `deploy-prod` uses manual
+triggering as the guard instead — nothing reaches prod without a deliberate
+click, even though the tag itself doesn't auto-deploy.
+
+1. Make sure `main` has everything you want in prod (push it, let `deploy-dev`
+   confirm it's healthy).
+2. Tag the commit and push the tag:
+   ```bash
+   git tag v1.1.0
+   git push origin v1.1.0
+   ```
+   This does **not** deploy anything by itself — it just marks the commit.
+3. Go to the repo's **Actions** tab → **Deploy** workflow → **Run workflow**.
+4. In the ref dropdown, pick the tag you just pushed (e.g. `v1.1.0`) instead of `main`.
+5. Click **Run workflow**. This runs `deploy-prod` (and only `deploy-prod` —
+   `deploy-dev` won't run for a `workflow_dispatch` event) against exactly
+   that tagged commit.
+
+To roll prod back to an older tagged version later, repeat steps 3–5 picking
+that older tag from the dropdown.
 
 ### Where secrets live
 
@@ -75,8 +115,10 @@ for `wrangler dev` and for these tests.
 | `GEMINI_API_KEY`   | your Gemini API key                                                          |
 
 Using GitHub *Environments* (not plain repo secrets) means `dev` and `prod` never
-share a `BOT_TOKEN` by accident, and prod can later get a required-reviewers
-approval gate if you want one.
+share a `BOT_TOKEN` by accident. (Required-reviewers approval gates on
+Environments need a paid GitHub plan on a private repo, which is why prod is
+guarded by manual `workflow_dispatch` triggering instead — see
+[Promoting a commit to prod](#promoting-a-commit-to-prod).)
 
 `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are the same Cloudflare account
 for both environments, so those live once as plain **repository** secrets
@@ -131,9 +173,11 @@ instead. There's no admin command for this; usernames are added manually:
 npx wrangler kv namespace create WHITELIST --env dev
 npx wrangler kv namespace create WHITELIST --env prod
 
+# --remote is required — kv key put/get/list default to a LOCAL simulated
+# store otherwise, which silently does nothing to the real deployed bot.
 # Add someone (value is unused, just needs to exist; username lowercase, no @)
-npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env dev
-npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env prod
+npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env dev --remote
+npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env prod --remote
 ```
 
 Note: a Telegram user with no public `@username` set can never pass this
@@ -144,5 +188,5 @@ check (there's nothing to whitelist them by) — they'd need to set one first.
 Cloudflare keeps a history of every deployment per Worker — the fastest revert is
 `npx wrangler rollback --env dev` (or `--env prod`), which instantly swaps the live
 Worker back to its previous deployment without going through CI. To redeploy an
-older *tagged* prod version from source instead, re-run that tag's GitHub Actions
-run (or push a new tag pointing at the old commit).
+older *tagged* prod version from source instead, use the manual dispatch flow in
+[Promoting a commit to prod](#promoting-a-commit-to-prod), picking that older tag.
