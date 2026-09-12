@@ -2,6 +2,8 @@ import eventExtractPrompt from "../prompts/event_extract.txt";
 import diagPingPrompt from "../prompts/diag_ping.txt";
 import { EVENT_SCHEMA } from "./schemas/event_schema";
 import type { ExtractedEvent } from "./interfaces/extracted_event";
+import { buildCalendarEvent } from "./lib/calendarEvent";
+import { computeEventUid } from "./lib/eventUid";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
 
@@ -37,6 +39,26 @@ async function sendMessage(env: Env, chatId: number, text: string): Promise<void
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text }),
+  });
+}
+
+async function sendDocument(
+  env: Env,
+  chatId: number,
+  filename: string,
+  content: string,
+  caption?: string
+): Promise<void> {
+  const form = new FormData();
+  form.set("chat_id", String(chatId));
+  if (caption) {
+    form.set("caption", caption);
+  }
+  form.set("document", new Blob([content], { type: "text/calendar" }), filename);
+
+  await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendDocument`, {
+    method: "POST",
+    body: form,
   });
 }
 
@@ -231,7 +253,30 @@ export default {
 
       if (message && content && !content.startsWith("/")) {
         const downstream = await extractEvent(env, content);
-        await replyWith(env, message.chat.id, downstream);
+
+        if (downstream.result === "ok") {
+          const event: ExtractedEvent = JSON.parse(downstream.message);
+          const uid = await computeEventUid(content);
+          const calendarEvent = buildCalendarEvent(event, uid);
+
+          if (calendarEvent) {
+            await sendDocument(
+              env,
+              message.chat.id,
+              calendarEvent.icsFilename,
+              calendarEvent.icsContent,
+              `Add to Google Calendar: ${calendarEvent.googleCalendarUrl}`
+            );
+          } else {
+            await sendMessage(
+              env,
+              message.chat.id,
+              `I couldn't turn this into a calendar event yet. Here's what I extracted:\n${downstream.message}`
+            );
+          }
+        } else {
+          await replyWith(env, message.chat.id, downstream);
+        }
       }
 
       if (message && !content) {
