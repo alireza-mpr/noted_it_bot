@@ -1,4 +1,6 @@
 import dateTimeExtractPrompt from "../prompts/DateTimeExtract.txt";
+import diagPingPrompt from "../prompts/DiagPing.txt";
+import whatDayIsTodayPrompt from "../prompts/WhatDayIsToday.txt";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
 
@@ -102,7 +104,7 @@ const DIAG_CHECKS: DiagCheck[] = [
   {
     name: "Gemini",
     run: async (env) => {
-      const downstream = await askGemini(env, 'Reply with exactly the single word: PONG', 0);
+      const downstream = await askGemini(env, diagPingPrompt.trim(), 0);
       return downstream.result === "ok" && downstream.message.trim() === "PONG";
     },
   },
@@ -173,7 +175,7 @@ export default {
       }
 
       if (message?.text && !message.text.startsWith("/")) {
-        const downstream = await askGemini(env, "Hello, what day is today?");
+        const downstream = await askGemini(env, whatDayIsTodayPrompt.trim());
         await replyWith(env, message.chat.id, downstream);
       }
     } catch (err) {
