@@ -90,12 +90,19 @@ Translations are cached in a Workers KV namespace (`I18N` binding) keyed by a
 hash of the English text + language, so each fixed string is only translated
 once per language, ever. Falls back to English on any translation failure.
 
-**One-time setup**: create the KV namespace per environment and put its ID in
-[wrangler.toml](wrangler.toml) (it ships with placeholder IDs):
+Users can override the auto-detected language with `/lang <language>` (e.g.
+`/lang Persian` or `/lang fa` — free-text names are resolved via Gemini), or
+reset to auto-detection with `/lang auto`. The override is stored per chat in
+a separate `USER_LANG` KV namespace.
+
+**One-time setup**: create both KV namespaces per environment and put their
+IDs in [wrangler.toml](wrangler.toml) (it ships with placeholder IDs):
 
 ```bash
 npx wrangler kv namespace create I18N --env dev
 npx wrangler kv namespace create I18N --env prod
+npx wrangler kv namespace create USER_LANG --env dev
+npx wrangler kv namespace create USER_LANG --env prod
 ```
 
 ### Rolling back
