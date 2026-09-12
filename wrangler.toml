@@ -7,7 +7,7 @@ name = "noted-it-dev-bot"
 APP_VERSION = "0.0.0-dev-local"
 [[env.dev.kv_namespaces]]
 binding = "I18N"
-id = "REPLACE_WITH_DEV_I18N_KV_ID" # `npx wrangler kv namespace create I18N --env dev`
+id = "e0e7f8d9713349c5ae59be6961935109"
 
 [env.prod]
 name = "noted-it-bot"
