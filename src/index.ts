@@ -361,6 +361,7 @@ export default {
 
         await logMessage(env, {
           username: message.from?.username ?? null,
+          userId: message.from?.id ?? null,
           receivedMessage: content,
           geminiRequest: content,
           geminiResponse: downstream.message,

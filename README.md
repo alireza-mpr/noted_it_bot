@@ -155,9 +155,11 @@ npx wrangler kv namespace create USER_LANG --env prod
 
 Per the `/start` disclosure ("I may keep your messages to fix bugs"), every
 message that goes through event extraction is logged to a `MESSAGE_LOG` KV
-namespace via `src/lib/messageLog.ts`: the sender's Telegram `username`, the
-message/caption text as received, what was sent to Gemini, and Gemini's
-response — each entry expires automatically after **14 days**
+namespace via `src/lib/messageLog.ts`: the sender's Telegram `username` and
+numeric user id (the id is always present even when the username isn't,
+since it's optional in Telegram), the message/caption text as received,
+what was sent to Gemini, and Gemini's response — each entry expires
+automatically after **14 days**
 (`expirationTtl`). Logging failures are swallowed (best-effort) and never
 affect the actual reply.
 

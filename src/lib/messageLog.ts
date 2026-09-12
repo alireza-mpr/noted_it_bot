@@ -4,6 +4,7 @@ export interface MessageLogEnv {
 
 export interface MessageLogEntry {
   username: string | null;
+  userId: number | null;
   receivedMessage: string;
   geminiRequest: string;
   geminiResponse: string;
