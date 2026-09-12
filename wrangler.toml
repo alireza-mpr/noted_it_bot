@@ -24,13 +24,13 @@ name = "noted-it-bot"
 APP_VERSION = "0.0.0-dev-local"
 [[env.prod.kv_namespaces]]
 binding = "I18N"
-id = "REPLACE_WITH_PROD_I18N_KV_ID" # `npx wrangler kv namespace create I18N --env prod`
+id = "296e4c6114df451ca33774a2edf28ce5"
 [[env.prod.kv_namespaces]]
 binding = "USER_LANG"
-id = "REPLACE_WITH_PROD_USER_LANG_KV_ID" # `npx wrangler kv namespace create USER_LANG --env prod`
+id = "82f0418d9bc74193b895070de1eb2028"
 [[env.prod.kv_namespaces]]
 binding = "MESSAGE_LOG"
-id = "REPLACE_WITH_PROD_MESSAGE_LOG_KV_ID" # `npx wrangler kv namespace create MESSAGE_LOG --env prod`
+id = "0995f983386447d89941d1a4de8ac90b"
 [[env.prod.kv_namespaces]]
 binding = "WHITELIST"
-id = "REPLACE_WITH_PROD_WHITELIST_KV_ID" # `npx wrangler kv namespace create WHITELIST --env prod`
+id = "7bc58ed05e544baa88fb25ca11d7bd2c"
