@@ -72,23 +72,3 @@ export function getLanguageDisplayName(code: string): string {
     return code;
   }
 }
-
-// TypeScript's lib.es2022 doesn't yet declare Intl.Locale's `textInfo`
-// (a newer TC39 proposal), even though the Workers runtime supports it.
-interface LocaleWithTextInfo extends Intl.Locale {
-  textInfo?: { direction?: "ltr" | "rtl" };
-}
-
-// Whether `lang` reads right-to-left (Persian, Arabic, Hebrew, Urdu, ...).
-// Used to flip direction-sensitive emoji like a pointing hand, which
-// Unicode does not bidi-mirror on its own.
-export function isRtl(lang: string | undefined): boolean {
-  if (!lang) {
-    return false;
-  }
-  try {
-    return (new Intl.Locale(lang) as LocaleWithTextInfo).textInfo?.direction === "rtl";
-  } catch {
-    return false;
-  }
-}

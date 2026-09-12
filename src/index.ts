@@ -5,7 +5,7 @@ import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
 import { computeEventUid } from "./lib/eventUid";
 import { translateText } from "./lib/translate";
-import { resolveLanguageCode, getLanguageDisplayName, isRtl } from "./lib/language";
+import { resolveLanguageCode, getLanguageDisplayName } from "./lib/language";
 import { getUserLanguageOverride, setUserLanguageOverride, clearUserLanguageOverride } from "./lib/userLanguage";
 import { logMessage } from "./lib/messageLog";
 import { isWhitelisted } from "./lib/whitelist";
@@ -381,9 +381,8 @@ export default {
             ]);
 
             const summaryBlock = calendarEvent.summaryLines.map((line) => escapeHtmlAttribute(line)).join("\n");
-            const pointerEmoji = isRtl(lang) ? "👈" : "👉";
             const addToCalendarText = captionTemplate.replace("{0}", `<a href="${googleUrl}">${linkLabel}</a>`);
-            let caption = `${summaryBlock}\n\n${pointerEmoji} ${addToCalendarText}`;
+            let caption = `${summaryBlock}\n\n🔔 ${addToCalendarText}`;
             if (calendarEvent.allDay) {
               caption += `\n\n${await translateText(env, ALL_DAY_NOTE, lang)}`;
             }
