@@ -32,27 +32,42 @@ async function sendMessage(env: Env, chatId: number, text: string): Promise<void
   });
 }
 
-async function askGemini(env: Env, prompt: string): Promise<string> {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
+interface GeminiResult {
+  result: boolean;
+  message: string;
+}
+
+const GEMINI_FAILURE: GeminiResult = {
+  result: false,
+  message: "Sorry! I couldn't speak with Gemini",
+};
+
+async function askGemini(env: Env, prompt: string): Promise<GeminiResult> {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      return GEMINI_FAILURE;
     }
-  );
 
-  if (!response.ok) {
-    throw new Error(`Gemini API error ${response.status}: ${await response.text()}`);
+    const data = await response.json<{
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    }>();
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text ? { result: true, message: text } : GEMINI_FAILURE;
+  } catch {
+    return GEMINI_FAILURE;
   }
-
-  const data = await response.json<{
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
-  }>();
-
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "(no response from Gemini)";
 }
 
 export default {
@@ -94,17 +109,12 @@ export default {
     }
 
     if (message?.text === "/diag") {
-      let status = "OK";
-      try {
-        await askGemini(env, "Say OK.");
-      } catch {
-        status = "Broken";
-      }
-      await sendMessage(env, message.chat.id, status);
+      const { result } = await askGemini(env, "Say OK.");
+      await sendMessage(env, message.chat.id, result ? "OK" : "Broken");
     }
 
     if (message?.text && !message.text.startsWith("/")) {
-      const reply = await askGemini(env, "Hello, what day is today?");
+      const { message: reply } = await askGemini(env, "Hello, what day is today?");
       await sendMessage(env, message.chat.id, reply);
     }
 
