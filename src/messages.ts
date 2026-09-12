@@ -7,7 +7,7 @@
 export const START_MESSAGE = `Heya! I am {0} bot 👋.
 
 📆 Forward me any message with an event in it.
-I'll pull out the date and send you a calendar file.
+I'll pull out the details and send you a one-tap link to add it to Google Calendar, plus a file for Apple Calendar, Outlook, or anywhere else.
 
 🌎 Right now I read explicit dates only
 ("19 Sep, 8pm"), not "tomorrow".
