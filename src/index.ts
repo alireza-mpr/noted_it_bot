@@ -15,6 +15,7 @@ export interface Env {
 interface TelegramUpdate {
   message?: {
     text?: string;
+    caption?: string; // set instead of `text` when the message carries media (photo, video, ...)
     chat: { id: number };
     from?: { first_name?: string };
   };
@@ -224,12 +225,16 @@ export default {
         await sendMessage(env, message.chat.id, report);
       }
 
-      if (message?.text && !message.text.startsWith("/")) {
-        const downstream = await extractEvent(env, message.text);
+      // A media message (photo, video, ...) carries its text as `caption`
+      // instead of `text` — e.g. a forwarded channel post with a flyer image.
+      const content = message?.text ?? message?.caption;
+
+      if (message && content && !content.startsWith("/")) {
+        const downstream = await extractEvent(env, content);
         await replyWith(env, message.chat.id, downstream);
       }
 
-      if (message && !message.text) {
+      if (message && !content) {
         const raw = JSON.stringify(message, null, 2).slice(0, 3800);
         await sendMessage(env, message.chat.id, `⚠️ I couldn't find any text in that message. Raw payload:\n${raw}`);
       }
