@@ -42,7 +42,7 @@ const GEMINI_FAILURE: DownstreamResult = {
   message: "Sorry! I couldn't speak with Gemini",
 };
 
-async function askGemini(env: Env, prompt: string): Promise<DownstreamResult> {
+async function askGemini(env: Env, prompt: string, temperature?: number): Promise<DownstreamResult> {
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
@@ -51,6 +51,7 @@ async function askGemini(env: Env, prompt: string): Promise<DownstreamResult> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
+          ...(temperature !== undefined && { generationConfig: { temperature } }),
         }),
       }
     );
@@ -75,6 +76,37 @@ async function replyWith(env: Env, chatId: number, downstream: DownstreamResult)
     console.error("Downstream call failed", downstream.message);
   }
   await sendMessage(env, chatId, downstream.message);
+}
+
+interface DiagCheck {
+  name: string;
+  run: (env: Env) => Promise<boolean>;
+}
+
+// Each check must produce one exact, deterministic expected value — not just
+// "did the call succeed" — so a component that responds but drifts/misbehaves
+// still gets flagged as broken.
+const DIAG_CHECKS: DiagCheck[] = [
+  {
+    name: "Gemini",
+    run: async (env) => {
+      const downstream = await askGemini(env, 'Reply with exactly the single word: PONG', 0);
+      return downstream.result === "ok" && downstream.message.trim() === "PONG";
+    },
+  },
+];
+
+async function runDiagnostics(env: Env): Promise<string> {
+  const lines = await Promise.all(
+    DIAG_CHECKS.map(async (check) => {
+      const ok = await check.run(env).catch((err) => {
+        console.error(`Diag check "${check.name}" threw`, err);
+        return false;
+      });
+      return `${check.name}: ${ok ? "OK" : "Broken"}`;
+    })
+  );
+  return lines.join("\n");
 }
 
 export default {
@@ -124,8 +156,8 @@ export default {
       }
 
       if (message?.text === "/diag") {
-        const downstream = await askGemini(env, "Say OK.");
-        await sendMessage(env, message.chat.id, downstream.result === "ok" ? "OK" : "Broken");
+        const report = await runDiagnostics(env);
+        await sendMessage(env, message.chat.id, report);
       }
 
       if (message?.text && !message.text.startsWith("/")) {
