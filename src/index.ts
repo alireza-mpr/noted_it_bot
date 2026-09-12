@@ -1,6 +1,7 @@
-import dateTimeExtractPrompt from "../prompts/DateTimeExtract.txt";
-import diagPingPrompt from "../prompts/DiagPing.txt";
-import whatDayIsTodayPrompt from "../prompts/WhatDayIsToday.txt";
+import eventExtractPrompt from "../prompts/event_extract.txt";
+import diagPingPrompt from "../prompts/diag_ping.txt";
+import { EVENT_SCHEMA } from "./schemas/event_schema";
+import type { ExtractedEvent } from "./interfaces/extracted_event";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
 
@@ -80,6 +81,53 @@ async function askGemini(env: Env, prompt: string, temperature?: number): Promis
       .trim();
 
     return text ? { result: "ok", message: text } : GEMINI_FAILURE;
+  } catch {
+    return GEMINI_FAILURE;
+  }
+}
+
+async function extractEvent(env: Env, telegramMessageText: string): Promise<DownstreamResult> {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": env.GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          // 2. your prompt
+          systemInstruction: { parts: [{ text: eventExtractPrompt }] },
+
+          // 3. the telegram message
+          contents: [{ role: "user", parts: [{ text: telegramMessageText }] }],
+
+          // 4. the shape you want back
+          generationConfig: {
+            temperature: 0,
+            responseMimeType: "application/json",
+            responseSchema: EVENT_SCHEMA,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      return GEMINI_FAILURE;
+    }
+
+    const data = await response.json<{
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    }>();
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      return GEMINI_FAILURE;
+    }
+
+    const event: ExtractedEvent = JSON.parse(text);
+    return { result: "ok", message: JSON.stringify(event) };
   } catch {
     return GEMINI_FAILURE;
   }
@@ -175,7 +223,7 @@ export default {
       }
 
       if (message?.text && !message.text.startsWith("/")) {
-        const downstream = await askGemini(env, whatDayIsTodayPrompt.trim());
+        const downstream = await extractEvent(env, message.text);
         await replyWith(env, message.chat.id, downstream);
       }
     } catch (err) {
