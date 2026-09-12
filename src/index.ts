@@ -137,6 +137,7 @@ export async function extractEvent(env: Env, telegramMessageText: string): Promi
     );
 
     if (!response.ok) {
+      console.error("extractEvent: Gemini returned", response.status, await response.text());
       return GEMINI_FAILURE;
     }
 
@@ -146,12 +147,15 @@ export async function extractEvent(env: Env, telegramMessageText: string): Promi
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) {
+      console.error("extractEvent: no text in Gemini response", JSON.stringify(data));
       return GEMINI_FAILURE;
     }
 
     const event: ExtractedEvent = JSON.parse(text);
+    console.log("extractEvent: extracted", JSON.stringify({ source: telegramMessageText, event }));
     return { result: "ok", message: JSON.stringify(event) };
-  } catch {
+  } catch (err) {
+    console.error("extractEvent: threw", err);
     return GEMINI_FAILURE;
   }
 }
