@@ -34,9 +34,26 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
   -d "secret_token=<WEBHOOK_SECRET>"
 ```
 
+## Tests
+
+`test/extractEvent.test.ts` calls the real Gemini API with a table of
+message → expected-JSON cases (partial match via `toMatchObject`, so you only
+assert the fields you care about). Runs inside the actual Workers runtime via
+`@cloudflare/vitest-plugin`.
+
+```bash
+echo "GEMINI_API_KEY=$(node -p "require('./secrets/dev.json').GEMINI_API_KEY")" > .dev.vars
+npm test
+```
+
+`.dev.vars` is gitignored — it's how Wrangler/Miniflare inject local secrets
+for `wrangler dev` and for these tests.
+
 ## CI/CD
 
-- `.github/workflows/ci.yml` — installs deps and typechecks on every push/PR.
+- `.github/workflows/ci.yml` — installs deps, typechecks, and runs the test
+  suite (against the real Gemini API, using the `dev` environment's
+  `GEMINI_API_KEY`) on every push/PR.
 - `.github/workflows/deploy.yml` — two jobs:
   - `deploy-dev` runs on every push to `main`.
   - `deploy-prod` runs only when a `v*.*.*` tag is pushed (e.g. `git tag v1.0.0 && git push origin v1.0.0`).

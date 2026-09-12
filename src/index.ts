@@ -86,7 +86,7 @@ async function askGemini(env: Env, prompt: string, temperature?: number): Promis
   }
 }
 
-async function extractEvent(env: Env, telegramMessageText: string): Promise<DownstreamResult> {
+export async function extractEvent(env: Env, telegramMessageText: string): Promise<DownstreamResult> {
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
