@@ -93,6 +93,16 @@ export default {
       await sendMessage(env, message.chat.id, `Hi ${userName}, current time is: ${currentTime} UTC`);
     }
 
+    if (message?.text === "/diag") {
+      let status = "OK";
+      try {
+        await askGemini(env, "Say OK.");
+      } catch {
+        status = "Broken";
+      }
+      await sendMessage(env, message.chat.id, status);
+    }
+
     if (message?.text && !message.text.startsWith("/")) {
       const reply = await askGemini(env, "Hello, what day is today?");
       await sendMessage(env, message.chat.id, reply);
