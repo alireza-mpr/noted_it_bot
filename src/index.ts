@@ -230,7 +230,8 @@ export default {
       }
 
       if (message && !message.text) {
-        await sendMessage(env, message.chat.id, "⚠️ I couldn't find any text in that message.");
+        const raw = JSON.stringify(message, null, 2).slice(0, 3800);
+        await sendMessage(env, message.chat.id, `⚠️ I couldn't find any text in that message. Raw payload:\n${raw}`);
       }
     } catch (err) {
       const detail = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
