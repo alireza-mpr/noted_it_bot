@@ -69,7 +69,10 @@ for `wrangler dev` and for these tests.
   suite (against the real Gemini API, using the `dev` environment's
   `GEMINI_API_KEY`) on every push/PR.
 - `.github/workflows/deploy.yml` — two jobs:
-  - `deploy-dev` runs automatically on every push to `main`.
+  - `deploy-dev` runs automatically on every push to `main`. On success, it
+    pushes a git tag matching exactly what `/ver` reports for that deploy
+    (e.g. `v0.0.42-beta-abc1234`), so a specific dev deployment can be found
+    later with `git tag`. A failed deploy leaves no tag.
   - `deploy-prod` **never runs automatically** — it's `workflow_dispatch`-only
     (manually triggered), gated to only run against a `v*.*.*` tag. See
     [Promoting a commit to prod](#promoting-a-commit-to-prod).
