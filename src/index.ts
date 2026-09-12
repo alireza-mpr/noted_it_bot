@@ -1,5 +1,4 @@
 import eventExtractPrompt from "../prompts/event_extract.txt";
-import diagPingPrompt from "../prompts/diag_ping.txt";
 import { EVENT_SCHEMA } from "./schemas/event_schema";
 import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
@@ -104,52 +103,6 @@ const GEMINI_FAILURE: DownstreamResult = {
   message: "Sorry! I couldn't speak with Gemini",
 };
 
-async function askGemini(
-  env: Env,
-  prompt: string,
-  temperature?: number,
-): Promise<DownstreamResult> {
-  try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": env.GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          model: GEMINI_MODEL,
-          input: prompt,
-          ...(temperature !== undefined && {
-            generation_config: { temperature },
-          }),
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      return GEMINI_FAILURE;
-    }
-
-    const data = await response.json<{
-      steps?: { type?: string; content?: { type?: string; text?: string }[] }[];
-    }>();
-
-    const text = data.steps
-      ?.filter((step) => step.type === "model_output")
-      .flatMap((step) => step.content ?? [])
-      .filter((block) => block.type === "text")
-      .map((block) => block.text ?? "")
-      .join("")
-      .trim();
-
-    return text ? { result: "ok", message: text } : GEMINI_FAILURE;
-  } catch {
-    return GEMINI_FAILURE;
-  }
-}
-
 export async function extractEvent(
   env: Env,
   telegramMessageText: string,
@@ -227,37 +180,6 @@ async function replyWith(
   await sendMessage(env, chatId, text);
 }
 
-interface DiagCheck {
-  name: string;
-  run: (env: Env) => Promise<boolean>;
-}
-
-// Each check must produce one exact, deterministic expected value — not just
-// "did the call succeed" — so a component that responds but drifts/misbehaves
-// still gets flagged as broken.
-const DIAG_CHECKS: DiagCheck[] = [
-  {
-    name: "Gemini",
-    run: async (env) => {
-      const downstream = await askGemini(env, diagPingPrompt.trim(), 0);
-      return downstream.result === "ok" && downstream.message.trim() === "PONG";
-    },
-  },
-];
-
-async function runDiagnostics(env: Env): Promise<string> {
-  const lines = await Promise.all(
-    DIAG_CHECKS.map(async (check) => {
-      const ok = await check.run(env).catch((err) => {
-        console.error(`Diag check "${check.name}" threw`, err);
-        return false;
-      });
-      return `${check.name}: ${ok ? "OK" : "Broken"}`;
-    }),
-  );
-  return lines.join("\n");
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method !== "POST") {
@@ -292,11 +214,6 @@ export default {
 
       if (message?.text === "/ver") {
         await sendMessage(env, message.chat.id, env.APP_VERSION);
-      }
-
-      if (message?.text === "/diag") {
-        const report = await runDiagnostics(env);
-        await sendMessage(env, message.chat.id, report);
       }
 
       if (message?.text?.startsWith("/lang")) {
