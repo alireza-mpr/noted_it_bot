@@ -85,14 +85,15 @@ click, even though the tag itself doesn't auto-deploy.
 
 1. Make sure `main` has everything you want in prod (push it, let `deploy-dev`
    confirm it's healthy).
-2. Tag the commit and push the tag:
+2. Tag the commit and push the tag (stay in `0.x.y` while the bot is Beta —
+   semver reserves `1.0.0`+ for a stable release):
    ```bash
-   git tag v1.1.0
-   git push origin v1.1.0
+   git tag v0.1.0
+   git push origin v0.1.0
    ```
    This does **not** deploy anything by itself — it just marks the commit.
 3. Go to the repo's **Actions** tab → **Deploy** workflow → **Run workflow**.
-4. In the ref dropdown, pick the tag you just pushed (e.g. `v1.1.0`) instead of `main`.
+4. In the ref dropdown, pick the tag you just pushed (e.g. `v0.1.0`) instead of `main`.
 5. Click **Run workflow**. This runs `deploy-prod` (and only `deploy-prod` —
    `deploy-dev` won't run for a `workflow_dispatch` event) against exactly
    that tagged commit.
