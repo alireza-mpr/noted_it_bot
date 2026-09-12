@@ -179,11 +179,8 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string, lang?: st
     summaryLines.push(`📌 ${event.title}`);
   }
   summaryLines.push(
-    allDay ? `🗓️ ${dateLabel}` : `🗓️ ${dateLabel} ⏰ ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`
+    allDay ? `🗓️ ${dateLabel}` : `🗓️ ${dateLabel} ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`
   );
-  if (event.location) {
-    summaryLines.push(`📍 ${event.location}`);
-  }
 
   return {
     icsFilename: "event.ics",

@@ -18,8 +18,11 @@ Example: /lang fa - to receive my messages in Farsi.
 
 🤓 Beta.`;
 
+// {0} gets wrapped in literal { } after substitution (the surrounding braces
+// here are intentional, not a typo) — that's how the clickable link itself
+// gets visually set apart, per explicit choice after comparing live options.
 export const CALENDAR_CAPTION_TEMPLATE =
-  "📅 To add to Google Calendar, click {0}.\n\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.";
+  "👉 <b>Click {{0}} to add to Google Calendar</b>\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.";
 
 export const LINK_LABEL = "here";
 
