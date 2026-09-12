@@ -82,6 +82,22 @@ approval gate if you want one.
 for both environments, so those live once as plain **repository** secrets
 (Settings → Secrets and variables → Actions), not inside either Environment.
 
+### Multilingual replies
+
+The bot's own reply text (not extracted event content) is translated on demand
+based on Telegram's `message.from.language_code`, via `src/lib/translate.ts`.
+Translations are cached in a Workers KV namespace (`I18N` binding) keyed by a
+hash of the English text + language, so each fixed string is only translated
+once per language, ever. Falls back to English on any translation failure.
+
+**One-time setup**: create the KV namespace per environment and put its ID in
+[wrangler.toml](wrangler.toml) (it ships with placeholder IDs):
+
+```bash
+npx wrangler kv namespace create I18N --env dev
+npx wrangler kv namespace create I18N --env prod
+```
+
 ### Rolling back
 
 Cloudflare keeps a history of every deployment per Worker — the fastest revert is

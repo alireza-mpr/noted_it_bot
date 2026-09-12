@@ -4,6 +4,7 @@ import { EVENT_SCHEMA } from "./schemas/event_schema";
 import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
 import { computeEventUid } from "./lib/eventUid";
+import { translateText } from "./lib/translate";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
 
@@ -12,6 +13,7 @@ export interface Env {
   WEBHOOK_SECRET: string;
   APP_VERSION: string;
   GEMINI_API_KEY: string;
+  I18N: KVNamespace;
 }
 
 interface TelegramUpdate {
@@ -19,7 +21,7 @@ interface TelegramUpdate {
     text?: string;
     caption?: string; // set instead of `text` when the message carries media (photo, video, ...)
     chat: { id: number };
-    from?: { first_name?: string };
+    from?: { first_name?: string; language_code?: string };
   };
 }
 
@@ -33,6 +35,19 @@ Right now I read explicit dates only
 Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne).
 
 Beta. I keep your messages to fix bugs.`;
+
+// Templates translated (and cached) via translateText() — {0}, {1} etc. are
+// preserved verbatim by the translation prompt and substituted afterward, so
+// per-event dynamic content (a name, a URL) never needs its own translation
+// call or cache entry.
+const HI_TEMPLATE = "Hi {0}, current time is: {1} UTC";
+const CALENDAR_CAPTION_TEMPLATE =
+  "📅 To add to Google Calendar, click {0}.\n\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.";
+const LINK_LABEL = "here";
+const ALL_DAY_NOTE = "No specific time was mentioned, so this was added as an all-day event.";
+const NO_CALENDAR_EVENT_MESSAGE = "⚠️ I couldn't turn this into a calendar event yet.";
+const NO_TEXT_MESSAGE = "⚠️ I couldn't find any text in that message.";
+const GENERIC_ERROR_MESSAGE = "⚠️ Something went wrong on my end — I've logged it to fix later.";
 
 async function sendMessage(
   env: Env,
@@ -208,11 +223,13 @@ async function replyWith(
   env: Env,
   chatId: number,
   downstream: DownstreamResult,
+  lang: string | undefined,
 ): Promise<void> {
   if (downstream.result === "failed") {
     console.error("Downstream call failed", downstream.message);
   }
-  await sendMessage(env, chatId, downstream.message);
+  const text = await translateText(env, downstream.message, lang);
+  await sendMessage(env, chatId, text);
 }
 
 interface DiagCheck {
@@ -265,13 +282,15 @@ export default {
     // but still surface it back to the chat (when we know the chat id) so a
     // failure is visible to the user instead of silently swallowed.
     let chatId: number | undefined;
+    let lang: string | undefined;
     try {
       const update = await request.json<TelegramUpdate>();
       const message = update.message;
       chatId = message?.chat.id;
+      lang = message?.from?.language_code;
 
       if (message?.text === "/start") {
-        await sendMessage(env, message.chat.id, START_MESSAGE);
+        await sendMessage(env, message.chat.id, await translateText(env, START_MESSAGE, lang));
       }
 
       if (message?.text === "/ver") {
@@ -291,11 +310,9 @@ export default {
           second: "2-digit",
         });
 
-        await sendMessage(
-          env,
-          message.chat.id,
-          `Hi ${userName}, current time is: ${currentTime} UTC`,
-        );
+        const hiTemplate = await translateText(env, HI_TEMPLATE, lang);
+        const hiText = hiTemplate.replace("{0}", userName).replace("{1}", currentTime);
+        await sendMessage(env, message.chat.id, hiText);
       }
 
       if (message?.text === "/diag") {
@@ -319,12 +336,15 @@ export default {
             const googleUrl = escapeHtmlAttribute(
               calendarEvent.googleCalendarUrl,
             );
-            const caption =
-              `📅 To add to Google Calendar, click <a href="${googleUrl}">here</a>.\n` +
-              `📎 For Apple Calendar, Outlook, or anything else — tap the attached file.` +
-              (calendarEvent.allDay
-                ? "\n\nNo specific time was mentioned, so this was added as an all-day event."
-                : "");
+            const [captionTemplate, linkLabel] = await Promise.all([
+              translateText(env, CALENDAR_CAPTION_TEMPLATE, lang),
+              translateText(env, LINK_LABEL, lang),
+            ]);
+
+            let caption = captionTemplate.replace("{0}", `<a href="${googleUrl}">${linkLabel}</a>`);
+            if (calendarEvent.allDay) {
+              caption += `\n\n${await translateText(env, ALL_DAY_NOTE, lang)}`;
+            }
 
             await sendDocument(
               env,
@@ -342,11 +362,11 @@ export default {
             await sendMessage(
               env,
               message.chat.id,
-              "⚠️ I couldn't turn this into a calendar event yet.",
+              await translateText(env, NO_CALENDAR_EVENT_MESSAGE, lang),
             );
           }
         } else {
-          await replyWith(env, message.chat.id, downstream);
+          await replyWith(env, message.chat.id, downstream, lang);
         }
       }
 
@@ -358,16 +378,19 @@ export default {
         await sendMessage(
           env,
           message.chat.id,
-          "⚠️ I couldn't find any text in that message.",
+          await translateText(env, NO_TEXT_MESSAGE, lang),
         );
       }
     } catch (err) {
       console.error("Unhandled error processing update", err);
       if (chatId !== undefined) {
+        const errorText = await translateText(env, GENERIC_ERROR_MESSAGE, lang).catch(
+          () => GENERIC_ERROR_MESSAGE,
+        );
         await sendMessage(
           env,
           chatId,
-          "⚠️ Something went wrong on my end — I've logged it to fix later.",
+          errorText,
         ).catch((sendErr) =>
           console.error("Failed to report error back to chat", sendErr),
         );

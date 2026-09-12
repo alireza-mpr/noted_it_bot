@@ -5,8 +5,14 @@ compatibility_date = "2026-09-01"
 name = "noted-it-dev-bot"
 [env.dev.vars]
 APP_VERSION = "0.0.0-dev-local"
+[[env.dev.kv_namespaces]]
+binding = "I18N"
+id = "REPLACE_WITH_DEV_I18N_KV_ID" # `npx wrangler kv namespace create I18N --env dev`
 
 [env.prod]
 name = "noted-it-bot"
 [env.prod.vars]
 APP_VERSION = "0.0.0-dev-local"
+[[env.prod.kv_namespaces]]
+binding = "I18N"
+id = "REPLACE_WITH_PROD_I18N_KV_ID" # `npx wrangler kv namespace create I18N --env prod`
