@@ -179,10 +179,11 @@ of these is whitelisted:
 
 - **By username** (lowercase, no `@`) — lets you proactively whitelist
   someone before they've ever messaged the bot, just from knowing their `@handle`.
-- **By numeric Telegram user id**, stored as `id:<numeric id>` — the only
+- **By numeric Telegram user id**, as a plain unprefixed key — the only
   option for a user with no public username (it's optional in Telegram, so
   there's nothing to whitelist them by otherwise). The bot's own rejection
-  message includes the user's id, so it can be relayed to you for this.
+  message includes the user's id, so it can be relayed to you for this. No
+  collision risk with usernames — a Telegram username can never be purely numeric.
 
 ```bash
 npx wrangler kv namespace create WHITELIST --env dev
@@ -195,7 +196,7 @@ npx wrangler kv namespace create WHITELIST --env prod
 npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env dev --remote
 
 # By id (get the number from the bot's own rejection message)
-npx wrangler kv key put --binding=WHITELIST "id:123456789" "1" --env dev --remote
+npx wrangler kv key put --binding=WHITELIST "123456789" "1" --env dev --remote
 ```
 
 ### Rolling back
