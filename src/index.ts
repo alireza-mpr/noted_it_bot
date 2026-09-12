@@ -22,7 +22,8 @@ import {
   LANG_SET_CONFIRMATION,
   LANG_RESET_CONFIRMATION,
   LANG_NOT_UNDERSTOOD,
-  NOT_WHITELISTED_MESSAGE,
+  NOT_WHITELISTED_BY_USERNAME,
+  NOT_WHITELISTED_BY_ID,
 } from "./messages";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
@@ -296,10 +297,11 @@ export default {
           message.from?.id,
           message.chat.id
         );
-        const text = (await translateText(env, NOT_WHITELISTED_MESSAGE, lang)).replace(
-          "{0}",
-          String(message.from?.id ?? "unknown")
-        );
+        const identifierTemplate = message.from?.username ? NOT_WHITELISTED_BY_USERNAME : NOT_WHITELISTED_BY_ID;
+        const identifierValue = message.from?.username
+          ? `@${message.from.username}`
+          : String(message.from?.id ?? "unknown");
+        const text = (await translateText(env, identifierTemplate, lang)).replace("{0}", identifierValue);
         await sendMessage(env, message.chat.id, text);
         return new Response("OK");
       }
