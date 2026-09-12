@@ -169,10 +169,13 @@ npx wrangler kv namespace create MESSAGE_LOG --env prod
 ### Access control (whitelist)
 
 The bot is invite-only: `src/lib/whitelist.ts` checks the sender against a
-`WHITELIST` KV namespace before processing *anything* (including `/start`) —
-a non-whitelisted user gets a polite rejection message instead. There's no
-admin command for this; entries are added manually, and a user passes if
-**either** of these is whitelisted:
+`WHITELIST` KV namespace before processing anything (including `/start`) —
+a non-whitelisted user gets a polite rejection message instead. **The one
+exception is `/lang`**, which works for everyone regardless of whitelist
+status, so even a rejected user can set their preferred language and get
+the rejection message itself back in it. There's no admin command for
+whitelisting; entries are added manually, and a user passes if **either**
+of these is whitelisted:
 
 - **By username** (lowercase, no `@`) — lets you proactively whitelist
   someone before they've ever messaged the bot, just from knowing their `@handle`.
