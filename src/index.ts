@@ -186,12 +186,14 @@ export default {
     // Telegram only advances its per-bot update queue on a 2xx response —
     // any non-2xx (or a thrown error surfacing as 500) leaves that update
     // stuck at the head of the queue, blocking every update behind it until
-    // it succeeds. Swallow and log failures here instead of letting them
-    // propagate, so a broken downstream call (Gemini, a bug, a bad payload)
-    // can never wedge the whole queue.
+    // it succeeds. Never let an error propagate up to the response status —
+    // but still surface it back to the chat (when we know the chat id) so a
+    // failure is visible to the user instead of silently swallowed.
+    let chatId: number | undefined;
     try {
       const update = await request.json<TelegramUpdate>();
       const message = update.message;
+      chatId = message?.chat.id;
 
       if (message?.text === "/start") {
         await sendMessage(env, message.chat.id, START_MESSAGE);
@@ -226,8 +228,18 @@ export default {
         const downstream = await extractEvent(env, message.text);
         await replyWith(env, message.chat.id, downstream);
       }
+
+      if (message && !message.text) {
+        await sendMessage(env, message.chat.id, "⚠️ I couldn't find any text in that message.");
+      }
     } catch (err) {
+      const detail = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
       console.error("Unhandled error processing update", err);
+      if (chatId !== undefined) {
+        await sendMessage(env, chatId, `⚠️ Something broke:\n${detail}`).catch((sendErr) =>
+          console.error("Failed to report error back to chat", sendErr)
+        );
+      }
     }
 
     return new Response("OK");
