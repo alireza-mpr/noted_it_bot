@@ -3,6 +3,10 @@ compatibility_date = "2026-09-01"
 
 [env.dev]
 name = "noted-it-dev-bot"
+[env.dev.vars]
+APP_VERSION = "0.0.0-dev-local"
 
 [env.prod]
 name = "noted-it-bot"
+[env.prod.vars]
+APP_VERSION = "0.0.0-dev-local"

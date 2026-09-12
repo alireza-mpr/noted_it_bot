@@ -21,12 +21,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compute version
+        id: version
+        run: echo "version=0.0.${{ github.run_number }}-beta-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to Cloudflare Workers (dev)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env dev
+          command: deploy --env dev --var APP_VERSION:${{ steps.version.outputs.version }}
           environment: dev
           secrets: |
             BOT_TOKEN
@@ -60,12 +64,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compute version
+        id: version
+        run: echo "version=0.0.${{ github.run_number }}-beta-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to Cloudflare Workers (prod)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env prod
+          command: deploy --env prod --var APP_VERSION:${{ steps.version.outputs.version }}
           environment: prod
           secrets: |
             BOT_TOKEN

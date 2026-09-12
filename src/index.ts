@@ -1,6 +1,7 @@
 export interface Env {
   BOT_TOKEN: string;
   WEBHOOK_SECRET: string;
+  APP_VERSION: string;
 }
 
 interface TelegramUpdate {
@@ -24,6 +25,17 @@ export default {
 
     const update = await request.json<TelegramUpdate>();
     const message = update.message;
+
+    if (message?.text === "/version") {
+      await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: message.chat.id,
+          text: env.APP_VERSION,
+        }),
+      });
+    }
 
     if (message?.text === "/hi") {
       const userName = message.from?.first_name ?? "there";
