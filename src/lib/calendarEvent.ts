@@ -5,6 +5,7 @@ export interface BuiltCalendarEvent {
   icsFilename: string;
   icsContent: string;
   googleCalendarUrl: string;
+  allDay: boolean;
 }
 
 function parseTime(time: string): { hour: number; minute: number } {
@@ -27,6 +28,17 @@ function formatIcsLocal(year: number, month: number, day: number, hour: number, 
   return `${year}${pad(month)}${pad(day)}T${pad(hour)}${pad(minute)}00`;
 }
 
+function formatIcsDate(year: number, month: number, day: number): string {
+  return `${year}${pad(month)}${pad(day)}`;
+}
+
+// All-day DTEND is exclusive per RFC 5545 §3.6.1 — a one-day event's DTEND is
+// the following day.
+function nextDay(year: number, month: number, day: number): { year: number; month: number; day: number } {
+  const d = new Date(Date.UTC(year, month - 1, day + 1));
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
 // RFC 5545 §3.3.11: backslash, semicolon, comma and newline are significant
 // and must be escaped in TEXT values.
 function escapeIcsText(text: string): string {
@@ -37,6 +49,10 @@ function escapeIcsText(text: string): string {
 // calendar event — relative/weekday dates are deliberately left unresolved
 // upstream (event_extract.txt), and non-Gregorian calendars aren't supported
 // yet, so this returns null for anything else.
+//
+// A date without a time (start_time null) becomes an all-day event rather
+// than guessing a time — a guessed time would look like a real, specific
+// appointment on the calendar when none was actually given.
 export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCalendarEvent | null {
   if (event.calendar !== "gregorian" || event.date_kind !== "absolute" || event.month === null || event.day === null) {
     return null;
@@ -46,17 +62,44 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCal
   const year = resolveYear(event.year, event.month, event.day, timeZone);
   const { month, day } = event;
 
-  const { hour: startHour, minute: startMinute } = event.start_time ? parseTime(event.start_time) : { hour: 9, minute: 0 };
-  const startLocal = formatIcsLocal(year, month, day, startHour, startMinute);
-
-  const end = event.end_time
-    ? parseTime(event.end_time)
-    : { hour: (startHour + 1) % 24, minute: startMinute };
-  const endLocal = formatIcsLocal(year, month, day, end.hour, end.minute);
-
   const summary = escapeIcsText(event.title ?? "Event");
   const location = event.location ? escapeIcsText(event.location) : undefined;
   const dtstamp = formatIcsUtc(new Date());
+  const allDay = !event.start_time;
+
+  let dtStartLine: string;
+  let dtEndLine: string;
+  let googleDates: string;
+  const googleParams = new URLSearchParams({ action: "TEMPLATE", text: event.title ?? "Event" });
+
+  if (allDay) {
+    const startDate = formatIcsDate(year, month, day);
+    const end = nextDay(year, month, day);
+    const endDate = formatIcsDate(end.year, end.month, end.day);
+
+    dtStartLine = `DTSTART;VALUE=DATE:${startDate}`;
+    dtEndLine = `DTEND;VALUE=DATE:${endDate}`;
+    googleDates = `${startDate}/${endDate}`;
+  } else {
+    const { hour: startHour, minute: startMinute } = parseTime(event.start_time!);
+    const startLocal = formatIcsLocal(year, month, day, startHour, startMinute);
+
+    const end = event.end_time ? parseTime(event.end_time) : { hour: (startHour + 1) % 24, minute: startMinute };
+    const endLocal = formatIcsLocal(year, month, day, end.hour, end.minute);
+
+    dtStartLine = `DTSTART;TZID=${timeZone}:${startLocal}`;
+    dtEndLine = `DTEND;TZID=${timeZone}:${endLocal}`;
+
+    const startUtc = zonedTimeToUtc(year, month, day, startHour, startMinute, timeZone);
+    const endUtc = zonedTimeToUtc(year, month, day, end.hour, end.minute, timeZone);
+    googleDates = `${formatIcsUtc(startUtc)}/${formatIcsUtc(endUtc)}`;
+    googleParams.set("ctz", timeZone);
+  }
+
+  googleParams.set("dates", googleDates);
+  if (event.location) {
+    googleParams.set("location", event.location);
+  }
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -65,30 +108,18 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCal
     "BEGIN:VEVENT",
     `UID:${uid}`,
     `DTSTAMP:${dtstamp}`,
-    `DTSTART;TZID=${timeZone}:${startLocal}`,
-    `DTEND;TZID=${timeZone}:${endLocal}`,
+    dtStartLine,
+    dtEndLine,
     `SUMMARY:${summary}`,
     ...(location ? [`LOCATION:${location}`] : []),
     "END:VEVENT",
     "END:VCALENDAR",
   ];
 
-  const startUtc = zonedTimeToUtc(year, month, day, startHour, startMinute, timeZone);
-  const endUtc = zonedTimeToUtc(year, month, day, end.hour, end.minute, timeZone);
-
-  const googleParams = new URLSearchParams({
-    action: "TEMPLATE",
-    text: event.title ?? "Event",
-    dates: `${formatIcsUtc(startUtc)}/${formatIcsUtc(endUtc)}`,
-    ctz: timeZone,
-  });
-  if (event.location) {
-    googleParams.set("location", event.location);
-  }
-
   return {
     icsFilename: "event.ics",
     icsContent: lines.join("\r\n"),
     googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
+    allDay,
   };
 }

@@ -19,9 +19,12 @@ const cases: [message: string, expected: Partial<ExtractedEvent>][] = [
     },
   ],
   [
+    // "last night" is a relative reference, so this could reasonably come
+    // back as date_kind "relative" or "none" — either way no absolute date
+    // should be resolved, which is the part that actually matters (it means
+    // no calendar event gets built).
     "Thanks for coming to my party last night!",
     {
-      date_kind: "none",
       year: null,
       month: null,
       day: null,

@@ -34,7 +34,11 @@ Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne).
 
 Beta. I keep your messages to fix bugs.`;
 
-async function sendMessage(env: Env, chatId: number, text: string): Promise<void> {
+async function sendMessage(
+  env: Env,
+  chatId: number,
+  text: string,
+): Promise<void> {
   await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -48,7 +52,7 @@ async function sendDocument(
   filename: string,
   content: string,
   caption?: string,
-  parseMode?: "HTML"
+  parseMode?: "HTML",
 ): Promise<void> {
   const form = new FormData();
   form.set("chat_id", String(chatId));
@@ -58,7 +62,11 @@ async function sendDocument(
   if (parseMode) {
     form.set("parse_mode", parseMode);
   }
-  form.set("document", new Blob([content], { type: "text/calendar" }), filename);
+  form.set(
+    "document",
+    new Blob([content], { type: "text/calendar" }),
+    filename,
+  );
 
   await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendDocument`, {
     method: "POST",
@@ -69,7 +77,11 @@ async function sendDocument(
 // Escapes a URL for safe use inside an HTML href="..." attribute (Telegram's
 // HTML parse_mode). Google Calendar links contain `&` between query params.
 function escapeHtmlAttribute(url: string): string {
-  return url.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return url
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 interface DownstreamResult {
@@ -82,20 +94,29 @@ const GEMINI_FAILURE: DownstreamResult = {
   message: "Sorry! I couldn't speak with Gemini",
 };
 
-async function askGemini(env: Env, prompt: string, temperature?: number): Promise<DownstreamResult> {
+async function askGemini(
+  env: Env,
+  prompt: string,
+  temperature?: number,
+): Promise<DownstreamResult> {
   try {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": env.GEMINI_API_KEY,
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": env.GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          model: GEMINI_MODEL,
+          input: prompt,
+          ...(temperature !== undefined && {
+            generation_config: { temperature },
+          }),
+        }),
       },
-      body: JSON.stringify({
-        model: GEMINI_MODEL,
-        input: prompt,
-        ...(temperature !== undefined && { generation_config: { temperature } }),
-      }),
-    });
+    );
 
     if (!response.ok) {
       return GEMINI_FAILURE;
@@ -119,7 +140,10 @@ async function askGemini(env: Env, prompt: string, temperature?: number): Promis
   }
 }
 
-export async function extractEvent(env: Env, telegramMessageText: string): Promise<DownstreamResult> {
+export async function extractEvent(
+  env: Env,
+  telegramMessageText: string,
+): Promise<DownstreamResult> {
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
@@ -143,11 +167,15 @@ export async function extractEvent(env: Env, telegramMessageText: string): Promi
             responseSchema: EVENT_SCHEMA,
           },
         }),
-      }
+      },
     );
 
     if (!response.ok) {
-      console.error("extractEvent: Gemini returned", response.status, await response.text());
+      console.error(
+        "extractEvent: Gemini returned",
+        response.status,
+        await response.text(),
+      );
       return GEMINI_FAILURE;
     }
 
@@ -157,12 +185,18 @@ export async function extractEvent(env: Env, telegramMessageText: string): Promi
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) {
-      console.error("extractEvent: no text in Gemini response", JSON.stringify(data));
+      console.error(
+        "extractEvent: no text in Gemini response",
+        JSON.stringify(data),
+      );
       return GEMINI_FAILURE;
     }
 
     const event: ExtractedEvent = JSON.parse(text);
-    console.log("extractEvent: extracted", JSON.stringify({ source: telegramMessageText, event }));
+    console.log(
+      "extractEvent: extracted",
+      JSON.stringify({ source: telegramMessageText, event }),
+    );
     return { result: "ok", message: JSON.stringify(event) };
   } catch (err) {
     console.error("extractEvent: threw", err);
@@ -170,7 +204,11 @@ export async function extractEvent(env: Env, telegramMessageText: string): Promi
   }
 }
 
-async function replyWith(env: Env, chatId: number, downstream: DownstreamResult): Promise<void> {
+async function replyWith(
+  env: Env,
+  chatId: number,
+  downstream: DownstreamResult,
+): Promise<void> {
   if (downstream.result === "failed") {
     console.error("Downstream call failed", downstream.message);
   }
@@ -203,7 +241,7 @@ async function runDiagnostics(env: Env): Promise<string> {
         return false;
       });
       return `${check.name}: ${ok ? "OK" : "Broken"}`;
-    })
+    }),
   );
   return lines.join("\n");
 }
@@ -236,7 +274,7 @@ export default {
         await sendMessage(env, message.chat.id, START_MESSAGE);
       }
 
-      if (message?.text === "/version") {
+      if (message?.text === "/ver") {
         await sendMessage(env, message.chat.id, env.APP_VERSION);
       }
 
@@ -253,7 +291,11 @@ export default {
           second: "2-digit",
         });
 
-        await sendMessage(env, message.chat.id, `Hi ${userName}, current time is: ${currentTime} UTC`);
+        await sendMessage(
+          env,
+          message.chat.id,
+          `Hi ${userName}, current time is: ${currentTime} UTC`,
+        );
       }
 
       if (message?.text === "/diag") {
@@ -274,10 +316,15 @@ export default {
           const calendarEvent = buildCalendarEvent(event, uid);
 
           if (calendarEvent) {
-            const googleUrl = escapeHtmlAttribute(calendarEvent.googleCalendarUrl);
+            const googleUrl = escapeHtmlAttribute(
+              calendarEvent.googleCalendarUrl,
+            );
             const caption =
               `📅 To add to Google Calendar, click <a href="${googleUrl}">here</a>.\n` +
-              `📎 For Apple Calendar, Outlook, or anything else — tap the attached file.`;
+              `📎 For Apple Calendar, Outlook, or anything else — tap the attached file.` +
+              (calendarEvent.allDay
+                ? "\n\nNo specific time was mentioned, so this was added as an all-day event."
+                : "");
 
             await sendDocument(
               env,
@@ -285,11 +332,18 @@ export default {
               calendarEvent.icsFilename,
               calendarEvent.icsContent,
               caption,
-              "HTML"
+              "HTML",
             );
           } else {
-            console.error("Could not build a calendar event from extraction", downstream.message);
-            await sendMessage(env, message.chat.id, "⚠️ I couldn't turn this into a calendar event yet.");
+            console.error(
+              "Could not build a calendar event from extraction",
+              downstream.message,
+            );
+            await sendMessage(
+              env,
+              message.chat.id,
+              "⚠️ I couldn't turn this into a calendar event yet.",
+            );
           }
         } else {
           await replyWith(env, message.chat.id, downstream);
@@ -297,14 +351,25 @@ export default {
       }
 
       if (message && !content) {
-        console.error("Message had no text or caption", JSON.stringify(message));
-        await sendMessage(env, message.chat.id, "⚠️ I couldn't find any text in that message.");
+        console.error(
+          "Message had no text or caption",
+          JSON.stringify(message),
+        );
+        await sendMessage(
+          env,
+          message.chat.id,
+          "⚠️ I couldn't find any text in that message.",
+        );
       }
     } catch (err) {
       console.error("Unhandled error processing update", err);
       if (chatId !== undefined) {
-        await sendMessage(env, chatId, "⚠️ Something went wrong on my end — I've logged it to fix later.").catch(
-          (sendErr) => console.error("Failed to report error back to chat", sendErr)
+        await sendMessage(
+          env,
+          chatId,
+          "⚠️ Something went wrong on my end — I've logged it to fix later.",
+        ).catch((sendErr) =>
+          console.error("Failed to report error back to chat", sendErr),
         );
       }
     }
