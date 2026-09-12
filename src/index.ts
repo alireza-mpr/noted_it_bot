@@ -288,11 +288,8 @@ export default {
               "HTML"
             );
           } else {
-            await sendMessage(
-              env,
-              message.chat.id,
-              `I couldn't turn this into a calendar event yet. Here's what I extracted:\n${downstream.message}`
-            );
+            console.error("Could not build a calendar event from extraction", downstream.message);
+            await sendMessage(env, message.chat.id, "⚠️ I couldn't turn this into a calendar event yet.");
           }
         } else {
           await replyWith(env, message.chat.id, downstream);
@@ -300,15 +297,14 @@ export default {
       }
 
       if (message && !content) {
-        const raw = JSON.stringify(message, null, 2).slice(0, 3800);
-        await sendMessage(env, message.chat.id, `⚠️ I couldn't find any text in that message. Raw payload:\n${raw}`);
+        console.error("Message had no text or caption", JSON.stringify(message));
+        await sendMessage(env, message.chat.id, "⚠️ I couldn't find any text in that message.");
       }
     } catch (err) {
-      const detail = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
       console.error("Unhandled error processing update", err);
       if (chatId !== undefined) {
-        await sendMessage(env, chatId, `⚠️ Something broke:\n${detail}`).catch((sendErr) =>
-          console.error("Failed to report error back to chat", sendErr)
+        await sendMessage(env, chatId, "⚠️ Something went wrong on my end — I've logged it to fix later.").catch(
+          (sendErr) => console.error("Failed to report error back to chat", sendErr)
         );
       }
     }
