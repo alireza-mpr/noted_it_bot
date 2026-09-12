@@ -84,7 +84,10 @@ jobs:
 
       - name: Compute version
         id: version
-        run: echo "version=0.0.${{ github.run_number }}-beta-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+        # Prod's version is the tag itself (e.g. v1.1.0 -> 1.1.0), not the
+        # beta/run-number scheme dev uses — /ver should say exactly what you
+        # deployed, since that's literally how you chose what to deploy.
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to Cloudflare Workers (prod)
         uses: cloudflare/wrangler-action@v3
