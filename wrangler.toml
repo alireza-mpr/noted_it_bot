@@ -14,6 +14,9 @@ id = "d05a28ba60ae461e935926195327875d"
 [[env.dev.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "f1a94b61a6ea499ba534adab79d3b3fc"
+[[env.dev.kv_namespaces]]
+binding = "WHITELIST"
+id = "REPLACE_WITH_DEV_WHITELIST_KV_ID" # `npx wrangler kv namespace create WHITELIST --env dev`
 
 [env.prod]
 name = "noted-it-bot"
@@ -28,3 +31,6 @@ id = "REPLACE_WITH_PROD_USER_LANG_KV_ID" # `npx wrangler kv namespace create USE
 [[env.prod.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "REPLACE_WITH_PROD_MESSAGE_LOG_KV_ID" # `npx wrangler kv namespace create MESSAGE_LOG --env prod`
+[[env.prod.kv_namespaces]]
+binding = "WHITELIST"
+id = "REPLACE_WITH_PROD_WHITELIST_KV_ID" # `npx wrangler kv namespace create WHITELIST --env prod`

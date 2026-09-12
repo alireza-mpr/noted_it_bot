@@ -120,6 +120,25 @@ npx wrangler kv namespace create MESSAGE_LOG --env dev
 npx wrangler kv namespace create MESSAGE_LOG --env prod
 ```
 
+### Access control (whitelist)
+
+The bot is invite-only: `src/lib/whitelist.ts` checks the sender's Telegram
+`username` against a `WHITELIST` KV namespace before processing *anything*
+(including `/start`) — a non-whitelisted user gets a polite rejection message
+instead. There's no admin command for this; usernames are added manually:
+
+```bash
+npx wrangler kv namespace create WHITELIST --env dev
+npx wrangler kv namespace create WHITELIST --env prod
+
+# Add someone (value is unused, just needs to exist; username lowercase, no @)
+npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env dev
+npx wrangler kv key put --binding=WHITELIST "someusername" "1" --env prod
+```
+
+Note: a Telegram user with no public `@username` set can never pass this
+check (there's nothing to whitelist them by) — they'd need to set one first.
+
 ### Rolling back
 
 Cloudflare keeps a history of every deployment per Worker — the fastest revert is

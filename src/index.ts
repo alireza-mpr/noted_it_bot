@@ -7,6 +7,7 @@ import { translateText } from "./lib/translate";
 import { resolveLanguageCode } from "./lib/language";
 import { getUserLanguageOverride, setUserLanguageOverride, clearUserLanguageOverride } from "./lib/userLanguage";
 import { logMessage } from "./lib/messageLog";
+import { isWhitelisted } from "./lib/whitelist";
 import {
   START_MESSAGE,
   CALENDAR_CAPTION_TEMPLATE,
@@ -20,6 +21,7 @@ import {
   LANG_SET_CONFIRMATION,
   LANG_RESET_CONFIRMATION,
   LANG_NOT_UNDERSTOOD,
+  NOT_WHITELISTED_MESSAGE,
 } from "./messages";
 
 const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
@@ -32,6 +34,7 @@ export interface Env {
   I18N: KVNamespace;
   USER_LANG: KVNamespace;
   MESSAGE_LOG: KVNamespace;
+  WHITELIST: KVNamespace;
 }
 
 interface TelegramUpdate {
@@ -207,6 +210,12 @@ export default {
 
       const langOverride = message ? await getUserLanguageOverride(env, message.chat.id) : null;
       lang = langOverride ?? message?.from?.language_code;
+
+      if (message && !(await isWhitelisted(env, message.from?.username))) {
+        console.log("Rejected non-whitelisted user", message.from?.username ?? "(no username)", message.chat.id);
+        await sendMessage(env, message.chat.id, await translateText(env, NOT_WHITELISTED_MESSAGE, lang));
+        return new Response("OK");
+      }
 
       if (message?.text === "/start") {
         const startText = (await translateText(env, START_MESSAGE, lang)).replace("{0}", "Noted");
