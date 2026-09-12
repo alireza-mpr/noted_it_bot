@@ -32,17 +32,17 @@ async function sendMessage(env: Env, chatId: number, text: string): Promise<void
   });
 }
 
-interface GeminiResult {
-  result: boolean;
+interface DownstreamResult {
+  result: "ok" | "failed";
   message: string;
 }
 
-const GEMINI_FAILURE: GeminiResult = {
-  result: false,
+const GEMINI_FAILURE: DownstreamResult = {
+  result: "failed",
   message: "Sorry! I couldn't speak with Gemini",
 };
 
-async function askGemini(env: Env, prompt: string): Promise<GeminiResult> {
+async function askGemini(env: Env, prompt: string): Promise<DownstreamResult> {
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
@@ -64,10 +64,17 @@ async function askGemini(env: Env, prompt: string): Promise<GeminiResult> {
     }>();
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text ? { result: true, message: text } : GEMINI_FAILURE;
+    return text ? { result: "ok", message: text } : GEMINI_FAILURE;
   } catch {
     return GEMINI_FAILURE;
   }
+}
+
+async function replyWith(env: Env, chatId: number, downstream: DownstreamResult): Promise<void> {
+  if (downstream.result === "failed") {
+    console.error("Downstream call failed", downstream.message);
+  }
+  await sendMessage(env, chatId, downstream.message);
 }
 
 export default {
@@ -117,13 +124,13 @@ export default {
       }
 
       if (message?.text === "/diag") {
-        const { result } = await askGemini(env, "Say OK.");
-        await sendMessage(env, message.chat.id, result ? "OK" : "Broken");
+        const downstream = await askGemini(env, "Say OK.");
+        await sendMessage(env, message.chat.id, downstream.result === "ok" ? "OK" : "Broken");
       }
 
       if (message?.text && !message.text.startsWith("/")) {
-        const { message: reply } = await askGemini(env, "Hello, what day is today?");
-        await sendMessage(env, message.chat.id, reply);
+        const downstream = await askGemini(env, "Hello, what day is today?");
+        await replyWith(env, message.chat.id, downstream);
       }
     } catch (err) {
       console.error("Unhandled error processing update", err);
