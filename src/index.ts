@@ -81,41 +81,52 @@ export default {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const update = await request.json<TelegramUpdate>();
-    const message = update.message;
+    // Always ACK with 200 past this point, no matter what happens below.
+    // Telegram only advances its per-bot update queue on a 2xx response —
+    // any non-2xx (or a thrown error surfacing as 500) leaves that update
+    // stuck at the head of the queue, blocking every update behind it until
+    // it succeeds. Swallow and log failures here instead of letting them
+    // propagate, so a broken downstream call (Gemini, a bug, a bad payload)
+    // can never wedge the whole queue.
+    try {
+      const update = await request.json<TelegramUpdate>();
+      const message = update.message;
 
-    if (message?.text === "/start") {
-      await sendMessage(env, message.chat.id, START_MESSAGE);
-    }
+      if (message?.text === "/start") {
+        await sendMessage(env, message.chat.id, START_MESSAGE);
+      }
 
-    if (message?.text === "/version") {
-      await sendMessage(env, message.chat.id, env.APP_VERSION);
-    }
+      if (message?.text === "/version") {
+        await sendMessage(env, message.chat.id, env.APP_VERSION);
+      }
 
-    if (message?.text === "/hi") {
-      const userName = message.from?.first_name ?? "there";
-      const currentTime = new Date().toLocaleString("en-US", {
-        timeZone: "UTC",
-        hour12: false,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
+      if (message?.text === "/hi") {
+        const userName = message.from?.first_name ?? "there";
+        const currentTime = new Date().toLocaleString("en-US", {
+          timeZone: "UTC",
+          hour12: false,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
 
-      await sendMessage(env, message.chat.id, `Hi ${userName}, current time is: ${currentTime} UTC`);
-    }
+        await sendMessage(env, message.chat.id, `Hi ${userName}, current time is: ${currentTime} UTC`);
+      }
 
-    if (message?.text === "/diag") {
-      const { result } = await askGemini(env, "Say OK.");
-      await sendMessage(env, message.chat.id, result ? "OK" : "Broken");
-    }
+      if (message?.text === "/diag") {
+        const { result } = await askGemini(env, "Say OK.");
+        await sendMessage(env, message.chat.id, result ? "OK" : "Broken");
+      }
 
-    if (message?.text && !message.text.startsWith("/")) {
-      const { message: reply } = await askGemini(env, "Hello, what day is today?");
-      await sendMessage(env, message.chat.id, reply);
+      if (message?.text && !message.text.startsWith("/")) {
+        const { message: reply } = await askGemini(env, "Hello, what day is today?");
+        await sendMessage(env, message.chat.id, reply);
+      }
+    } catch (err) {
+      console.error("Unhandled error processing update", err);
     }
 
     return new Response("OK");
