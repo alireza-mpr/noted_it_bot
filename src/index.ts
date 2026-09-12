@@ -268,7 +268,7 @@ export default {
         if (downstream.result === "ok") {
           const event: ExtractedEvent = JSON.parse(downstream.message);
           const uid = await computeEventUid(content);
-          const calendarEvent = buildCalendarEvent(event, uid);
+          const calendarEvent = buildCalendarEvent(event, uid, lang);
 
           if (calendarEvent) {
             const googleUrl = escapeHtmlAttribute(
@@ -279,7 +279,9 @@ export default {
               translateText(env, LINK_LABEL, lang),
             ]);
 
-            let caption = captionTemplate.replace("{0}", `<a href="${googleUrl}">${linkLabel}</a>`);
+            const summaryBlock = calendarEvent.summaryLines.map((line) => escapeHtmlAttribute(line)).join("\n");
+            const addToCalendarText = captionTemplate.replace("{0}", `<a href="${googleUrl}">${linkLabel}</a>`);
+            let caption = `${summaryBlock}\n\n${addToCalendarText}`;
             if (calendarEvent.allDay) {
               caption += `\n\n${await translateText(env, ALL_DAY_NOTE, lang)}`;
             }

@@ -6,6 +6,10 @@ export interface BuiltCalendarEvent {
   icsContent: string;
   googleCalendarUrl: string;
   allDay: boolean;
+  // 📌/🗓️+⏰/📍 lines summarizing the event — emoji-only, no text labels, so
+  // it never needs translation. Ready to join with "\n" and prepend to the
+  // caption.
+  summaryLines: string[];
 }
 
 function parseTime(time: string): { hour: number; minute: number } {
@@ -87,7 +91,7 @@ function foldIcsLine(line: string): string {
 // A date without a time (start_time null) becomes an all-day event rather
 // than guessing a time — a guessed time would look like a real, specific
 // appointment on the calendar when none was actually given.
-export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCalendarEvent | null {
+export function buildCalendarEvent(event: ExtractedEvent, uid: string, lang?: string): BuiltCalendarEvent | null {
   if (event.calendar !== "gregorian" || event.date_kind !== "absolute" || event.month === null || event.day === null) {
     return null;
   }
@@ -101,6 +105,13 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCal
   const dtstamp = formatIcsUtc(new Date());
   const allDay = !event.start_time;
 
+  const start = allDay ? null : parseTime(event.start_time!);
+  const end = allDay
+    ? null
+    : event.end_time
+      ? parseTime(event.end_time)
+      : { hour: (start!.hour + 1) % 24, minute: start!.minute };
+
   let dtStartLine: string;
   let dtEndLine: string;
   let googleDates: string;
@@ -108,24 +119,21 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCal
 
   if (allDay) {
     const startDate = formatIcsDate(year, month, day);
-    const end = nextDay(year, month, day);
-    const endDate = formatIcsDate(end.year, end.month, end.day);
+    const nd = nextDay(year, month, day);
+    const endDate = formatIcsDate(nd.year, nd.month, nd.day);
 
     dtStartLine = `DTSTART;VALUE=DATE:${startDate}`;
     dtEndLine = `DTEND;VALUE=DATE:${endDate}`;
     googleDates = `${startDate}/${endDate}`;
   } else {
-    const { hour: startHour, minute: startMinute } = parseTime(event.start_time!);
-    const startLocal = formatIcsLocal(year, month, day, startHour, startMinute);
-
-    const end = event.end_time ? parseTime(event.end_time) : { hour: (startHour + 1) % 24, minute: startMinute };
-    const endLocal = formatIcsLocal(year, month, day, end.hour, end.minute);
+    const startLocal = formatIcsLocal(year, month, day, start!.hour, start!.minute);
+    const endLocal = formatIcsLocal(year, month, day, end!.hour, end!.minute);
 
     dtStartLine = `DTSTART;TZID=${timeZone}:${startLocal}`;
     dtEndLine = `DTEND;TZID=${timeZone}:${endLocal}`;
 
-    const startUtc = zonedTimeToUtc(year, month, day, startHour, startMinute, timeZone);
-    const endUtc = zonedTimeToUtc(year, month, day, end.hour, end.minute, timeZone);
+    const startUtc = zonedTimeToUtc(year, month, day, start!.hour, start!.minute, timeZone);
+    const endUtc = zonedTimeToUtc(year, month, day, end!.hour, end!.minute, timeZone);
     googleDates = `${formatIcsUtc(startUtc)}/${formatIcsUtc(endUtc)}`;
     googleParams.set("ctz", timeZone);
   }
@@ -150,10 +158,38 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string): BuiltCal
     "END:VCALENDAR",
   ].map(foldIcsLine);
 
+  // Force the Gregorian calendar explicitly — some locales (e.g. "fa")
+  // otherwise default to a different calendar system (Jalali), which would
+  // show a date that doesn't match the actual Gregorian event being created.
+  const dateLabel = new Intl.DateTimeFormat(lang || "en", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+    calendar: "gregory",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+
+  const formatClock = (hour: number, minute: number) =>
+    new Intl.DateTimeFormat(lang || "en", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(
+      new Date(Date.UTC(2000, 0, 1, hour, minute))
+    );
+
+  const summaryLines: string[] = [];
+  if (event.title) {
+    summaryLines.push(`📌 ${event.title}`);
+  }
+  summaryLines.push(
+    allDay ? `🗓️ ${dateLabel}` : `🗓️ ${dateLabel} ⏰ ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`
+  );
+  if (event.location) {
+    summaryLines.push(`📍 ${event.location}`);
+  }
+
   return {
     icsFilename: "event.ics",
     icsContent: lines.join("\r\n"),
     googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
     allDay,
+    summaryLines,
   };
 }
