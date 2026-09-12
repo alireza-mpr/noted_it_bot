@@ -1,3 +1,5 @@
+const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
+
 export interface Env {
   BOT_TOKEN: string;
   WEBHOOK_SECRET: string;
@@ -41,8 +43,6 @@ const GEMINI_FAILURE: DownstreamResult = {
   result: "failed",
   message: "Sorry! I couldn't speak with Gemini",
 };
-
-const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
 
 async function askGemini(env: Env, prompt: string, temperature?: number): Promise<DownstreamResult> {
   try {
