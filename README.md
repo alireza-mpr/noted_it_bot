@@ -105,6 +105,21 @@ npx wrangler kv namespace create USER_LANG --env dev
 npx wrangler kv namespace create USER_LANG --env prod
 ```
 
+### Message logging
+
+Per the `/start` disclosure ("I may keep your messages to fix bugs"), every
+message that goes through event extraction is logged to a `MESSAGE_LOG` KV
+namespace via `src/lib/messageLog.ts`: the sender's Telegram `username`, the
+message/caption text as received, what was sent to Gemini, and Gemini's
+response — each entry expires automatically after **14 days**
+(`expirationTtl`). Logging failures are swallowed (best-effort) and never
+affect the actual reply.
+
+```bash
+npx wrangler kv namespace create MESSAGE_LOG --env dev
+npx wrangler kv namespace create MESSAGE_LOG --env prod
+```
+
 ### Rolling back
 
 Cloudflare keeps a history of every deployment per Worker — the fastest revert is

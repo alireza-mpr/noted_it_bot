@@ -7,6 +7,7 @@ import { computeEventUid } from "./lib/eventUid";
 import { translateText } from "./lib/translate";
 import { resolveLanguageCode } from "./lib/language";
 import { getUserLanguageOverride, setUserLanguageOverride, clearUserLanguageOverride } from "./lib/userLanguage";
+import { logMessage } from "./lib/messageLog";
 import {
   START_MESSAGE,
   HI_TEMPLATE,
@@ -32,6 +33,7 @@ export interface Env {
   GEMINI_API_KEY: string;
   I18N: KVNamespace;
   USER_LANG: KVNamespace;
+  MESSAGE_LOG: KVNamespace;
 }
 
 interface TelegramUpdate {
@@ -39,7 +41,7 @@ interface TelegramUpdate {
     text?: string;
     caption?: string; // set instead of `text` when the message carries media (photo, video, ...)
     chat: { id: number };
-    from?: { first_name?: string; language_code?: string };
+    from?: { first_name?: string; username?: string; language_code?: string };
   };
 }
 
@@ -345,6 +347,13 @@ export default {
 
       if (message && content && !content.startsWith("/")) {
         const downstream = await extractEvent(env, content);
+
+        await logMessage(env, {
+          username: message.from?.username ?? null,
+          receivedMessage: content,
+          geminiRequest: content,
+          geminiResponse: downstream.message,
+        });
 
         if (downstream.result === "ok") {
           const event: ExtractedEvent = JSON.parse(downstream.message);

@@ -11,6 +11,9 @@ id = "e0e7f8d9713349c5ae59be6961935109"
 [[env.dev.kv_namespaces]]
 binding = "USER_LANG"
 id = "d05a28ba60ae461e935926195327875d"
+[[env.dev.kv_namespaces]]
+binding = "MESSAGE_LOG"
+id = "REPLACE_WITH_DEV_MESSAGE_LOG_KV_ID" # `npx wrangler kv namespace create MESSAGE_LOG --env dev`
 
 [env.prod]
 name = "noted-it-bot"
@@ -22,3 +25,6 @@ id = "REPLACE_WITH_PROD_I18N_KV_ID" # `npx wrangler kv namespace create I18N --e
 [[env.prod.kv_namespaces]]
 binding = "USER_LANG"
 id = "REPLACE_WITH_PROD_USER_LANG_KV_ID" # `npx wrangler kv namespace create USER_LANG --env prod`
+[[env.prod.kv_namespaces]]
+binding = "MESSAGE_LOG"
+id = "REPLACE_WITH_PROD_MESSAGE_LOG_KV_ID" # `npx wrangler kv namespace create MESSAGE_LOG --env prod`
