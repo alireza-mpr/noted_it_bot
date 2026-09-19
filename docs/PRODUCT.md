@@ -1,0 +1,122 @@
+# Noted — Product Feature List & Backlog
+
+Noted is a Telegram bot: forward it any message that contains an event and it
+replies with a one-tap "add to Google Calendar" link plus a calendar file.
+Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
+
+## Delivered
+
+### Core: message → calendar event
+- Accepts plain text **and media messages with captions** (e.g. a forwarded
+  channel post with a flyer image) — the caption is used when there's no text.
+- Extracts a structured event via Gemini: title, date, start/end time,
+  timezone hint, location, confidence.
+- Explicit dates only for now ("19 Sep, 8pm"); relative dates ("tomorrow") are
+  deliberately not guessed.
+- Times default to Australian Eastern time (Sydney/Melbourne) unless the
+  message states another timezone.
+- Works for non-Latin scripts (Persian tested end to end).
+
+### Calendar output
+- **One-tap Google Calendar link**, plus an **`.ics` file** for Apple Calendar,
+  Outlook, or anything else.
+- Valid RFC 5545 output: timezone-aware events, all-day events when no time is
+  given (with a note explaining why), long lines folded correctly so
+  multi-byte titles don't break strict calendar apps.
+- **Stable event UID**: a hash of the source message, so re-forwarding the same
+  message updates the existing calendar entry instead of duplicating it.
+- Chat summary above the link: 📌 title, 🗓️ date and time range, then a bold
+  🔔 call-to-action with the link set apart in `{ }`.
+
+### Multilingual replies
+- All bot replies are translated on demand into the user's Telegram language,
+  cached per string per language (translate once, ever), falling back to
+  English if translation fails.
+- `/lang <language>` — set your language by name or code ("Persian", "fa");
+  `/lang auto` returns to Telegram's setting; `/lang` shows the current one
+  (shown by its own name, e.g. "فارسی").
+- Dates and times in the summary follow the reply language, always Gregorian.
+- The bot's own name ("Noted") is never translated.
+
+### Access control
+- Invite-only: a whitelist keyed by **username or numeric user id**
+  (case-insensitive), managed manually in Cloudflare KV.
+- Non-whitelisted users get a friendly rejection that shows their username (or
+  their ID if they have none) so it can be relayed to get them added.
+- `/lang` is open to everyone, so even a rejected user gets the message in
+  their own language.
+
+### Commands
+| Command  | Purpose                                                        |
+|----------|----------------------------------------------------------------|
+| `/start` | Intro and what the bot does                                    |
+| `/lang`  | Show or change reply language                                  |
+| `/ver`   | Show the running version                                       |
+| `/diag`  | Gemini connectivity check (hidden — not in the `/` menu)       |
+
+The visible commands are registered with Telegram on every deploy so they
+appear in the `/` autocomplete menu.
+
+### Reliability & observability
+- Always acknowledges Telegram updates (so one failure can never block the
+  update queue); users see a generic error, details go to logs.
+- Workers Logs enabled; rejected access attempts logged as warnings.
+- Message log (username, user id, message, Gemini request/response) kept in KV
+  for **14 days**, as disclosed in `/start`.
+
+### Delivery pipeline
+- Two fully separate environments (own bot, Worker, KV namespaces, secrets):
+  **dev** (`@noted_it_dev_bot`) and **prod** (`@noted_it_bot`).
+- CI on every push: typecheck + tests against the real Gemini API.
+- **dev** auto-deploys on every push to `main`, versioned
+  `0.0.{run}-beta-{commit}` and auto-tagged with that same string.
+- **prod** is deployed only by deliberate manual trigger against a `v0.x.y`
+  tag; its `/ver` equals the tag. Fast rollback via `wrangler rollback`.
+- Secrets live in GitHub Environments; setup, promotion, and rollback steps
+  are documented in the README.
+
+## Backlog
+
+### Next up
+- [ ] **Multi-model routing layer (cost control).** AI-native architectures
+      enforce a strict pay-per-compute reality where inefficient data pipelines
+      directly inflate cloud bills. Implement a multi-model routing layer that
+      sends simple classification and extraction tasks to cheaper, faster
+      models and reserves expensive frontier models strictly for complex
+      reasoning.
+  - Today every call (event extraction, translation, language-name resolution)
+    uses the same single model — nothing is routed.
+  - Introduce a small router: task type → model tier (e.g. Flash-Lite tier for
+    translation and language resolution, a mid tier for extraction, a frontier
+    tier only for genuinely hard cases such as ambiguous or multi-event
+    messages).
+  - Add an escalation path: try the cheap model first, and re-run on a stronger
+    model only when confidence is low or the output fails schema validation.
+  - Log model used and token counts per call so savings are measurable
+    (Gemini spend is real — this account is on prepaid billing).
+  - Review Gemini "thinking" token overhead on tasks that don't need it.
+  - Extend the test suite to assert quality doesn't regress on the cheaper tiers.
+- [ ] **Confirm the first prod release** under the new versioning scheme (tag →
+      manual dispatch → webhook and command list registered → whitelist
+      verified) and smoke-test `@noted_it_bot`.
+
+### Product
+- [ ] Relative and weekday dates ("tomorrow", "next Friday") — needs a reliable
+      reference date (message timestamp) and clear handling of ambiguity.
+- [ ] Jalali/Persian calendar dates (schema already classifies them; calendar
+      generation currently declines).
+- [ ] Per-user timezone instead of the fixed Australian default.
+- [ ] Multiple events in one message.
+- [ ] Recurring events.
+
+### Platform & ops
+- [ ] Migrate event extraction off the legacy Gemini `generateContent` endpoint
+      to the Interactions API once structured output is verified there.
+- [ ] Admin tooling for the whitelist (today it's manual `wrangler kv` commands).
+- [ ] Automate `package.json` version bumps alongside prod tags (currently manual).
+- [ ] Prod approval gate proper — needs a paid GitHub plan on a private repo;
+      manual dispatch is the interim guard.
+- [ ] Dev tag housekeeping — one tag per dev deploy will accumulate.
+- [ ] Broaden tests beyond extraction: handler flow, ICS output, whitelist,
+      translation placeholders.
+- [ ] Rate limiting / per-user usage caps to bound Gemini cost.
