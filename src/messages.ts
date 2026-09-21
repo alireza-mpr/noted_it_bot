@@ -12,6 +12,8 @@ export const START_MESSAGE = `Heya! I am {0} bot 👋.
 ("19 Sep - 8pm"), not "tomorrow".
 Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne). I'll support that in future.
 
+🔁 Repeating events work too ("every Thursday, 7:30pm"). For those, use the attached file: phone calendars usually ignore repeats in the link and add only the first event.
+
 💭 I reply in your Telegram language by default. To change the language, simply send /lang command.
 Example: /lang fa - to receive my messages in Farsi.
 
@@ -31,6 +33,12 @@ export const LINK_LABEL = "here";
 
 export const ALL_DAY_NOTE =
   "<i>🤔 By the way, no specific time was mentioned, so this was added as an all-day event.</i>";
+
+export const RECURRING_NOTE =
+  "<i>🔁 This event repeats. On a phone, the link may add only the first one — tap the attached file to add the whole series.</i>";
+
+export const RECURRENCE_DECLINED_MESSAGE =
+  '⚠️ This looks like a repeating event, but I couldn\'t tell for sure how often it repeats, so I didn\'t create it. Please send it again with clearer wording, e.g. "every Thursday at 7:30pm".';
 
 export const NO_CALENDAR_EVENT_MESSAGE =
   "⚠️ I couldn't turn this into a calendar event.";

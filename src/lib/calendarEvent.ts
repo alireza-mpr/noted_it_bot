@@ -1,5 +1,6 @@
 import type { ExtractedEvent } from "../interfaces/extracted_event";
 import { resolveTimezone, resolveYear, zonedTimeToUtc } from "./timezone";
+import { buildRrule, describeRecurrence, planRecurrence } from "./recurrence";
 
 export interface BuiltCalendarEvent {
   icsFilename: string;
@@ -10,6 +11,10 @@ export interface BuiltCalendarEvent {
   // it never needs translation. Ready to join with "\n" and prepend to the
   // caption.
   summaryLines: string[];
+  // Present for a repeating event. `template` is an English sentence to be
+  // translated ("{0}" = the end date, already formatted for the reply
+  // language in `untilLabel`).
+  recurrence: { template: string; untilLabel: string | null } | null;
 }
 
 function parseTime(time: string): { hour: number; minute: number } {
@@ -83,26 +88,57 @@ function foldIcsLine(line: string): string {
   return parts.join("\r\n ");
 }
 
-// Only absolute Gregorian dates with a resolved month/day can become a
-// calendar event — relative/weekday dates are deliberately left unresolved
-// upstream (event_extract.txt), and non-Gregorian calendars aren't supported
-// yet, so this returns null for anything else.
+// Only Gregorian events with a resolvable date become a calendar event:
+// an absolute date, or — for a repeating event with no stated start — a
+// weekday pattern whose first occurrence we work out from today. Other
+// relative dates stay unresolved (event_extract.txt) and non-Gregorian
+// calendars aren't supported yet, so this returns null for anything else.
 //
 // A date without a time (start_time null) becomes an all-day event rather
 // than guessing a time — a guessed time would look like a real, specific
 // appointment on the calendar when none was actually given.
-export function buildCalendarEvent(event: ExtractedEvent, uid: string, lang?: string): BuiltCalendarEvent | null {
-  if (event.calendar !== "gregorian" || event.date_kind !== "absolute" || event.month === null || event.day === null) {
+//
+// `now` is injectable so date arithmetic is testable.
+export function buildCalendarEvent(
+  event: ExtractedEvent,
+  uid: string,
+  lang?: string,
+  now: Date = new Date()
+): BuiltCalendarEvent | null {
+  if (event.calendar !== "gregorian") {
+    return null;
+  }
+
+  const recurrence = event.recurrence ?? null;
+  const dated = event.date_kind === "absolute" && event.month !== null && event.day !== null;
+  const weekdayPattern = event.date_kind === "weekday" && recurrence !== null;
+  if (!dated && !weekdayPattern) {
     return null;
   }
 
   const timeZone = resolveTimezone(event.timezone_hint);
-  const year = resolveYear(event.year, event.month, event.day, timeZone);
-  const { month, day } = event;
+
+  let year: number;
+  let month: number;
+  let day: number;
+  let until: { year: number; month: number; day: number } | null = null;
+
+  if (recurrence) {
+    const plan = planRecurrence(event, now);
+    if (!plan.ok) {
+      return null;
+    }
+    ({ year, month, day } = plan.first);
+    until = plan.until;
+  } else {
+    year = resolveYear(event.year, event.month!, event.day!, timeZone, now);
+    month = event.month!;
+    day = event.day!;
+  }
 
   const summary = escapeIcsText(event.title ?? "Event");
   const location = event.location ? escapeIcsText(event.location) : undefined;
-  const dtstamp = formatIcsUtc(new Date());
+  const dtstamp = formatIcsUtc(now);
   const allDay = !event.start_time;
 
   const start = allDay ? null : parseTime(event.start_time!);
@@ -143,6 +179,22 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string, lang?: st
     googleParams.set("location", event.location);
   }
 
+  let rrule: string | null = null;
+  if (recurrence) {
+    // Timed events end the series at the close of the last day in the event's
+    // own timezone, expressed in UTC as RFC 5545 requires; all-day events use
+    // a plain date.
+    const untilValue = until
+      ? allDay
+        ? formatIcsDate(until.year, until.month, until.day)
+        : formatIcsUtc(zonedTimeToUtc(until.year, until.month, until.day, 23, 59, timeZone))
+      : null;
+    rrule = buildRrule(recurrence, untilValue);
+    // Google's web editor honours this; its phone app ignores it (adds a
+    // single event), which is why recurring events point users at the file.
+    googleParams.set("recur", `RRULE:${rrule}`);
+  }
+
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -152,6 +204,7 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string, lang?: st
     `DTSTAMP:${dtstamp}`,
     dtStartLine,
     dtEndLine,
+    ...(rrule ? [`RRULE:${rrule}`] : []),
     `SUMMARY:${summary}`,
     ...(location ? [`LOCATION:${location}`] : []),
     "END:VEVENT",
@@ -188,5 +241,19 @@ export function buildCalendarEvent(event: ExtractedEvent, uid: string, lang?: st
     googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
     allDay,
     summaryLines,
+    recurrence: recurrence
+      ? {
+          template: describeRecurrence(recurrence),
+          untilLabel: until
+            ? new Intl.DateTimeFormat(lang || "en", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+                timeZone: "UTC",
+                calendar: "gregory",
+              }).format(new Date(Date.UTC(until.year, until.month - 1, until.day)))
+            : null,
+        }
+      : null,
   };
 }

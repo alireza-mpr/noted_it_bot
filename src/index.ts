@@ -3,6 +3,7 @@ import diagPingPrompt from "../prompts/diag_ping.txt";
 import { EVENT_SCHEMA } from "./schemas/event_schema";
 import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
+import { recurrenceProblem } from "./lib/recurrence";
 import { computeEventUid } from "./lib/eventUid";
 import { translateText } from "./lib/translate";
 import { resolveLanguageCode, getLanguageDisplayName } from "./lib/language";
@@ -14,6 +15,8 @@ import {
   CALENDAR_CAPTION_TEMPLATE,
   LINK_LABEL,
   ALL_DAY_NOTE,
+  RECURRING_NOTE,
+  RECURRENCE_DECLINED_MESSAGE,
   NO_CALENDAR_EVENT_MESSAGE,
   NO_TEXT_MESSAGE,
   GENERIC_ERROR_MESSAGE,
@@ -370,6 +373,20 @@ export default {
         if (downstream.result === "ok") {
           const event: ExtractedEvent = JSON.parse(downstream.message);
           const uid = await computeEventUid(content);
+
+          // A repeat rule we can't trust is declined outright — a wrong one
+          // silently fills someone's calendar.
+          const problem = recurrenceProblem(event);
+          if (problem) {
+            console.error("Declined recurring event", problem, downstream.message);
+            await sendMessage(
+              env,
+              message.chat.id,
+              await translateText(env, RECURRENCE_DECLINED_MESSAGE, lang),
+            );
+            return new Response("OK");
+          }
+
           const calendarEvent = buildCalendarEvent(event, uid, lang);
 
           if (calendarEvent) {
@@ -381,9 +398,20 @@ export default {
               translateText(env, LINK_LABEL, lang),
             ]);
 
-            const summaryBlock = calendarEvent.summaryLines.map((line) => escapeHtmlAttribute(line)).join("\n");
+            const summaryLines = [...calendarEvent.summaryLines];
+            if (calendarEvent.recurrence) {
+              const sentence = (await translateText(env, calendarEvent.recurrence.template, lang)).replace(
+                "{0}",
+                calendarEvent.recurrence.untilLabel ?? "",
+              );
+              summaryLines.push(`🔁 ${sentence}`);
+            }
+            const summaryBlock = summaryLines.map((line) => escapeHtmlAttribute(line)).join("\n");
             const addToCalendarText = captionTemplate.replace("{0}", `<a href="${googleUrl}">${linkLabel}</a>`);
             let caption = `${summaryBlock}\n\n🔔 ${addToCalendarText}`;
+            if (calendarEvent.recurrence) {
+              caption += `\n\n${await translateText(env, RECURRING_NOTE, lang)}`;
+            }
             if (calendarEvent.allDay) {
               caption += `\n\n${await translateText(env, ALL_DAY_NOTE, lang)}`;
             }

@@ -1,6 +1,28 @@
+export type Weekday = "MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU";
+
+// How an event repeats. Describes the pattern only — the model never does date
+// arithmetic; our code derives the first occurrence (from today's date when the
+// message gives no explicit start) and validates the rule before using it.
+export interface Recurrence {
+  frequency: "daily" | "weekly" | "monthly" | "yearly";
+  interval: number; // every N frequency-units; 1 = every one
+  weekdays: Weekday[] | null; // "every Mon and Wed"
+  ordinal: number | null; // monthly + weekdays: 1..4, or -1 for "last" (first Friday = 1 + FR)
+  month_day: number | null; // monthly: "on the 15th"
+
+  // "never" is allowed and means an open-ended series — no cap is applied.
+  end_kind: "never" | "until" | "count";
+  until_year: number | null; // null year = infer, same as the event's own year
+  until_month: number | null;
+  until_day: number | null;
+  count: number | null; // "for 6 weeks" -> 6
+}
+
 export interface ExtractedEvent {
   title: string | null;
   calendar: "gregorian" | "jalali" | "unknown";
+  // "weekday" with year/month/day null is the normal shape for a recurring
+  // event with no stated start date ("every Sunday at 5pm").
   date_kind: "absolute" | "relative" | "weekday" | "none";
   year: number | null;
   month: number | null; // 1-12
@@ -9,5 +31,6 @@ export interface ExtractedEvent {
   end_time: string | null;
   timezone_hint: string | null; // IANA name, or null
   location: string | null;
+  recurrence?: Recurrence | null; // absent/null = one-off event
   confidence: number; // 0.0 - 1.0
 }

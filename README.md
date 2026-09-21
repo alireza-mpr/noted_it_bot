@@ -22,6 +22,23 @@ an `.ics` file for Apple Calendar/Outlook/anywhere else.
 
 Any other message is treated as event content and sent to Gemini for extraction.
 
+### Recurring events
+
+Explicit repetition ("every Thursday 7:30pm", "every 2 weeks until 29 Nov",
+"first Friday of the month") is extracted as a `recurrence` object (see
+`src/schemas/event_schema.ts`) and turned into an `RRULE` in the `.ics` file
+by `src/lib/recurrence.ts` — the model only describes the pattern; all date
+arithmetic (first occurrence, end date, validation) is done in code, using
+today's date in the event's timezone when no start date is stated.
+
+- Series without an end date are open-ended (no cap).
+- A repeat rule that is invalid or low-confidence (`RECURRENCE_MIN_CONFIDENCE`,
+  0.7) is declined with a message instead of guessed.
+- The Google Calendar link also carries the rule (`recur=RRULE:...`), which the
+  **web** editor honours but the **phone app ignores** (it adds one event). So
+  for repeating events the attached `.ics` is the dependable route, and the
+  caption and `/start` tell users that.
+
 ## How it works
 
 Telegram calls the Worker's URL as a webhook for every update (no polling, no

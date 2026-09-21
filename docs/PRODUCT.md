@@ -17,6 +17,24 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
   message states another timezone.
 - Works for non-Latin scripts (Persian tested end to end).
 
+### Recurring events
+- Understands explicit repetition — "every Thursday", "every 2 weeks", "first
+  Friday of the month", "monthly on the 15th", "for 6 weeks", "until 29 Nov" —
+  in English and Persian. A list of separate dates is deliberately not treated
+  as a repeat.
+- A pattern with no start date ("every Thursday at 7:30pm") starts on the next
+  matching day from today; a stated start date is moved to the first date that
+  fits the pattern.
+- Series with no end date stay open-ended (no cap).
+- The `.ics` file carries the full repeat rule (timezone-aware, so events keep
+  their local time across daylight saving; verified in Google Calendar).
+- **Phones:** Google's mobile app ignores repeats in the link and adds a single
+  event, so for repeating events the file is the dependable route. The caption
+  says so, and `/start` explains it.
+- If the repeat rule is unclear or invalid (low confidence, end before start,
+  a pattern that doesn't say which days), the bot declines with a message
+  rather than guess and fill a calendar wrongly.
+
 ### Calendar output
 - **One-tap Google Calendar link**, plus an **`.ics` file** for Apple Calendar,
   Outlook, or anything else.
@@ -107,7 +125,7 @@ appear in the `/` autocomplete menu.
       generation currently declines).
 - [ ] Per-user timezone instead of the fixed Australian default.
 - [ ] Multiple events in one message.
-- [ ] Recurring events.
+- [ ] Recurring events written with Jalali/Persian calendar dates (recurrence itself is done).
 
 ### Platform & ops
 - [ ] Migrate event extraction off the legacy Gemini `generateContent` endpoint
@@ -117,6 +135,6 @@ appear in the `/` autocomplete menu.
 - [ ] Prod approval gate proper — needs a paid GitHub plan on a private repo;
       manual dispatch is the interim guard.
 - [ ] Dev tag housekeeping — one tag per dev deploy will accumulate.
-- [ ] Broaden tests beyond extraction: handler flow, ICS output, whitelist,
-      translation placeholders.
+- [ ] Broaden tests further: handler flow, whitelist, translation placeholders
+      (recurrence and ICS output now have unit tests).
 - [ ] Rate limiting / per-user usage caps to bound Gemini cost.

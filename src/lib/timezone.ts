@@ -32,13 +32,13 @@ export function resolveYear(
   year: number | null,
   month: number,
   day: number,
-  timeZone: string
+  timeZone: string,
+  now: Date = new Date()
 ): number {
   if (year !== null) {
     return year;
   }
 
-  const now = new Date();
   const nowInZone = new Date(now.toLocaleString("en-US", { timeZone }));
   const currentYear = nowInZone.getFullYear();
 
