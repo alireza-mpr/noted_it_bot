@@ -1,9 +1,9 @@
-import type { Env } from "./env";
-import { messageLogger } from "./logging/messageLogger";
-import { whitelistPolicy } from "./policy/whitelistPolicy";
-import { createRouter } from "./router/router";
-import { handleUpdate } from "./telegram/handleUpdate";
-import { TelegramClient } from "./telegram/telegramClient";
+import type { Env } from "../env";
+import { messageLogger } from "../logging/messageLogger";
+import { whitelistPolicy } from "../policy/whitelistPolicy";
+import { createRouter } from "../router/router";
+import { handleUpdate } from "./handleUpdate";
+import { TelegramClient } from "./telegramClient";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {

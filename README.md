@@ -42,11 +42,12 @@ today's date in the event's timezone when no start date is stated.
 ## How it works
 
 Telegram calls the Worker's URL as a webhook for every update (no polling, no
-always-on process). [src/index.ts](src/index.ts) is deliberately tiny: it
+always-on process). [src/telegram/telegramWebhook.ts](src/telegram/telegramWebhook.ts) is the Worker's
+entry point (`main` in `wrangler.toml`) and is deliberately tiny: it
 verifies the request came from Telegram (via a shared secret token), initialises
 the shared pieces (whitelist policy, message logger), builds the router and the
-Telegram client, and hands the update to `handleUpdate`. Everything else is
-under `src/telegram/`:
+Telegram client, and hands the update to `handleUpdate`. The rest of the Telegram
+code sits next to it in `src/telegram/`:
 
 - `handleUpdate.ts` reads the update, works out the reply language, checks the
   sender against the [whitelist](#access-control-whitelist) (`/lang` is exempt),
@@ -283,7 +284,7 @@ hard-coded Gemini model directly.
 - **Where it runs.** The bot code talks to a router and never to Gemini: it
   depends on the `LlmClient` interface (`src/lib/providers/providerClient.ts`, one method:
   `generate({systemPrompt?, userPrompt, temperature?, responseSchema?})`), which
-  `Router` (`src/router/router.ts`) implements. `index.ts` builds it once with
+  `Router` (`src/router/router.ts`) implements. `telegramWebhook.ts` builds it once with
   `createRouter(env)` (in `src/router/router.ts`) and passes it into `handleUpdate`,
   which hands it to `extractEvent(router, text)` and `/diag`. The router owns the loop and has two
   collaborators: the **repository** (`src/repositories/geminiUsageRepository.ts`,

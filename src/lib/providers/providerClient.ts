@@ -32,7 +32,7 @@ export type LlmResult =
   | { result: "ok"; text: string; totalTokens: number }
   | { result: "failed"; failure: LlmFailure };
 
-// What index.ts depends on: ask for an answer, whichever model gives it.
+// What the Telegram handlers depend on: ask for an answer, whichever model gives it.
 export interface LlmClient {
   generate(request: LlmRequest): Promise<LlmResult>;
 }
