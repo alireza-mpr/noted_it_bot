@@ -1,4 +1,5 @@
 import eventExtractPrompt from "../../../prompts/event_extract.txt";
+import { NO_AVAILABLE_MODEL_MESSAGE } from "../interactiveMessages/messages";
 import type { ProviderFailure } from "../providers/providerClient";
 import type { Router } from "../../router/router";
 import { EVENT_SCHEMA } from "./event_schema";
@@ -10,9 +11,9 @@ export interface DownstreamResult {
   failure?: ProviderFailure;
 }
 
-const PROVIDER_FAILURE: DownstreamResult = {
+const NO_AVAILABLE_MODEL: DownstreamResult = {
   result: "failed",
-  message: "Sorry! I couldn't speak with any provider",
+  message: NO_AVAILABLE_MODEL_MESSAGE,
 };
 
 export async function extractEvent(
@@ -26,7 +27,7 @@ export async function extractEvent(
       responseSchema: EVENT_SCHEMA,
     });
     if (answer.result === "failed") {
-      return { ...PROVIDER_FAILURE, failure: answer.failure };
+      return { ...NO_AVAILABLE_MODEL, failure: answer.failure };
     }
 
     const event: ExtractedEvent = JSON.parse(answer.text);
@@ -38,7 +39,7 @@ export async function extractEvent(
   } catch (err) {
     console.error("extractEvent: threw", err);
     return {
-      ...PROVIDER_FAILURE,
+      ...NO_AVAILABLE_MODEL,
       failure: { kind: "internal", detail: String(err) },
     };
   }

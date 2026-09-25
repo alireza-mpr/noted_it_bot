@@ -8,13 +8,13 @@ export const START_MESSAGE = `Heya! I am {0} bot 👋.
 
 📆 Forward me any message with an event in it. I'll pull out the details and send you a one-tap link to add it to Google Calendar, plus a file for Apple Calendar, Outlook, or anywhere else.
 
-🌎 For now I read explicit dates only
+🕙 For now I read explicit dates only
 ("19 Sep - 8pm"), not "tomorrow".
 Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne). I'll support that in future.
 
 🔁 Repeating events work too ("every Thursday, 7:30pm"). The link adds today's session everywhere; open it on a computer to get the whole series, or set the repeat yourself on a phone using the pattern I send.
 
-💭 I reply in your Telegram language by default. To change the language, simply send /lang command.
+🌎  I reply in your Telegram language by default. To change the language, simply send /lang command.
 Example: /lang fa - to receive my messages in Farsi.
 
 🤓 Beta.`;
@@ -45,6 +45,9 @@ export const NO_CALENDAR_EVENT_MESSAGE =
 
 export const NO_TEXT_MESSAGE =
   "⚠️ Sorry! I couldn't find any text in your message.";
+
+export const NO_AVAILABLE_MODEL_MESSAGE =
+  "Sorry! All the downstream providers are busy right now. Please try later.";
 
 export const GENERIC_ERROR_MESSAGE =
   "⚠️ Something went wrong on my end — I've logged it to fix later.";
