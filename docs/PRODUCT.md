@@ -59,8 +59,8 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
 ### Access control
 - Invite-only: a whitelist keyed by **username or numeric user id**
   (case-insensitive), managed manually in Cloudflare KV.
-- Non-whitelisted users get a friendly rejection that shows their username (or
-  their ID if they have none) so it can be relayed to get them added.
+- Non-whitelisted users get a friendly rejection that shows their numeric ID so
+  it can be relayed to get them added.
 - `/lang` is open to everyone, so even a rejected user gets the message in
   their own language.
 

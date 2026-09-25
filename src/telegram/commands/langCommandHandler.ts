@@ -2,10 +2,10 @@ import {
   LANG_NOT_UNDERSTOOD,
   LANG_RESET_CONFIRMATION,
   LANG_SET_CONFIRMATION,
-  LANG_STATUS_AUTO,
-  LANG_STATUS_MANUAL,
+  LANG_USAGE,
 } from "../../lib/interactiveMessages/messages";
 import {
+  DEFAULT_LANGUAGE,
   getLanguageDisplayName,
   resolveLanguageCode,
 } from "../../lib/translation/language";
@@ -13,7 +13,9 @@ import {
   clearUserLanguageOverride,
   setUserLanguageOverride,
 } from "../../lib/translation/userLanguage";
-import type { CommandHandler } from "../botContext";
+import type { Env } from "../../env";
+import type { Replier } from "../replier";
+import type { TelegramMessage } from "../telegramTypes";
 
 const PREFIX = "/lang";
 
@@ -21,27 +23,24 @@ export function isLangCommand(text: string | undefined): boolean {
   return text?.startsWith(PREFIX) ?? false;
 }
 
-export const langCommand: CommandHandler = async ({
-  env,
-  message,
-  replier,
-  lang,
-  langOverride,
-}) => {
+export async function langCommandHandler(
+  env: Env,
+  message: TelegramMessage,
+  replier: Replier,
+): Promise<void> {
   const arg = (message.text ?? "").slice(PREFIX.length).trim();
   const chatId = message.chat.id;
 
   if (!arg) {
-    await replier.say(
-      langOverride ? LANG_STATUS_MANUAL : LANG_STATUS_AUTO,
-      getLanguageDisplayName(lang ?? "en"),
-    );
+    await replier.say(LANG_USAGE);
     return;
   }
 
   if (arg.toLowerCase() === "auto") {
     await clearUserLanguageOverride(env, chatId);
-    await replier.withLang(message.from?.language_code).say(LANG_RESET_CONFIRMATION);
+    await replier
+      .withLang(message.from.language_code ?? DEFAULT_LANGUAGE)
+      .say(LANG_RESET_CONFIRMATION);
     return;
   }
 
@@ -55,4 +54,4 @@ export const langCommand: CommandHandler = async ({
   await replier
     .withLang(resolved)
     .say(LANG_SET_CONFIRMATION, getLanguageDisplayName(resolved));
-};
+}

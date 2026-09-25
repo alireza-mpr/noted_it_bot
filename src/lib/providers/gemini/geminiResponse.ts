@@ -1,4 +1,4 @@
-import type { LlmFailure, LlmResult } from "../providerClient";
+import type { ProviderFailure, ProviderResult } from "../providerClient";
 
 interface GeminiBody {
   candidates?: {
@@ -32,9 +32,9 @@ function describeError(data: GeminiBody | null, body: string): string {
 export function parseGeminiResponse(
   httpStatus: number,
   body: string,
-): LlmResult {
+): ProviderResult {
   const data = parseJson(body);
-  const fail = (failure: LlmFailure): LlmResult => ({
+  const fail = (failure: ProviderFailure): ProviderResult => ({
     result: "failed",
     failure,
   });

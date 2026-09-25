@@ -1,6 +1,6 @@
 import type { ProviderConfig } from "../lib/providers/ProviderConfig";
 import type { QuotaLimitScope } from "../lib/quotaLimit/quotaLimitScope";
-import type { LlmFailure } from "../lib/providers/providerClient";
+import type { ProviderFailure } from "../lib/providers/providerClient";
 import { dateTimeAest } from "../lib/time/dateTimeAest";
 
 const LOGGER = "routerLog";
@@ -31,7 +31,7 @@ export class RouterLog {
     );
   }
 
-  unavailable(model: ProviderConfig, failure: LlmFailure): string {
+  unavailable(model: ProviderConfig, failure: ProviderFailure): string {
     return this.modelEvent(
       "warn",
       model,
@@ -39,7 +39,7 @@ export class RouterLog {
     );
   }
 
-  failed(model: ProviderConfig, failure: LlmFailure): string {
+  failed(model: ProviderConfig, failure: ProviderFailure): string {
     return this.modelEvent(
       "error",
       model,

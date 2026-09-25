@@ -3,8 +3,8 @@ export interface TelegramUpdate {
     text?: string;
     caption?: string; // media messages carry their text here, not in `text`
     chat: { id: number };
-    from?: {
-      id?: number;
+    from: {
+      id: number;
       username?: string;
       language_code?: string;
     };

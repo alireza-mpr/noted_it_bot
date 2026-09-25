@@ -2,6 +2,7 @@ export interface LanguageEnv {
   GEMINI_API_KEY: string;
 }
 
+export const DEFAULT_LANGUAGE = "en";
 const LANGUAGE_MODEL = "gemini-3.1-flash-lite";
 const BCP47_LIKE = /^[a-z]{2,3}(-[A-Z]{2})?$/;
 

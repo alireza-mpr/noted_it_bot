@@ -1,17 +1,17 @@
 import diagPingPrompt from "../../../prompts/diag_ping.txt";
-import type { LlmClient } from "../../lib/providers/providerClient";
-import type { CommandHandler } from "../botContext";
+import type { Router } from "../../router/router";
+import type { Replier } from "../replier";
 
 interface DiagCheck {
   name: string;
-  run: (llm: LlmClient) => Promise<string | null>;
+  run: (router: Router) => Promise<string | null>;
 }
 
 const DIAG_CHECKS: DiagCheck[] = [
   {
     name: "Gemini",
-    run: async (llm) => {
-      const answer = await llm.generate({
+    run: async (router) => {
+      const answer = await router.generate({
         userPrompt: diagPingPrompt.trim(),
         temperature: 0,
       });
@@ -23,10 +23,10 @@ const DIAG_CHECKS: DiagCheck[] = [
   },
 ];
 
-async function runDiagnostics(llm: LlmClient): Promise<string> {
+async function runDiagnostics(router: Router): Promise<string> {
   const lines = await Promise.all(
     DIAG_CHECKS.map(async (check) => {
-      const problem = await check.run(llm).catch((err) => {
+      const problem = await check.run(router).catch((err) => {
         console.error(`Diag check "${check.name}" threw`, err);
         return "threw";
       });
@@ -36,6 +36,9 @@ async function runDiagnostics(llm: LlmClient): Promise<string> {
   return lines.join("\n");
 }
 
-export const diagCommand: CommandHandler = async ({ llm, replier }) => {
-  await replier.sendPlain(await runDiagnostics(llm));
-};
+export async function diagCommandHandler(
+  router: Router,
+  replier: Replier,
+): Promise<void> {
+  await replier.sendPlain(await runDiagnostics(router));
+}

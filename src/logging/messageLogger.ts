@@ -7,8 +7,8 @@ export interface MessageLogEntry {
   username: string | null;
   userId: number | null;
   receivedMessage: string;
-  geminiRequest: string;
-  geminiResponse: string;
+  providerRequest: string;
+  providerResponse: string;
 }
 
 export class MessageLogger {

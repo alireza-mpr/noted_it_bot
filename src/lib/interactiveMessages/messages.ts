@@ -38,7 +38,7 @@ export const RECURRING_NOTE =
   "<i>🔁 This event repeats. The link above adds today's session; on a phone it usually won't add the repeat, so open it on a computer for the full series, or set it to repeat yourself using the pattern above.</i>";
 
 export const RECURRENCE_DECLINED_MESSAGE =
-  '⚠️ This looks like a repeating event, but I couldn\'t tell for sure how often it repeats, so I didn\'t create it. Please send it again with clearer wording, e.g. "every Thursday at 7:30pm".';
+  "⚠️ This looks like a repeating event, but I couldn't tell for sure how often it repeats, so I didn't create it. Please send it again with clearer wording, e.g. \"every Thursday at 7:30pm\".";
 
 export const NO_CALENDAR_EVENT_MESSAGE =
   "⚠️ I couldn't turn this into a calendar event.";
@@ -49,11 +49,8 @@ export const NO_TEXT_MESSAGE =
 export const GENERIC_ERROR_MESSAGE =
   "⚠️ Something went wrong on my end — I've logged it to fix later.";
 
-export const LANG_STATUS_AUTO = `I'm currently replying in {0}, auto-detected from your Telegram settings.\n\nSend /lang <language> to set it manually. 
-  Example: /lang Persian or /lang fa`;
-
-export const LANG_STATUS_MANUAL =
-  "I'm currently replying in {0}, which you set manually.\n\nSend /lang <language> to change it, or /lang auto to go back to auto-detecting from your Telegram settings.";
+export const LANG_USAGE =
+  "Which language? Send /lang followed by a language name or code, e.g. /lang Persian or /lang fa. To go back to auto-detecting from your Telegram settings, send /lang auto.";
 
 export const LANG_SET_CONFIRMATION = "Got it — I'll reply in {0} from now on.";
 
@@ -63,11 +60,7 @@ export const LANG_RESET_CONFIRMATION =
 export const LANG_NOT_UNDERSTOOD =
   'I couldn\'t figure out what language "{0}" refers to. Try a language name (e.g. "Persian") or a code (e.g. "fa").';
 
-// {0} is whichever identifier the user actually has — username preferred
-// (so you can whitelist by @handle), falling back to their numeric Telegram
-// id (always present) if they haven't set a public username.
-export const NOT_WHITELISTED_BY_USERNAME =
-  "This bot is invite-only right now, and I don't have you on the list. Ask Alireza to add you — your username is {0}.";
-
-export const NOT_WHITELISTED_BY_ID =
-  "This bot is invite-only right now, and I don't have you on the list. Ask Alireza to add you — your ID is {0}.";
+// {0} is the user's numeric Telegram id: always present, unlike the username,
+// and enough to whitelist them.
+export const NOT_WHITELISTED =
+  "This bot is invite-only right now, and I don't have you on the list. Ask Alireza to add you — your Username/Id is {0}.";

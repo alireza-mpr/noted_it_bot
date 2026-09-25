@@ -1,31 +1,32 @@
 import eventExtractPrompt from "../../../prompts/event_extract.txt";
-import type { LlmClient, LlmFailure } from "../providers/providerClient";
+import type { ProviderFailure } from "../providers/providerClient";
+import type { Router } from "../../router/router";
 import { EVENT_SCHEMA } from "./event_schema";
 import type { ExtractedEvent } from "./extractedEvent";
 
 export interface DownstreamResult {
   result: "ok" | "failed";
   message: string;
-  failure?: LlmFailure;
+  failure?: ProviderFailure;
 }
 
-const GEMINI_FAILURE: DownstreamResult = {
+const PROVIDER_FAILURE: DownstreamResult = {
   result: "failed",
-  message: "Sorry! I couldn't speak with Gemini",
+  message: "Sorry! I couldn't speak with any provider",
 };
 
 export async function extractEvent(
-  llm: LlmClient,
+  router: Router,
   telegramMessageText: string,
 ): Promise<DownstreamResult> {
   try {
-    const answer = await llm.generate({
+    const answer = await router.generate({
       systemPrompt: eventExtractPrompt,
       userPrompt: telegramMessageText,
       responseSchema: EVENT_SCHEMA,
     });
     if (answer.result === "failed") {
-      return { ...GEMINI_FAILURE, failure: answer.failure };
+      return { ...PROVIDER_FAILURE, failure: answer.failure };
     }
 
     const event: ExtractedEvent = JSON.parse(answer.text);
@@ -37,7 +38,7 @@ export async function extractEvent(
   } catch (err) {
     console.error("extractEvent: threw", err);
     return {
-      ...GEMINI_FAILURE,
+      ...PROVIDER_FAILURE,
       failure: { kind: "internal", detail: String(err) },
     };
   }

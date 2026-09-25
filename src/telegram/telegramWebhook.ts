@@ -2,9 +2,10 @@ import type { Env } from "../env";
 import { messageLogger } from "../logging/messageLogger";
 import { whitelistPolicy } from "../policy/whitelistPolicy";
 import { createRouter } from "../router/router";
-import { handleUpdate } from "./handleUpdate";
+import { updateHandler } from "./messageHandlers/updateHandler";
 import { TelegramClient } from "./telegramClient";
 
+// This is the Webhook that telegram calls when a message is sent to the bot.
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method !== "POST") {
@@ -19,11 +20,12 @@ export default {
     whitelistPolicy.init(env.WHITELIST, env.MESSAGE_LOG);
     messageLogger.init(env.MESSAGE_LOG);
 
-    await handleUpdate(request, {
+    await updateHandler(
+      request,
       env,
-      llm: createRouter(env),
-      telegram: new TelegramClient(env.BOT_TOKEN),
-    });
+      createRouter(env),
+      new TelegramClient(env.BOT_TOKEN),
+    );
     return new Response("OK");
   },
 };

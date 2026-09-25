@@ -14,10 +14,10 @@ export class WhitelistPolicyLogger {
 
   async rejected(
     username: string | undefined,
-    userId: number | undefined,
+    userId: number,
     chatId: number,
   ): Promise<void> {
-    const message = `rejected non-whitelisted user ${username ? `@${username}` : "(no username)"}, id ${userId ?? "unknown"}, chat ${chatId}`;
+    const message = `rejected non-whitelisted user ${username ? `@${username}` : "(no username)"}, id ${userId}, chat ${chatId}`;
     console.warn("WhitelistPolicyLogger:", message);
 
     try {

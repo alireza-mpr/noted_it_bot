@@ -1,7 +1,7 @@
 import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
 import type { ProviderConfig } from "./ProviderConfig";
 
-export interface LlmRequest {
+export interface ProviderRequest {
   systemPrompt?: string;
   userPrompt: string;
   temperature?: number;
@@ -13,7 +13,7 @@ interface FailureDetails {
   detail: string;
 }
 
-export type LlmFailure =
+export type ProviderFailure =
   | (FailureDetails & {
       kind: "rateLimited";
       quotaLimitScope?: QuotaLimitScope;
@@ -28,16 +28,11 @@ export type LlmFailure =
         | "internal";
     });
 
-export type LlmResult =
+export type ProviderResult =
   | { result: "ok"; text: string; totalTokens: number }
-  | { result: "failed"; failure: LlmFailure };
-
-// What the Telegram handlers depend on: ask for an answer, whichever model gives it.
-export interface LlmClient {
-  generate(request: LlmRequest): Promise<LlmResult>;
-}
+  | { result: "failed"; failure: ProviderFailure };
 
 // What the router depends on: one call to one specific model.
 export interface ProviderClient {
-  call(model: ProviderConfig, request: LlmRequest): Promise<LlmResult>;
+  call(model: ProviderConfig, request: ProviderRequest): Promise<ProviderResult>;
 }

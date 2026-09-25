@@ -3,22 +3,24 @@ import {
   CALENDAR_CAPTION_TEMPLATE,
   LINK_LABEL,
   NO_CALENDAR_EVENT_MESSAGE,
+  NO_TEXT_MESSAGE,
   RECURRENCE_DECLINED_MESSAGE,
   RECURRING_NOTE,
-} from "../lib/interactiveMessages/messages";
+} from "../../lib/interactiveMessages/messages";
 import {
   buildCalendarEvent,
   type BuiltCalendarEvent,
-} from "../lib/extractedEvents/calendarEvent";
-import { computeEventUid } from "../lib/extractedEvents/eventUid";
-import { extractEvent } from "../lib/extractedEvents/extractEvent";
-import type { ExtractedEvent } from "../lib/extractedEvents/extractedEvent";
-import { recurrenceProblem } from "../lib/extractedEvents/recurrence";
-import { fillPlaceholder } from "../lib/translation/placeholders";
-import { messageLogger } from "../logging/messageLogger";
-import type { MessageContext } from "./botContext";
-import { escapeHtmlAttribute } from "./telegramHtml";
-import type { Replier } from "./replier";
+} from "../../lib/extractedEvents/calendarEvent";
+import { computeEventUid } from "../../lib/extractedEvents/eventUid";
+import { extractEvent } from "../../lib/extractedEvents/extractEvent";
+import type { ExtractedEvent } from "../../lib/extractedEvents/extractedEvent";
+import { recurrenceProblem } from "../../lib/extractedEvents/recurrence";
+import { fillPlaceholder } from "../../lib/translation/placeholders";
+import { messageLogger } from "../../logging/messageLogger";
+import type { Router } from "../../router/router";
+import { escapeHtmlAttribute } from "../telegramHtml";
+import type { Replier } from "../replier";
+import type { TelegramMessage } from "../telegramTypes";
 
 async function buildCaption(
   calendarEvent: BuiltCalendarEvent,
@@ -55,19 +57,30 @@ async function buildCaption(
   return caption;
 }
 
-export async function handleEventMessage(
-  ctx: MessageContext,
-  content: string,
+export async function eventMessageHandler(
+  message: TelegramMessage,
+  router: Router,
+  replier: Replier,
 ): Promise<void> {
-  const { llm, message, replier, lang } = ctx;
+  const content = message.text ?? message.caption;
+  if (!content) {
+    console.error("Message had no text or caption", JSON.stringify(message));
+    await replier.say(NO_TEXT_MESSAGE);
+    return;
+  }
 
-  const downstream = await extractEvent(llm, content);
+  // An unknown /command: nothing to extract, and not worth a reply.
+  if (content.startsWith("/")) {
+    return;
+  }
+
+  const downstream = await extractEvent(router, content);
   await messageLogger.log({
-    username: message.from?.username ?? null,
-    userId: message.from?.id ?? null,
+    username: message.from.username ?? null,
+    userId: message.from.id,
     receivedMessage: content,
-    geminiRequest: content,
-    geminiResponse: downstream.message,
+    providerRequest: content,
+    providerResponse: downstream.message,
   });
 
   if (downstream.result === "failed") {
@@ -91,10 +104,13 @@ export async function handleEventMessage(
   const calendarEvent = buildCalendarEvent(
     event,
     await computeEventUid(content),
-    lang,
+    replier.lang,
   );
   if (!calendarEvent) {
-    console.error("Could not build a calendar event from extraction", downstream.message);
+    console.error(
+      "Could not build a calendar event from extraction",
+      downstream.message,
+    );
     await replier.say(NO_CALENDAR_EVENT_MESSAGE);
     return;
   }

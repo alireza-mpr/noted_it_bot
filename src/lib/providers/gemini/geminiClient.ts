@@ -1,6 +1,6 @@
 import type { ProviderConfig } from "../ProviderConfig";
 import { parseGeminiResponse } from "./geminiResponse";
-import type { LlmRequest, LlmResult, ProviderClient } from "../providerClient";
+import type { ProviderRequest, ProviderResult, ProviderClient } from "../providerClient";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 
@@ -10,7 +10,7 @@ export class GeminiClient implements ProviderClient {
     private readonly timeoutMs = DEFAULT_TIMEOUT_MS,
   ) {}
 
-  async call(model: ProviderConfig, request: LlmRequest): Promise<LlmResult> {
+  async call(model: ProviderConfig, request: ProviderRequest): Promise<ProviderResult> {
     try {
       const response = await fetch(
         `${model.baseUrl}/models/${model.model}:generateContent`,

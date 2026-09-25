@@ -2,10 +2,9 @@ import type { QuotaLimitScope } from "../lib/quotaLimit/quotaLimitScope";
 import { GeminiClient } from "../lib/providers/gemini/geminiClient";
 import type { ProviderConfig } from "../lib/providers/ProviderConfig";
 import type {
-  LlmClient,
-  LlmFailure,
-  LlmRequest,
-  LlmResult,
+  ProviderFailure,
+  ProviderRequest,
+  ProviderResult,
   ProviderClient,
 } from "../lib/providers/providerClient";
 import { GeminiUsageRepository } from "../repositories/geminiUsageRepository";
@@ -13,76 +12,93 @@ import { RouterLog } from "./routerLog";
 
 export interface UsageRepository {
   selectAvailableModels(now: Date): Promise<ProviderConfig[]>;
+
   recordUsage(model: ProviderConfig, tokens: number, now: Date): Promise<void>;
+
   markQuotaExhausted(
     model: ProviderConfig,
     quotaLimitScope: QuotaLimitScope,
     now: Date,
   ): Promise<void>;
+
   recordError(model: ProviderConfig, message: string, now: Date): Promise<void>;
 }
 
-export class Router implements LlmClient {
+// A provider whose usage is metered: the client calls its models, the
+// usage repository says which are still available and records what was used.
+export interface MeteredProvider {
+  providerClient: ProviderClient;
+  usageRepository: UsageRepository;
+}
+
+export class Router {
   constructor(
-    private readonly repository: UsageRepository,
-    private readonly client: ProviderClient,
     private readonly log: RouterLog,
+    private readonly meteredProviders: MeteredProvider[],
   ) {}
 
-  async generate(request: LlmRequest): Promise<LlmResult> {
-    const { repository, client, log } = this;
-    let lastFailure: LlmFailure = {
+  async generate(request: ProviderRequest): Promise<ProviderResult> {
+    const { log, meteredProviders } = this;
+    let lastFailure: ProviderFailure = {
       kind: "rateLimited",
       detail: "no model is under its usage limits",
     };
 
     try {
-      const models = await repository.selectAvailableModels(new Date());
-      log.listed(models);
+      for (const { providerClient, usageRepository } of meteredProviders) {
+        const models = await usageRepository.selectAvailableModels(new Date());
+        log.listed(models);
 
-      for (const model of models) {
-        log.attempted(model);
-        const answer = await client.call(model, request);
+        for (const model of models) {
+          log.attempted(model);
+          const answer = await providerClient.call(model, request);
 
-        if (answer.result === "ok") {
-          await repository.recordUsage(model, answer.totalTokens, new Date());
-          log.succeeded(model, answer.totalTokens);
-          return answer;
-        }
+          if (answer.result === "ok") {
+            await usageRepository.recordUsage(
+              model,
+              answer.totalTokens,
+              new Date(),
+            );
+            log.succeeded(model, answer.totalTokens);
+            return answer;
+          }
 
-        const { failure } = answer;
-        if (failure.kind === "rateLimited") {
-          const quotaLimitScope = failure.quotaLimitScope ?? "minute";
-          await repository.markQuotaExhausted(
-            model,
-            quotaLimitScope,
-            new Date(),
-          );
-          await repository.recordError(
-            model,
-            log.rateLimited(model, quotaLimitScope),
-            new Date(),
-          );
+          const { failure } = answer;
           lastFailure = failure;
-          continue;
-        }
 
-        if (failure.kind === "unavailable") {
-          await repository.recordError(
+          if (failure.kind === "rateLimited") {
+            const quotaLimitScope = failure.quotaLimitScope ?? "minute";
+            await usageRepository.markQuotaExhausted(
+              model,
+              quotaLimitScope,
+              new Date(),
+            );
+            await usageRepository.recordError(
+              model,
+              log.rateLimited(model, quotaLimitScope),
+              new Date(),
+            );
+            continue;
+          }
+
+          if (failure.kind === "unavailable") {
+            await usageRepository.recordError(
+              model,
+              log.unavailable(model, failure),
+              new Date(),
+            );
+            continue;
+          }
+
+          // Any other failure would hit this provider's other models the same
+          // way, so give up on it and try the next provider.
+          await usageRepository.recordError(
             model,
-            log.unavailable(model, failure),
+            log.failed(model, failure),
             new Date(),
           );
-          lastFailure = failure;
-          continue;
+          break;
         }
-
-        await repository.recordError(
-          model,
-          log.failed(model, failure),
-          new Date(),
-        );
-        return answer;
       }
 
       log.noModelSucceeded();
@@ -100,12 +116,14 @@ export class Router implements LlmClient {
 export interface RouterEnv {
   GEMINI_API_KEY: string;
   GEMINI_USAGE_DB: D1Database;
+  // new provider-specific configs will be added here
 }
 
 export function createRouter(env: RouterEnv): Router {
-  return new Router(
-    new GeminiUsageRepository(env.GEMINI_USAGE_DB),
-    new GeminiClient(env.GEMINI_API_KEY),
-    new RouterLog(),
-  );
+  return new Router(new RouterLog(), [
+    {
+      providerClient: new GeminiClient(env.GEMINI_API_KEY),
+      usageRepository: new GeminiUsageRepository(env.GEMINI_USAGE_DB),
+    },
+  ]);
 }

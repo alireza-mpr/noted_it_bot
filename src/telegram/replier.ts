@@ -9,10 +9,10 @@ export class Replier {
     private readonly env: TranslateEnv,
     private readonly telegram: TelegramClient,
     private readonly chatId: number,
-    private readonly lang: string | undefined,
+    readonly lang: string,
   ) {}
 
-  withLang(lang: string | undefined): Replier {
+  withLang(lang: string): Replier {
     return new Replier(this.env, this.telegram, this.chatId, lang);
   }
 

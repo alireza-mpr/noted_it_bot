@@ -16,7 +16,7 @@ an `.ics` file for Apple Calendar/Outlook/anywhere else.
 | Command       | What it does                                                         |
 |---------------|------------------------------------------------------------------------|
 | `/start`      | Intro message                                                        |
-| `/lang`       | Show or set the reply language (`/lang fa`, `/lang auto`)            |
+| `/lang`       | Set the reply language (`/lang fa`, `/lang Persian`) or `/lang auto` to go back to auto-detect; a bare `/lang` replies with how to use it |
 | `/ver`        | Show the running version                                             |
 | `/diag`       | Gemini connectivity check — functional but intentionally not listed in Telegram's `/` autocomplete menu |
 
@@ -46,17 +46,21 @@ always-on process). [src/telegram/telegramWebhook.ts](src/telegram/telegramWebho
 entry point (`main` in `wrangler.toml`) and is deliberately tiny: it
 verifies the request came from Telegram (via a shared secret token), initialises
 the shared pieces (whitelist policy, message logger), builds the router and the
-Telegram client, and hands the update to `handleUpdate`. The rest of the Telegram
+Telegram client, and hands the update to `updateHandler`. The rest of the Telegram
 code sits next to it in `src/telegram/`:
 
-- `handleUpdate.ts` reads the update, works out the reply language, checks the
-  sender against the [whitelist](#access-control-whitelist) (`/lang` is exempt),
-  and routes: a command, or (for anything else) event extraction via Gemini.
-  It never throws; errors are reported to the chat, because Telegram retries
-  any non-2xx update and would block the queue.
-- `commands/` has one file per command (`/start`, `/ver`, `/diag`, `/lang`) and
-  `findCommand.ts`, the lookup used for routing.
-- `eventMessage.ts` is the forwarded-event flow: extract, log the message,
+- `messageHandlers/updateHandler.ts` is the flow for one update: `updateHandler` reads it and works
+  out the reply language, then `handleMessage` checks the sender against the
+  [whitelist](#access-control-whitelist) (`/lang` is exempt) and dispatches: a
+  command (a plain `if` per command, so that is where a new one is added), or,
+  for anything else, event extraction via Gemini. `updateHandler` never throws;
+  errors are reported to the chat, because Telegram retries any non-2xx update and
+  would block the queue.
+- `commands/` has one handler file per command (`startCommandHandler.ts`,
+  `versionCommandHandler.ts`, `diagCommandHandler.ts`, `langCommandHandler.ts`
+  for `/start`, `/ver`, `/diag`, `/lang`), each a plain function taking only what
+  it needs.
+- `messageHandlers/eventMessageHandler.ts` is the forwarded-event flow: extract, log the message,
   decline untrustworthy repeat rules, build the calendar event and caption, send
   the `.ics`.
 - `replier.ts` is the one place that does "translate the template, fill `{0}`,
@@ -106,9 +110,8 @@ npm ci && npm run typecheck && npm test
 ```
 
 `vitest.config.ts` fails fast if `GEMINI_API_KEY` is missing. Runs are slower
-than a simulated setup (every KV/D1 call is a network round trip) and leave
-`llm:` entries in the dev `MESSAGE_LOG` (14-day TTL) and usage rows in the dev
-`gemini_usage` table. To run only the offline tests:
+than a simulated setup (every KV/D1 call is a network round trip) and leave usage
+rows in the dev `gemini_usage` table. To run only the offline tests:
 `npx vitest run --exclude "tests/integration/**"`.
 
 ## CI/CD
@@ -281,17 +284,23 @@ hard-coded Gemini model directly.
   is created on first use (each query is batched with
   `CREATE TABLE IF NOT EXISTS`, `src/db/schema/geminiUsageTable.ts`); all SQL:
   `src/db/sql/geminiUsage.ts`.
-- **Where it runs.** The bot code talks to a router and never to Gemini: it
-  depends on the `LlmClient` interface (`src/lib/providers/providerClient.ts`, one method:
-  `generate({systemPrompt?, userPrompt, temperature?, responseSchema?})`), which
-  `Router` (`src/router/router.ts`) implements. `telegramWebhook.ts` builds it once with
-  `createRouter(env)` (in `src/router/router.ts`) and passes it into `handleUpdate`,
-  which hands it to `extractEvent(router, text)` and `/diag`. The router owns the loop and has two
-  collaborators: the **repository** (`src/repositories/geminiUsageRepository.ts`,
-  D1 binding `GEMINI_USAGE_DB`) says which models are available and stores usage
-  and errors, and the **provider client** (`GeminiClient`,
-  `src/lib/providers/gemini/geminiClient.ts`) makes one call to one model: endpoint, request
-  body, response parsing. D1 calls are async, so `generate` is too. Each upsert
+- **Where it runs.** The bot code talks to the `Router` (`src/router/router.ts`)
+  and never to Gemini. Its one public method is
+  `generate({systemPrompt?, userPrompt, temperature?, responseSchema?})`.
+  `telegramWebhook.ts` builds it once with `createRouter(env)` (in
+  `src/router/router.ts`) and passes it into `updateHandler`, which hands it to
+  `extractEvent(router, text)` and `/diag`. The router is built from a logger and
+  a list of **metered providers**, each a pair: a **provider client**
+  (`GeminiClient`, `src/lib/providers/gemini/geminiClient.ts`) that makes one call
+  to one model (endpoint, request body, response parsing), and a **usage
+  repository** (`src/repositories/geminiUsageRepository.ts`, D1 binding
+  `GEMINI_USAGE_DB`) that says which of its models are still available and stores
+  usage and errors. The router owns the loop: it tries a provider's available
+  models in order, then moves on to the next provider (today there is one, Gemini;
+  adding another means adding one more `{providerClient, usageRepository}` pair in
+  `createRouter`). A failure that isn't a 429 or 503 abandons that provider's
+  remaining models but not the next provider.
+  D1 calls are async, so `generate` is too. Each upsert
   is a single atomic statement. The D1 binding is in [wrangler.toml](wrangler.toml)
   for both envs; **create the databases and paste their ids over the placeholder
   `database_id`s:**

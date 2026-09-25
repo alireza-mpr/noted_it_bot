@@ -2,7 +2,7 @@ import { WhitelistPolicyLogger } from "./whitelistPolicyLogger";
 
 export interface WhitelistUser {
   username: string | undefined;
-  userId: number | undefined;
+  userId: number;
 }
 
 export class WhitelistPolicy {
@@ -38,14 +38,7 @@ export class WhitelistPolicy {
       }
     }
 
-    if (user.userId !== undefined) {
-      const byId = await this.whitelist.get(String(user.userId));
-      if (byId !== null) {
-        return true;
-      }
-    }
-
-    return false;
+    return (await this.whitelist.get(String(user.userId))) !== null;
   }
 }
 
