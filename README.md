@@ -317,7 +317,9 @@ hard-coded Gemini model directly.
   `markQuotaExhausted` sets `rpd` (per-day quota) or `rpm` (otherwise) to its
   cap so the model is skipped, and the loop moves to the next model. A 503
   (`UNAVAILABLE`, "high demand") is a capacity error, not a quota: it is logged
-  and the loop moves to the next model without touching the row. Any other
+  and the loop moves to the next model without touching the row. A call that
+  gets no answer within 12 seconds (`GeminiClient`'s timeout) is treated the same
+  way, so one stalled model can't hold up a request. Any other
   failure (other 5xx, 4xx, empty 200) stops the loop and fails the request. Only
   a 429 touches the row. Nothing is reserved up front, so two simultaneous requests can both take
   the last free slot; the 429 corrects that. Gemini responses are parsed by

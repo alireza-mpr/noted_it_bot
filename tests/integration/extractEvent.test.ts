@@ -174,7 +174,7 @@ describe("extractEvent", () => {
   // Live Gemini calls (with thinking) can take longer than vitest's 5s default.
   it.each(cases)(
     "extracts from: %s",
-    { timeout: 30_000 },
+    { timeout: 60_000 },
     async (message, expected) => {
       const downstream = await extractEvent(
         createRouter(env as unknown as RouterEnv),
