@@ -1,6 +1,7 @@
 import eventExtractPrompt from "../prompts/event_extract.txt";
 import diagPingPrompt from "../prompts/diag_ping.txt";
 import { EVENT_SCHEMA } from "./schemas/event_schema";
+import { fetchWithRetry } from "./config/retry";
 import type { ExtractedEvent } from "./interfaces/extracted_event";
 import { buildCalendarEvent } from "./lib/calendarEvent";
 import { recurrenceProblem } from "./lib/recurrence";
@@ -117,7 +118,7 @@ async function askGemini(
   temperature?: number,
 ): Promise<DownstreamResult> {
   try {
-    const response = await fetch(
+    const response = await fetchWithRetry(
       "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
@@ -162,7 +163,7 @@ export async function extractEvent(
   telegramMessageText: string,
 ): Promise<DownstreamResult> {
   try {
-    const response = await fetch(
+    const response = await fetchWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
       {
         method: "POST",
