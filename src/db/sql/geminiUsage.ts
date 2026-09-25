@@ -28,7 +28,9 @@ ON CONFLICT(model) DO UPDATE SET
   tpm    = CASE WHEN minute = excluded.minute THEN tpm + excluded.tpm ELSE excluded.tpm END,
   day    = excluded.day,
   minute = excluded.minute,
-  aestTime = excluded.aestTime`;
+  aestTime = excluded.aestTime,
+  lastError     = '',
+  lastErrorAest = ''`;
 
 export const MARK_GEMINI_MINUTE_EXHAUSTED = `
 INSERT INTO gemini_usage (model, day, minute, aestTime, rpm, tpm, rpd)

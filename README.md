@@ -279,7 +279,8 @@ hard-coded Gemini model directly.
   database (`model`, `day`, `minute`, `aestTime`, `rpm`, `tpm`, `rpd`, `lastError`,
   `lastErrorAest`, all `NOT NULL`; `aestTime` is the last usage write in Australian
   Eastern time, to the second; `lastError` / `lastErrorAest` are the model's most
-  recent failure and when it happened, empty until it fails). Stale windows reset
+  recent failure and when it happened, empty until it fails and cleared again by
+  its next successful call). Stale windows reset
   lazily on the next write; a model with no row counts as zero usage. The table
   is created on first use (each query is batched with
   `CREATE TABLE IF NOT EXISTS`, `src/db/schema/geminiUsageTable.ts`); all SQL:
@@ -298,8 +299,10 @@ hard-coded Gemini model directly.
   usage and errors. The router owns the loop: it tries a provider's available
   models in order, then moves on to the next provider (today there is one, Gemini;
   adding another means adding one more `{providerClient, usageRepository}` pair in
-  `createRouter`). A failure that isn't a 429 or 503 abandons that provider's
-  remaining models but not the next provider.
+  `createRouter`). A failure only skips the model that failed and is saved on its
+  row, so one retired or broken model can't block the rest; the exception is a
+  401/403, where the key is bad for every model, so the router abandons that
+  provider and moves on to the next one.
   D1 calls are async, so `generate` is too. Each upsert
   is a single atomic statement. The D1 binding is in [wrangler.toml](wrangler.toml)
   for both envs; **create the databases and paste their ids over the placeholder
@@ -345,7 +348,7 @@ hard-coded Gemini model directly.
   - **Last error per model.** A rate limit, 503 or other failure is also saved on
     that model's `gemini_usage` row (`lastError`, `lastErrorAest`), e.g.
     `unavailable (HTTP 503): UNAVAILABLE: This model is currently experiencing high demand…`.
-    Only the latest failure is kept: `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage"`.
+    Only the latest failure is kept, and a successful call to that model clears it: `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage"`.
 - **Caps** live in `src/lib/providers/registry.ts` (`limits`), copied from the
   AI Studio free-tier usage table. Try order is registry order.
 - **Verification:** `tests/integration/extractEvent.test.ts` runs a table of
