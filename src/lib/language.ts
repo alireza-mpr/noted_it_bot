@@ -2,7 +2,7 @@ export interface LanguageEnv {
   GEMINI_API_KEY: string;
 }
 
-const LANGUAGE_MODEL = "gemini-3.8-flash";
+const LANGUAGE_MODEL = "gemini-3.1-flash-lite";
 const BCP47_LIKE = /^[a-z]{2,3}(-[A-Z]{2})?$/;
 
 // Resolves free-text (a language name, in any language — e.g. "Persian",

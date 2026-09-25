@@ -29,7 +29,7 @@ import {
   NOT_WHITELISTED_BY_ID,
 } from "./messages";
 
-const GEMINI_MODEL = "gemini-3.8-flash"; // free-tier model, current (non-legacy) Interactions API
+const GEMINI_MODEL = "gemini-3.1-flash-lite"; // free-tier model, current (non-legacy) Interactions API
 
 export interface Env {
   BOT_TOKEN: string;

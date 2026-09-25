@@ -3,7 +3,7 @@ export interface TranslateEnv {
   GEMINI_API_KEY: string;
 }
 
-const TRANSLATE_MODEL = "gemini-3.8-flash";
+const TRANSLATE_MODEL = "gemini-3.1-flash-lite";
 
 async function cacheKey(text: string, lang: string): Promise<string> {
   const data = new TextEncoder().encode(`${lang}:${text}`);
