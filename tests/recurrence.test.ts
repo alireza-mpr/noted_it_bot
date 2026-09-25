@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../src/lib/calendarEvent";
-import { describeRecurrence, recurrenceProblem } from "../src/lib/recurrence";
-import type { ExtractedEvent, Recurrence } from "../src/interfaces/extracted_event";
+import { buildCalendarEvent } from "../src/lib/extractedEvents/calendarEvent";
+import {
+  describeRecurrence,
+  recurrenceProblem,
+} from "../src/lib/extractedEvents/recurrence";
+import type {
+  ExtractedEvent,
+  Recurrence,
+} from "../src/lib/extractedEvents/extractedEvent";
 
 // Fixed "now": Monday 21 Sep 2026, 12:00 Melbourne (AEST, UTC+10).
 const MON_NOON = new Date("2026-09-21T02:00:00Z");
@@ -56,23 +62,33 @@ function build(e: ExtractedEvent, now = MON_NOON) {
 describe("recurring events: first occurrence", () => {
   it("weekday-only pattern starts on the next matching day from today", () => {
     const built = build(event());
-    expect(built.icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20260924T193000");
-    expect(built.icsContent).toContain("DTEND;TZID=Australia/Melbourne:20260924T203000");
+    expect(built.icsContent).toContain(
+      "DTSTART;TZID=Australia/Melbourne:20260924T193000",
+    );
+    expect(built.icsContent).toContain(
+      "DTEND;TZID=Australia/Melbourne:20260924T203000",
+    );
     expect(built.icsContent).toContain("RRULE:FREQ=WEEKLY;BYDAY=TH");
   });
 
   it("counts today if the event hasn't started yet", () => {
-    expect(build(event(), THU_5PM).icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20260924T193000");
+    expect(build(event(), THU_5PM).icsContent).toContain(
+      "DTSTART;TZID=Australia/Melbourne:20260924T193000",
+    );
   });
 
   it("skips to next week if today's occurrence has already started", () => {
-    expect(build(event(), THU_8PM).icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20261001T193000");
+    expect(build(event(), THU_8PM).icsContent).toContain(
+      "DTSTART;TZID=Australia/Melbourne:20261001T193000",
+    );
   });
 
   it("moves a stated start date that doesn't fit the pattern to the next date that does", () => {
     // 26 Sep 2026 is a Saturday; the pattern is Thursdays.
     const built = build(event({ ...dated, day: 26 }));
-    expect(built.icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20261001T193000");
+    expect(built.icsContent).toContain(
+      "DTSTART;TZID=Australia/Melbourne:20261001T193000",
+    );
   });
 
   it("monthly on an ordinal weekday finds the next matching month", () => {
@@ -83,45 +99,77 @@ describe("recurring events: first occurrence", () => {
         month: 12,
         day: 5,
         recurrence: rec({ frequency: "monthly", weekdays: ["FR"], ordinal: 1 }),
-      })
+      }),
     );
-    expect(built.icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20270101T193000");
+    expect(built.icsContent).toContain(
+      "DTSTART;TZID=Australia/Melbourne:20270101T193000",
+    );
     expect(built.icsContent).toContain("RRULE:FREQ=MONTHLY;BYDAY=1FR");
   });
 
   it("monthly on a day of the month, with no stated start", () => {
-    const built = build(event({ recurrence: rec({ frequency: "monthly", weekdays: null, month_day: 15 }) }));
-    expect(built.icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20261015T193000");
+    const built = build(
+      event({
+        recurrence: rec({
+          frequency: "monthly",
+          weekdays: null,
+          month_day: 15,
+        }),
+      }),
+    );
+    expect(built.icsContent).toContain(
+      "DTSTART;TZID=Australia/Melbourne:20261015T193000",
+    );
     expect(built.icsContent).toContain("RRULE:FREQ=MONTHLY;BYMONTHDAY=15");
   });
 });
 
 describe("recurring events: rule and end condition", () => {
   it("open-ended series has neither UNTIL nor COUNT", () => {
-    const rrule = build(event()).icsContent.split("\r\n").find((l) => l.startsWith("RRULE:"))!;
+    const rrule = build(event())
+      .icsContent.split("\r\n")
+      .find((l) => l.startsWith("RRULE:"))!;
     expect(rrule).not.toMatch(/UNTIL|COUNT/);
   });
 
   it("interval and count", () => {
-    const built = build(event({ recurrence: rec({ interval: 2, end_kind: "count", count: 6 }) }));
-    expect(built.icsContent).toContain("RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TH;COUNT=6");
+    const built = build(
+      event({ recurrence: rec({ interval: 2, end_kind: "count", count: 6 }) }),
+    );
+    expect(built.icsContent).toContain(
+      "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TH;COUNT=6",
+    );
   });
 
   it("timed series ends at the close of the last day, in UTC, with the year inferred", () => {
     // 29 Nov 2026 23:59 in Melbourne (AEDT, UTC+11) = 12:59 UTC.
-    const built = build(event({ ...dated, recurrence: rec({ end_kind: "until", until_month: 11, until_day: 29 }) }));
+    const built = build(
+      event({
+        ...dated,
+        recurrence: rec({ end_kind: "until", until_month: 11, until_day: 29 }),
+      }),
+    );
     expect(built.icsContent).toContain("UNTIL=20261129T125900Z");
     expect(built.recurrence?.untilLabel).toContain("2026");
   });
 
   it("an end month earlier than the start rolls into the next year", () => {
-    const built = build(event({ ...dated, recurrence: rec({ end_kind: "until", until_month: 3, until_day: 1 }) }));
+    const built = build(
+      event({
+        ...dated,
+        recurrence: rec({ end_kind: "until", until_month: 3, until_day: 1 }),
+      }),
+    );
     expect(built.icsContent).toContain("UNTIL=20270301T");
   });
 
   it("all-day series uses plain dates", () => {
     const built = build(
-      event({ ...dated, start_time: null, recurrence: rec({ end_kind: "until", until_month: 11, until_day: 29 }) })
+      event({
+        ...dated,
+        start_time: null,
+        recurrence: rec({ end_kind: "until", until_month: 11, until_day: 29 }),
+      }),
     );
     expect(built.allDay).toBe(true);
     expect(built.icsContent).toContain("DTSTART;VALUE=DATE:20260924");
@@ -143,48 +191,76 @@ describe("one-off events are unchanged", () => {
   it("has no RRULE and no recur parameter", () => {
     const built = build(event({ ...dated, recurrence: null }));
     expect(built.icsContent).not.toContain("RRULE");
-    expect(new URL(built.googleCalendarUrl).searchParams.has("recur")).toBe(false);
+    expect(new URL(built.googleCalendarUrl).searchParams.has("recur")).toBe(
+      false,
+    );
     expect(built.recurrence).toBeNull();
   });
 
   it("a weekday pattern without recurrence still builds nothing", () => {
-    expect(buildCalendarEvent(event({ recurrence: null }), "u", "en", MON_NOON)).toBeNull();
+    expect(
+      buildCalendarEvent(event({ recurrence: null }), "u", "en", MON_NOON),
+    ).toBeNull();
   });
 });
 
 describe("recurrenceProblem (decline conditions)", () => {
   it("is null for a valid recurring event and for a one-off", () => {
     expect(recurrenceProblem(event(), MON_NOON)).toBeNull();
-    expect(recurrenceProblem(event({ ...dated, recurrence: null }), MON_NOON)).toBeNull();
+    expect(
+      recurrenceProblem(event({ ...dated, recurrence: null }), MON_NOON),
+    ).toBeNull();
   });
 
   it("declines low confidence", () => {
-    expect(recurrenceProblem(event({ confidence: 0.5 }), MON_NOON)).toMatch(/low confidence/);
+    expect(recurrenceProblem(event({ confidence: 0.5 }), MON_NOON)).toMatch(
+      /low confidence/,
+    );
   });
 
   it("declines a pattern with no start date that doesn't say which days", () => {
-    expect(recurrenceProblem(event({ recurrence: rec({ weekdays: null }) }), MON_NOON)).not.toBeNull();
+    expect(
+      recurrenceProblem(
+        event({ recurrence: rec({ weekdays: null }) }),
+        MON_NOON,
+      ),
+    ).not.toBeNull();
   });
 
   it("declines an invalid interval", () => {
-    expect(recurrenceProblem(event({ recurrence: rec({ interval: 0 }) }), MON_NOON)).not.toBeNull();
+    expect(
+      recurrenceProblem(event({ recurrence: rec({ interval: 0 }) }), MON_NOON),
+    ).not.toBeNull();
   });
 
   it("declines an end date before the first occurrence", () => {
     const e = event({
       ...dated,
-      recurrence: rec({ end_kind: "until", until_year: 2026, until_month: 9, until_day: 1 }),
+      recurrence: rec({
+        end_kind: "until",
+        until_year: 2026,
+        until_month: 9,
+        until_day: 1,
+      }),
     });
     expect(recurrenceProblem(e, MON_NOON)).toMatch(/before the first/);
   });
 
   it("declines a monthly weekday pattern with no ordinal", () => {
-    const e = event({ recurrence: rec({ frequency: "monthly", weekdays: ["FR"], ordinal: null }) });
+    const e = event({
+      recurrence: rec({
+        frequency: "monthly",
+        weekdays: ["FR"],
+        ordinal: null,
+      }),
+    });
     expect(recurrenceProblem(e, MON_NOON)).not.toBeNull();
   });
 
   it("buildCalendarEvent builds nothing for a declined pattern", () => {
-    expect(buildCalendarEvent(event({ confidence: 0.5 }), "u", "en", MON_NOON)).toBeNull();
+    expect(
+      buildCalendarEvent(event({ confidence: 0.5 }), "u", "en", MON_NOON),
+    ).toBeNull();
   });
 });
 
@@ -194,20 +270,32 @@ describe("describeRecurrence (English template, translated later)", () => {
   });
 
   it("multiple weekdays, interval and until", () => {
-    expect(describeRecurrence(rec({ interval: 2, weekdays: ["MO", "WE"], end_kind: "until" }))).toBe(
-      "Repeats every 2 weeks on Monday and Wednesday, until {0}"
-    );
+    expect(
+      describeRecurrence(
+        rec({ interval: 2, weekdays: ["MO", "WE"], end_kind: "until" }),
+      ),
+    ).toBe("Repeats every 2 weeks on Monday and Wednesday, until {0}");
   });
 
   it("monthly ordinal weekday and count", () => {
     expect(
-      describeRecurrence(rec({ frequency: "monthly", weekdays: ["FR"], ordinal: 1, end_kind: "count", count: 4 }))
+      describeRecurrence(
+        rec({
+          frequency: "monthly",
+          weekdays: ["FR"],
+          ordinal: 1,
+          end_kind: "count",
+          count: 4,
+        }),
+      ),
     ).toBe("Repeats on the first Friday of every month, 4 times");
   });
 
   it("monthly day of the month", () => {
-    expect(describeRecurrence(rec({ frequency: "monthly", weekdays: null, month_day: 22 }))).toBe(
-      "Repeats on the 22nd of every month"
-    );
+    expect(
+      describeRecurrence(
+        rec({ frequency: "monthly", weekdays: null, month_day: 22 }),
+      ),
+    ).toBe("Repeats on the 22nd of every month");
   });
 });

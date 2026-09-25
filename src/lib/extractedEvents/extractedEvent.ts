@@ -1,8 +1,5 @@
 export type Weekday = "MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU";
 
-// How an event repeats. Describes the pattern only — the model never does date
-// arithmetic; our code derives the first occurrence (from today's date when the
-// message gives no explicit start) and validates the rule before using it.
 export interface Recurrence {
   frequency: "daily" | "weekly" | "monthly" | "yearly";
   interval: number; // every N frequency-units; 1 = every one

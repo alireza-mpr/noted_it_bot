@@ -1,7 +1,11 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { extractEvent, type Env } from "../src/index";
-import type { ExtractedEvent, Recurrence } from "../src/interfaces/extracted_event";
+import { extractEvent } from "../../src/index";
+import { createRouter, type RouterEnv } from "../../src/router/router";
+import type {
+  ExtractedEvent,
+  Recurrence,
+} from "../../src/lib/extractedEvents/extractedEvent";
 
 // Partial is shallow, so allow a partial recurrence object too.
 type Expected = Omit<Partial<ExtractedEvent>, "recurrence"> & {
@@ -88,7 +92,12 @@ const cases: [message: string, expected: Expected][] = [
       month: null,
       day: null,
       start_time: "18:00",
-      recurrence: { frequency: "weekly", interval: 1, weekdays: ["TU"], end_kind: "never" },
+      recurrence: {
+        frequency: "weekly",
+        interval: 1,
+        weekdays: ["TU"],
+        end_kind: "never",
+      },
     },
   ],
   [
@@ -99,7 +108,12 @@ const cases: [message: string, expected: Expected][] = [
       month: 10,
       day: 3,
       start_time: "14:00",
-      recurrence: { frequency: "weekly", interval: 2, end_kind: "count", count: 6 },
+      recurrence: {
+        frequency: "weekly",
+        interval: 2,
+        end_kind: "count",
+        count: 6,
+      },
     },
   ],
   [
@@ -109,7 +123,12 @@ const cases: [message: string, expected: Expected][] = [
       month: 12,
       day: 5,
       start_time: "19:00",
-      recurrence: { frequency: "monthly", weekdays: ["FR"], ordinal: 1, end_kind: "never" },
+      recurrence: {
+        frequency: "monthly",
+        weekdays: ["FR"],
+        ordinal: 1,
+        end_kind: "never",
+      },
     },
   ],
   // Persian weekly sessions with no start date. Wording varies (with/without
@@ -129,7 +148,12 @@ const cases: [message: string, expected: Expected][] = [
       month: null,
       day: null,
       start_time: "19:30",
-      recurrence: { frequency: "weekly", interval: 1, weekdays: ["TH"], end_kind: "never" },
+      recurrence: {
+        frequency: "weekly",
+        interval: 1,
+        weekdays: ["TH"],
+        end_kind: "never",
+      },
     },
   ]),
   [
@@ -148,16 +172,23 @@ function normalizeTime(time: string | null): string | null {
 
 describe("extractEvent", () => {
   // Live Gemini calls (with thinking) can take longer than vitest's 5s default.
-  it.each(cases)("extracts from: %s", { timeout: 30_000 }, async (message, expected) => {
-    const downstream = await extractEvent(env as unknown as Env, message);
-    expect(downstream.result).toBe("ok");
+  it.each(cases)(
+    "extracts from: %s",
+    { timeout: 30_000 },
+    async (message, expected) => {
+      const downstream = await extractEvent(
+        createRouter(env as unknown as RouterEnv),
+        message,
+      );
+      expect(downstream.result).toBe("ok");
 
-    const parsed = JSON.parse(downstream.message) as ExtractedEvent;
-    const normalized = {
-      ...parsed,
-      start_time: normalizeTime(parsed.start_time),
-      end_time: normalizeTime(parsed.end_time),
-    };
-    expect(normalized).toMatchObject(expected);
-  });
+      const parsed = JSON.parse(downstream.message) as ExtractedEvent;
+      const normalized = {
+        ...parsed,
+        start_time: normalizeTime(parsed.start_time),
+        end_time: normalizeTime(parsed.end_time),
+      };
+      expect(normalized).toMatchObject(expected);
+    },
+  );
 });

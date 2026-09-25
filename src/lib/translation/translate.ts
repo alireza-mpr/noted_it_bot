@@ -1,9 +1,19 @@
+import translateSystemPrompt from "../../../prompts/translate_system.txt";
+import translateUserPrompt from "../../../prompts/translate_user.txt";
+
 export interface TranslateEnv {
   I18N: KVNamespace;
   GEMINI_API_KEY: string;
 }
 
 const TRANSLATE_MODEL = "gemini-3.1-flash-lite";
+
+function buildUserPrompt(lang: string, text: string): string {
+  return translateUserPrompt
+    .trim()
+    .replace("{lang}", () => lang)
+    .replace("{text}", () => text);
+}
 
 async function cacheKey(text: string, lang: string): Promise<string> {
   const data = new TextEncoder().encode(`${lang}:${text}`);
@@ -41,20 +51,8 @@ export async function translateText(env: TranslateEnv, text: string, lang: strin
           "x-goog-api-key": env.GEMINI_API_KEY,
         },
         body: JSON.stringify({
-          systemInstruction: {
-            parts: [
-              {
-                text:
-                  "Translate the given text, part of a Telegram bot's UI, into the target language. " +
-                  "If it contains a placeholder token like {0}, preserve it exactly as written — do not " +
-                  "translate, move, or alter it. It may contain simple HTML tags (e.g. <i>, </i>, <a href>) " +
-                  "for Telegram's HTML formatting — preserve all tags and attributes exactly as written, " +
-                  "translating only the human-readable text. Preserve emoji as-is. Reply with only the " +
-                  "translated text and nothing else.",
-              },
-            ],
-          },
-          contents: [{ role: "user", parts: [{ text: `Target language (IETF BCP47): ${lang}\n\nText:\n${text}` }] }],
+          systemInstruction: { parts: [{ text: translateSystemPrompt.trim() }] },
+          contents: [{ role: "user", parts: [{ text: buildUserPrompt(lang, text) }] }],
           generationConfig: { temperature: 0 },
         }),
       }

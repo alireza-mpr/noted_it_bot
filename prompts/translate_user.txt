@@ -1,0 +1,4 @@
+Target language (IETF BCP47): {lang}
+
+Text:
+{text}

@@ -11,15 +11,24 @@ APP_VERSION = "0.0.0-dev-local"
 [[env.dev.kv_namespaces]]
 binding = "I18N"
 id = "e0e7f8d9713349c5ae59be6961935109"
+remote = true
 [[env.dev.kv_namespaces]]
 binding = "USER_LANG"
 id = "d05a28ba60ae461e935926195327875d"
+remote = true
 [[env.dev.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "f1a94b61a6ea499ba534adab79d3b3fc"
+remote = true
 [[env.dev.kv_namespaces]]
 binding = "WHITELIST"
 id = "6b921bb296ca46bf95c7340852fabc67"
+remote = true
+[[env.dev.d1_databases]]
+binding = "GEMINI_USAGE_DB"
+database_name = "noted-it-dev-usage"
+database_id = "79df708c-b243-45ba-b308-f2d25f03db4a"
+remote = true
 
 [env.prod]
 name = "noted-it-bot"
@@ -37,3 +46,7 @@ id = "0995f983386447d89941d1a4de8ac90b"
 [[env.prod.kv_namespaces]]
 binding = "WHITELIST"
 id = "7bc58ed05e544baa88fb25ca11d7bd2c"
+[[env.prod.d1_databases]]
+binding = "GEMINI_USAGE_DB"
+database_name = "noted-it-prod-usage"
+database_id = "00000000-0000-0000-0000-000000000000"

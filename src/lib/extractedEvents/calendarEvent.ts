@@ -1,5 +1,5 @@
-import type { ExtractedEvent } from "../interfaces/extracted_event";
-import { resolveTimezone, resolveYear, zonedTimeToUtc } from "./timezone";
+import type { ExtractedEvent } from "./extractedEvent";
+import { resolveTimezone, resolveYear, zonedTimeToUtc } from "../time/timezone";
 import { buildRrule, describeRecurrence, planRecurrence } from "./recurrence";
 
 export interface BuiltCalendarEvent {
@@ -33,7 +33,13 @@ function formatIcsUtc(date: Date): string {
   );
 }
 
-function formatIcsLocal(year: number, month: number, day: number, hour: number, minute: number): string {
+function formatIcsLocal(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+): string {
   return `${year}${pad(month)}${pad(day)}T${pad(hour)}${pad(minute)}00`;
 }
 
@@ -43,15 +49,27 @@ function formatIcsDate(year: number, month: number, day: number): string {
 
 // All-day DTEND is exclusive per RFC 5545 §3.6.1 — a one-day event's DTEND is
 // the following day.
-function nextDay(year: number, month: number, day: number): { year: number; month: number; day: number } {
+function nextDay(
+  year: number,
+  month: number,
+  day: number,
+): { year: number; month: number; day: number } {
   const d = new Date(Date.UTC(year, month - 1, day + 1));
-  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+  };
 }
 
 // RFC 5545 §3.3.11: backslash, semicolon, comma and newline are significant
 // and must be escaped in TEXT values.
 function escapeIcsText(text: string): string {
-  return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
 }
 
 const FOLD_LIMIT = 75; // octets per physical line, per RFC 5545 §3.1
@@ -103,14 +121,17 @@ export function buildCalendarEvent(
   event: ExtractedEvent,
   uid: string,
   lang?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): BuiltCalendarEvent | null {
   if (event.calendar !== "gregorian") {
     return null;
   }
 
   const recurrence = event.recurrence ?? null;
-  const dated = event.date_kind === "absolute" && event.month !== null && event.day !== null;
+  const dated =
+    event.date_kind === "absolute" &&
+    event.month !== null &&
+    event.day !== null;
   const weekdayPattern = event.date_kind === "weekday" && recurrence !== null;
   if (!dated && !weekdayPattern) {
     return null;
@@ -151,7 +172,10 @@ export function buildCalendarEvent(
   let dtStartLine: string;
   let dtEndLine: string;
   let googleDates: string;
-  const googleParams = new URLSearchParams({ action: "TEMPLATE", text: event.title ?? "Event" });
+  const googleParams = new URLSearchParams({
+    action: "TEMPLATE",
+    text: event.title ?? "Event",
+  });
 
   if (allDay) {
     const startDate = formatIcsDate(year, month, day);
@@ -162,14 +186,34 @@ export function buildCalendarEvent(
     dtEndLine = `DTEND;VALUE=DATE:${endDate}`;
     googleDates = `${startDate}/${endDate}`;
   } else {
-    const startLocal = formatIcsLocal(year, month, day, start!.hour, start!.minute);
+    const startLocal = formatIcsLocal(
+      year,
+      month,
+      day,
+      start!.hour,
+      start!.minute,
+    );
     const endLocal = formatIcsLocal(year, month, day, end!.hour, end!.minute);
 
     dtStartLine = `DTSTART;TZID=${timeZone}:${startLocal}`;
     dtEndLine = `DTEND;TZID=${timeZone}:${endLocal}`;
 
-    const startUtc = zonedTimeToUtc(year, month, day, start!.hour, start!.minute, timeZone);
-    const endUtc = zonedTimeToUtc(year, month, day, end!.hour, end!.minute, timeZone);
+    const startUtc = zonedTimeToUtc(
+      year,
+      month,
+      day,
+      start!.hour,
+      start!.minute,
+      timeZone,
+    );
+    const endUtc = zonedTimeToUtc(
+      year,
+      month,
+      day,
+      end!.hour,
+      end!.minute,
+      timeZone,
+    );
     googleDates = `${formatIcsUtc(startUtc)}/${formatIcsUtc(endUtc)}`;
     googleParams.set("ctz", timeZone);
   }
@@ -187,7 +231,16 @@ export function buildCalendarEvent(
     const untilValue = until
       ? allDay
         ? formatIcsDate(until.year, until.month, until.day)
-        : formatIcsUtc(zonedTimeToUtc(until.year, until.month, until.day, 23, 59, timeZone))
+        : formatIcsUtc(
+            zonedTimeToUtc(
+              until.year,
+              until.month,
+              until.day,
+              23,
+              59,
+              timeZone,
+            ),
+          )
       : null;
     rrule = buildRrule(recurrence, untilValue);
     // Google's web editor honours this; its phone app ignores it (adds a
@@ -223,16 +276,20 @@ export function buildCalendarEvent(
   }).format(new Date(Date.UTC(year, month - 1, day)));
 
   const formatClock = (hour: number, minute: number) =>
-    new Intl.DateTimeFormat(lang || "en", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(
-      new Date(Date.UTC(2000, 0, 1, hour, minute))
-    );
+    new Intl.DateTimeFormat(lang || "en", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }).format(new Date(Date.UTC(2000, 0, 1, hour, minute)));
 
   const summaryLines: string[] = [];
   if (event.title) {
     summaryLines.push(`📌 ${event.title}`);
   }
   summaryLines.push(
-    allDay ? `🗓️ ${dateLabel}` : `🗓️ ${dateLabel} ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`
+    allDay
+      ? `🗓️ ${dateLabel}`
+      : `🗓️ ${dateLabel} ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`,
   );
 
   return {
@@ -251,7 +308,9 @@ export function buildCalendarEvent(
                 year: "numeric",
                 timeZone: "UTC",
                 calendar: "gregory",
-              }).format(new Date(Date.UTC(until.year, until.month - 1, until.day)))
+              }).format(
+                new Date(Date.UTC(until.year, until.month - 1, until.day)),
+              )
             : null,
         }
       : null,

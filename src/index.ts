@@ -1,15 +1,24 @@
 import eventExtractPrompt from "../prompts/event_extract.txt";
 import diagPingPrompt from "../prompts/diag_ping.txt";
-import { EVENT_SCHEMA } from "./schemas/event_schema";
-import type { ExtractedEvent } from "./interfaces/extracted_event";
-import { buildCalendarEvent } from "./lib/calendarEvent";
-import { recurrenceProblem } from "./lib/recurrence";
-import { computeEventUid } from "./lib/eventUid";
-import { translateText } from "./lib/translate";
-import { resolveLanguageCode, getLanguageDisplayName } from "./lib/language";
-import { getUserLanguageOverride, setUserLanguageOverride, clearUserLanguageOverride } from "./lib/userLanguage";
-import { logMessage } from "./lib/messageLog";
-import { isWhitelisted } from "./lib/whitelist";
+import { EVENT_SCHEMA } from "./lib/extractedEvents/event_schema";
+import type { ExtractedEvent } from "./lib/extractedEvents/extractedEvent";
+import { buildCalendarEvent } from "./lib/extractedEvents/calendarEvent";
+import { recurrenceProblem } from "./lib/extractedEvents/recurrence";
+import { computeEventUid } from "./lib/extractedEvents/eventUid";
+import { translateText } from "./lib/translation/translate";
+import {
+  resolveLanguageCode,
+  getLanguageDisplayName,
+} from "./lib/translation/language";
+import {
+  getUserLanguageOverride,
+  setUserLanguageOverride,
+  clearUserLanguageOverride,
+} from "./lib/translation/userLanguage";
+import { messageLogger } from "./logging/messageLogger";
+import { createRouter } from "./router/router";
+import type { LlmClient, LlmFailure } from "./lib/providers/providerClient";
+import { whitelistPolicy } from "./policy/whitelistPolicy";
 import {
   START_MESSAGE,
   CALENDAR_CAPTION_TEMPLATE,
@@ -27,9 +36,7 @@ import {
   LANG_NOT_UNDERSTOOD,
   NOT_WHITELISTED_BY_USERNAME,
   NOT_WHITELISTED_BY_ID,
-} from "./messages";
-
-const GEMINI_MODEL = "gemini-3.1-flash-lite"; // free-tier model, current (non-legacy) Interactions API
+} from "./lib/interactiveMessages/messages";
 
 export interface Env {
   BOT_TOKEN: string;
@@ -40,14 +47,20 @@ export interface Env {
   USER_LANG: KVNamespace;
   MESSAGE_LOG: KVNamespace;
   WHITELIST: KVNamespace;
+  GEMINI_USAGE_DB: D1Database;
 }
 
 interface TelegramUpdate {
   message?: {
     text?: string;
-    caption?: string; // set instead of `text` when the message carries media (photo, video, ...)
+    caption?: string; // media messages carry their text here, not in `text`
     chat: { id: number };
-    from?: { id?: number; first_name?: string; username?: string; language_code?: string };
+    from?: {
+      id?: number;
+      first_name?: string;
+      username?: string;
+      language_code?: string;
+    };
   };
 }
 
@@ -91,8 +104,7 @@ async function sendDocument(
   });
 }
 
-// Escapes a URL for safe use inside an HTML href="..." attribute (Telegram's
-// HTML parse_mode). Google Calendar links contain `&` between query params.
+// Escapes a URL for an HTML href (Telegram parse_mode HTML); calendar links contain "&".
 function escapeHtmlAttribute(url: string): string {
   return url
     .replace(/&/g, "&amp;")
@@ -104,6 +116,7 @@ function escapeHtmlAttribute(url: string): string {
 interface DownstreamResult {
   result: "ok" | "failed";
   message: string;
+  failure?: LlmFailure;
 }
 
 const GEMINI_FAILURE: DownstreamResult = {
@@ -111,105 +124,21 @@ const GEMINI_FAILURE: DownstreamResult = {
   message: "Sorry! I couldn't speak with Gemini",
 };
 
-async function askGemini(
-  env: Env,
-  prompt: string,
-  temperature?: number,
-): Promise<DownstreamResult> {
-  try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": env.GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          model: GEMINI_MODEL,
-          input: prompt,
-          ...(temperature !== undefined && {
-            generation_config: { temperature },
-          }),
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      return GEMINI_FAILURE;
-    }
-
-    const data = await response.json<{
-      steps?: { type?: string; content?: { type?: string; text?: string }[] }[];
-    }>();
-
-    const text = data.steps
-      ?.filter((step) => step.type === "model_output")
-      .flatMap((step) => step.content ?? [])
-      .filter((block) => block.type === "text")
-      .map((block) => block.text ?? "")
-      .join("")
-      .trim();
-
-    return text ? { result: "ok", message: text } : GEMINI_FAILURE;
-  } catch {
-    return GEMINI_FAILURE;
-  }
-}
-
 export async function extractEvent(
-  env: Env,
+  llm: LlmClient,
   telegramMessageText: string,
 ): Promise<DownstreamResult> {
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": env.GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          // 2. your prompt
-          systemInstruction: { parts: [{ text: eventExtractPrompt }] },
-
-          // 3. the telegram message
-          contents: [{ role: "user", parts: [{ text: telegramMessageText }] }],
-
-          // 4. the shape you want back
-          generationConfig: {
-            temperature: 0,
-            responseMimeType: "application/json",
-            responseSchema: EVENT_SCHEMA,
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      console.error(
-        "extractEvent: Gemini returned",
-        response.status,
-        await response.text(),
-      );
-      return GEMINI_FAILURE;
+    const answer = await llm.generate({
+      systemPrompt: eventExtractPrompt,
+      userPrompt: telegramMessageText,
+      responseSchema: EVENT_SCHEMA,
+    });
+    if (answer.result === "failed") {
+      return { ...GEMINI_FAILURE, failure: answer.failure };
     }
 
-    const data = await response.json<{
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    }>();
-
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
-      console.error(
-        "extractEvent: no text in Gemini response",
-        JSON.stringify(data),
-      );
-      return GEMINI_FAILURE;
-    }
-
-    const event: ExtractedEvent = JSON.parse(text);
+    const event: ExtractedEvent = JSON.parse(answer.text);
     console.log(
       "extractEvent: extracted",
       JSON.stringify({ source: telegramMessageText, event }),
@@ -217,7 +146,10 @@ export async function extractEvent(
     return { result: "ok", message: JSON.stringify(event) };
   } catch (err) {
     console.error("extractEvent: threw", err);
-    return GEMINI_FAILURE;
+    return {
+      ...GEMINI_FAILURE,
+      failure: { kind: "internal", detail: String(err) },
+    };
   }
 }
 
@@ -228,7 +160,11 @@ async function replyWith(
   lang: string | undefined,
 ): Promise<void> {
   if (downstream.result === "failed") {
-    console.error("Downstream call failed", downstream.message);
+    console.error(
+      "Downstream call failed",
+      downstream.message,
+      JSON.stringify(downstream.failure),
+    );
   }
   const text = await translateText(env, downstream.message, lang);
   await sendMessage(env, chatId, text);
@@ -236,30 +172,33 @@ async function replyWith(
 
 interface DiagCheck {
   name: string;
-  run: (env: Env) => Promise<boolean>;
+  run: (llm: LlmClient) => Promise<string | null>;
 }
 
-// Each check must produce one exact, deterministic expected value — not just
-// "did the call succeed" — so a component that responds but drifts/misbehaves
-// still gets flagged as broken.
 const DIAG_CHECKS: DiagCheck[] = [
   {
     name: "Gemini",
-    run: async (env) => {
-      const downstream = await askGemini(env, diagPingPrompt.trim(), 0);
-      return downstream.result === "ok" && downstream.message.trim() === "PONG";
+    run: async (llm) => {
+      const answer = await llm.generate({
+        userPrompt: diagPingPrompt.trim(),
+        temperature: 0,
+      });
+      if (answer.result === "failed") {
+        return answer.failure.kind;
+      }
+      return answer.text.trim() === "PONG" ? null : "unexpected reply";
     },
   },
 ];
 
-async function runDiagnostics(env: Env): Promise<string> {
+async function runDiagnostics(llm: LlmClient): Promise<string> {
   const lines = await Promise.all(
     DIAG_CHECKS.map(async (check) => {
-      const ok = await check.run(env).catch((err) => {
+      const problem = await check.run(llm).catch((err) => {
         console.error(`Diag check "${check.name}" threw`, err);
-        return false;
+        return "threw";
       });
-      return `${check.name}: ${ok ? "OK" : "Broken"}`;
+      return `${check.name}: ${problem === null ? "OK" : `Broken (${problem})`}`;
     }),
   );
   return lines.join("\n");
@@ -276,13 +215,12 @@ export default {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    // Always ACK with 200 past this point, no matter what happens below.
-    // Telegram only advances its per-bot update queue on a 2xx response —
-    // any non-2xx (or a thrown error surfacing as 500) leaves that update
-    // stuck at the head of the queue, blocking every update behind it until
-    // it succeeds. Never let an error propagate up to the response status —
-    // but still surface it back to the chat (when we know the chat id) so a
-    // failure is visible to the user instead of silently swallowed.
+    whitelistPolicy.init(env.WHITELIST, env.MESSAGE_LOG);
+    messageLogger.init(env.MESSAGE_LOG);
+    const router = createRouter(env);
+
+    // Always ACK 200 from here on: Telegram retries a non-2xx update and blocks
+    // the queue behind it. Errors are reported to the chat instead.
     let chatId: number | undefined;
     let lang: string | undefined;
     try {
@@ -290,32 +228,44 @@ export default {
       const message = update.message;
       chatId = message?.chat.id;
 
-      const langOverride = message ? await getUserLanguageOverride(env, message.chat.id) : null;
+      const langOverride = message
+        ? await getUserLanguageOverride(env, message.chat.id)
+        : null;
       lang = langOverride ?? message?.from?.language_code;
 
-      // /lang works for everyone, whitelisted or not — even a rejected user
-      // should be able to set their preferred language, so future replies
-      // (including the rejection message itself) come back in it.
+      // /lang is exempt, so even a rejected user can pick the language of the rejection.
       const isLangCommand = message?.text?.startsWith("/lang") ?? false;
 
-      if (message && !isLangCommand && !(await isWhitelisted(env, message.from?.username, message.from?.id))) {
-        console.warn(
-          "Rejected non-whitelisted user",
-          message.from?.username ?? "(no username)",
+      if (
+        message &&
+        !isLangCommand &&
+        !(await whitelistPolicy.isWhiteListed({
+          username: message.from?.username,
+          userId: message.from?.id,
+        }))
+      ) {
+        await whitelistPolicy.logger.rejected(
+          message.from?.username,
           message.from?.id,
-          message.chat.id
+          message.chat.id,
         );
-        const identifierTemplate = message.from?.username ? NOT_WHITELISTED_BY_USERNAME : NOT_WHITELISTED_BY_ID;
+        const identifierTemplate = message.from?.username
+          ? NOT_WHITELISTED_BY_USERNAME
+          : NOT_WHITELISTED_BY_ID;
         const identifierValue = message.from?.username
           ? `@${message.from.username}`
           : String(message.from?.id ?? "unknown");
-        const text = (await translateText(env, identifierTemplate, lang)).replace("{0}", identifierValue);
+        const text = (
+          await translateText(env, identifierTemplate, lang)
+        ).replace("{0}", identifierValue);
         await sendMessage(env, message.chat.id, text);
         return new Response("OK");
       }
 
       if (message?.text === "/start") {
-        const startText = (await translateText(env, START_MESSAGE, lang)).replace("{0}", "Noted");
+        const startText = (
+          await translateText(env, START_MESSAGE, lang)
+        ).replace("{0}", "Noted");
         await sendMessage(env, message.chat.id, startText);
       }
 
@@ -323,10 +273,9 @@ export default {
         await sendMessage(env, message.chat.id, env.APP_VERSION);
       }
 
-      // Intentionally not registered via setMyCommands — functional but
-      // hidden from Telegram's "/" autocomplete menu.
+      // Hidden: not registered via setMyCommands.
       if (message?.text === "/diag") {
-        const report = await runDiagnostics(env);
+        const report = await runDiagnostics(router);
         await sendMessage(env, message.chat.id, report);
       }
 
@@ -336,33 +285,46 @@ export default {
         if (!arg) {
           const template = langOverride ? LANG_STATUS_MANUAL : LANG_STATUS_AUTO;
           const displayName = getLanguageDisplayName(lang ?? "en");
-          const text = (await translateText(env, template, lang)).replace("{0}", displayName);
+          const text = (await translateText(env, template, lang)).replace(
+            "{0}",
+            displayName,
+          );
           await sendMessage(env, message.chat.id, text);
         } else if (arg.toLowerCase() === "auto") {
           await clearUserLanguageOverride(env, message.chat.id);
-          await sendMessage(env, message.chat.id, await translateText(env, LANG_RESET_CONFIRMATION, message.from?.language_code));
+          await sendMessage(
+            env,
+            message.chat.id,
+            await translateText(
+              env,
+              LANG_RESET_CONFIRMATION,
+              message.from?.language_code,
+            ),
+          );
         } else {
           const resolved = await resolveLanguageCode(env, arg);
           if (!resolved) {
-            const text = (await translateText(env, LANG_NOT_UNDERSTOOD, lang)).replace("{0}", arg);
+            const text = (
+              await translateText(env, LANG_NOT_UNDERSTOOD, lang)
+            ).replace("{0}", arg);
             await sendMessage(env, message.chat.id, text);
           } else {
             await setUserLanguageOverride(env, message.chat.id, resolved);
             const displayName = getLanguageDisplayName(resolved);
-            const text = (await translateText(env, LANG_SET_CONFIRMATION, resolved)).replace("{0}", displayName);
+            const text = (
+              await translateText(env, LANG_SET_CONFIRMATION, resolved)
+            ).replace("{0}", displayName);
             await sendMessage(env, message.chat.id, text);
           }
         }
       }
 
-      // A media message (photo, video, ...) carries its text as `caption`
-      // instead of `text` — e.g. a forwarded channel post with a flyer image.
       const content = message?.text ?? message?.caption;
 
       if (message && content && !content.startsWith("/")) {
-        const downstream = await extractEvent(env, content);
+        const downstream = await extractEvent(router, content);
 
-        await logMessage(env, {
+        await messageLogger.log({
           username: message.from?.username ?? null,
           userId: message.from?.id ?? null,
           receivedMessage: content,
@@ -374,11 +336,13 @@ export default {
           const event: ExtractedEvent = JSON.parse(downstream.message);
           const uid = await computeEventUid(content);
 
-          // A repeat rule we can't trust is declined outright — a wrong one
-          // silently fills someone's calendar.
           const problem = recurrenceProblem(event);
           if (problem) {
-            console.error("Declined recurring event", problem, downstream.message);
+            console.error(
+              "Declined recurring event",
+              problem,
+              downstream.message,
+            );
             await sendMessage(
               env,
               message.chat.id,
@@ -400,14 +364,22 @@ export default {
 
             const summaryLines = [...calendarEvent.summaryLines];
             if (calendarEvent.recurrence) {
-              const sentence = (await translateText(env, calendarEvent.recurrence.template, lang)).replace(
-                "{0}",
-                calendarEvent.recurrence.untilLabel ?? "",
-              );
+              const sentence = (
+                await translateText(
+                  env,
+                  calendarEvent.recurrence.template,
+                  lang,
+                )
+              ).replace("{0}", calendarEvent.recurrence.untilLabel ?? "");
               summaryLines.push(`🔁 ${sentence}`);
             }
-            const summaryBlock = summaryLines.map((line) => escapeHtmlAttribute(line)).join("\n");
-            const addToCalendarText = captionTemplate.replace("{0}", `<a href="${googleUrl}">${linkLabel}</a>`);
+            const summaryBlock = summaryLines
+              .map((line) => escapeHtmlAttribute(line))
+              .join("\n");
+            const addToCalendarText = captionTemplate.replace(
+              "{0}",
+              `<a href="${googleUrl}">${linkLabel}</a>`,
+            );
             let caption = `${summaryBlock}\n\n🔔 ${addToCalendarText}`;
             if (calendarEvent.recurrence) {
               caption += `\n\n${await translateText(env, RECURRING_NOTE, lang)}`;
@@ -454,19 +426,16 @@ export default {
     } catch (err) {
       console.error("Unhandled error processing update", err);
       if (chatId !== undefined) {
-        const errorText = await translateText(env, GENERIC_ERROR_MESSAGE, lang).catch(
-          () => GENERIC_ERROR_MESSAGE,
-        );
-        await sendMessage(
+        const errorText = await translateText(
           env,
-          chatId,
-          errorText,
-        ).catch((sendErr) =>
+          GENERIC_ERROR_MESSAGE,
+          lang,
+        ).catch(() => GENERIC_ERROR_MESSAGE);
+        await sendMessage(env, chatId, errorText).catch((sendErr) =>
           console.error("Failed to report error back to chat", sendErr),
         );
       }
     }
-
     return new Response("OK");
   },
 };

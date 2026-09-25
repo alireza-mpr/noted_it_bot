@@ -1,5 +1,5 @@
-import type { ExtractedEvent, Recurrence, Weekday } from "../interfaces/extracted_event";
-import { resolveTimezone, resolveYear } from "./timezone";
+import type { ExtractedEvent, Recurrence, Weekday } from "./extractedEvent";
+import { resolveTimezone, resolveYear } from "../time/timezone";
 
 // Below this, a message that reads as recurring is declined rather than
 // guessed at — a wrong repeat rule silently fills someone's calendar.
@@ -29,14 +29,24 @@ const DAY_NAMES: Record<Weekday, string> = {
   SU: "Sunday",
 };
 
-const ORDINAL_NAMES: Record<number, string> = { 1: "first", 2: "second", 3: "third", 4: "fourth", [-1]: "last" };
+const ORDINAL_NAMES: Record<number, string> = {
+  1: "first",
+  2: "second",
+  3: "third",
+  4: "fourth",
+  [-1]: "last",
+};
 
 function toDate(d: YMD): Date {
   return new Date(Date.UTC(d.year, d.month - 1, d.day));
 }
 
 function fromDate(date: Date): YMD {
-  return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+  };
 }
 
 function addDays(d: YMD, days: number): YMD {
@@ -69,7 +79,8 @@ function zonedNow(now: Date, timeZone: string): { ymd: YMD; minutes: number } {
     minute: "2-digit",
     hourCycle: "h23",
   }).formatToParts(now);
-  const get = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)!.value);
   return {
     ymd: { year: get("year"), month: get("month"), day: get("day") },
     minutes: get("hour") * 60 + get("minute"),
@@ -90,7 +101,9 @@ function matches(d: YMD, r: Recurrence): boolean {
         if (!r.weekdays!.includes(weekday)) {
           return false;
         }
-        return r.ordinal === -1 ? d.day + 7 > daysInMonth(d) : Math.ceil(d.day / 7) === r.ordinal;
+        return r.ordinal === -1
+          ? d.day + 7 > daysInMonth(d)
+          : Math.ceil(d.day / 7) === r.ordinal;
       }
       if (r.month_day != null) {
         return d.day === r.month_day;
@@ -114,7 +127,10 @@ function findMatch(from: YMD, r: Recurrence): YMD | null {
 // Works out the first occurrence and the end date, or explains why the
 // pattern can't be turned into a calendar series. Date arithmetic lives here,
 // never in the model.
-export function planRecurrence(event: ExtractedEvent, now: Date = new Date()): RecurrencePlan {
+export function planRecurrence(
+  event: ExtractedEvent,
+  now: Date = new Date(),
+): RecurrencePlan {
   const r = event.recurrence;
   if (!r) {
     return { ok: false, reason: "no recurrence" };
@@ -130,13 +146,34 @@ export function planRecurrence(event: ExtractedEvent, now: Date = new Date()): R
   if (!Number.isInteger(r.interval) || r.interval < 1) {
     return { ok: false, reason: `invalid interval ${r.interval}` };
   }
-  if (r.weekdays && (r.weekdays.length === 0 || r.weekdays.some((d) => !VALID_WEEKDAYS.has(d)))) {
+  if (
+    r.weekdays &&
+    (r.weekdays.length === 0 || r.weekdays.some((d) => !VALID_WEEKDAYS.has(d)))
+  ) {
     return { ok: false, reason: "invalid weekdays" };
   }
-  if (r.ordinal != null && !(r.frequency === "monthly" && r.weekdays?.length && [1, 2, 3, 4, -1].includes(r.ordinal))) {
-    return { ok: false, reason: "ordinal only applies to monthly weekday patterns" };
+  if (
+    r.ordinal != null &&
+    !(
+      r.frequency === "monthly" &&
+      r.weekdays?.length &&
+      [1, 2, 3, 4, -1].includes(r.ordinal)
+    )
+  ) {
+    return {
+      ok: false,
+      reason: "ordinal only applies to monthly weekday patterns",
+    };
   }
-  if (r.month_day != null && !(r.frequency === "monthly" && Number.isInteger(r.month_day) && r.month_day >= 1 && r.month_day <= 31)) {
+  if (
+    r.month_day != null &&
+    !(
+      r.frequency === "monthly" &&
+      Number.isInteger(r.month_day) &&
+      r.month_day >= 1 &&
+      r.month_day <= 31
+    )
+  ) {
     return { ok: false, reason: "month_day only applies to monthly patterns" };
   }
   if (r.frequency === "monthly" && r.weekdays?.length && r.ordinal == null) {
@@ -150,11 +187,15 @@ export function planRecurrence(event: ExtractedEvent, now: Date = new Date()): R
   if (!hasStartDate) {
     // No stated start: the pattern itself must say which days.
     const selfContained =
-      (r.frequency === "daily") ||
+      r.frequency === "daily" ||
       (r.frequency === "weekly" && !!r.weekdays?.length) ||
-      (r.frequency === "monthly" && ((!!r.weekdays?.length && r.ordinal != null) || r.month_day != null));
+      (r.frequency === "monthly" &&
+        ((!!r.weekdays?.length && r.ordinal != null) || r.month_day != null));
     if (!selfContained) {
-      return { ok: false, reason: "no start date and the pattern doesn't say which days" };
+      return {
+        ok: false,
+        reason: "no start date and the pattern doesn't say which days",
+      };
     }
   }
 
@@ -163,7 +204,11 @@ export function planRecurrence(event: ExtractedEvent, now: Date = new Date()): R
 
   let from: YMD;
   if (hasStartDate) {
-    from = { year: resolveYear(event.year, event.month!, event.day!, timeZone, now), month: event.month!, day: event.day! };
+    from = {
+      year: resolveYear(event.year, event.month!, event.day!, timeZone, now),
+      month: event.month!,
+      day: event.day!,
+    };
   } else {
     from = today;
     // Today only counts if the event hasn't already started.
@@ -196,8 +241,13 @@ export function planRecurrence(event: ExtractedEvent, now: Date = new Date()): R
   return { ok: true, first, until };
 }
 
-// null = fine (or not a recurring event). Otherwise a reason to decline.
-export function recurrenceProblem(event: ExtractedEvent, now: Date = new Date()): string | null {
+// null = fine (or not a recurring event). Otherwise a reason to decline: an
+// untrustworthy repeat rule is declined outright, since a wrong one silently
+// fills someone's calendar.
+export function recurrenceProblem(
+  event: ExtractedEvent,
+  now: Date = new Date(),
+): string | null {
   if (!event.recurrence || event.calendar !== "gregorian") {
     return null;
   }
@@ -222,7 +272,9 @@ export function buildRrule(r: Recurrence, untilValue: string | null): string {
   }
   if (r.frequency === "monthly") {
     if (r.weekdays?.length && r.ordinal != null) {
-      parts.push(`BYDAY=${r.weekdays.map((d) => `${r.ordinal}${d}`).join(",")}`);
+      parts.push(
+        `BYDAY=${r.weekdays.map((d) => `${r.ordinal}${d}`).join(",")}`,
+      );
     } else if (r.month_day != null) {
       parts.push(`BYMONTHDAY=${r.month_day}`);
     }
@@ -249,9 +301,12 @@ function ordinalSuffix(n: number): string {
 // in for the end date (formatted per language by the caller) so the template
 // itself stays cacheable across events.
 export function describeRecurrence(r: Recurrence): string {
-  const every = (unit: string, plural: string) => (r.interval === 1 ? `every ${unit}` : `every ${r.interval} ${plural}`);
+  const every = (unit: string, plural: string) =>
+    r.interval === 1 ? `every ${unit}` : `every ${r.interval} ${plural}`;
   const days = r.weekdays?.length
-    ? new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(r.weekdays.map((d) => DAY_NAMES[d]))
+    ? new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(
+        r.weekdays.map((d) => DAY_NAMES[d]),
+      )
     : null;
 
   let phrase: string;
@@ -260,10 +315,15 @@ export function describeRecurrence(r: Recurrence): string {
       phrase = every("day", "days");
       break;
     case "weekly":
-      phrase = days ? (r.interval === 1 ? `every ${days}` : `every ${r.interval} weeks on ${days}`) : every("week", "weeks");
+      phrase = days
+        ? r.interval === 1
+          ? `every ${days}`
+          : `every ${r.interval} weeks on ${days}`
+        : every("week", "weeks");
       break;
     case "monthly": {
-      const month = r.interval === 1 ? "every month" : `every ${r.interval} months`;
+      const month =
+        r.interval === 1 ? "every month" : `every ${r.interval} months`;
       if (days && r.ordinal != null) {
         phrase = `on the ${ORDINAL_NAMES[r.ordinal]} ${days} of ${month}`;
       } else if (r.month_day != null) {
