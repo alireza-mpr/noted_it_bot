@@ -8,4 +8,5 @@ export interface GeminiUsageRow {
   rpd: number;
   lastError: string;
   lastErrorAest: string;
+  lastSuccessAest: string;
 }

@@ -81,23 +81,26 @@ export class Router {
             continue;
           }
 
-          if (failure.kind === "unavailable") {
+          if (failure.kind === "unauthorized") {
+            // A bad API key breaks every model of this provider, so give up on
+            // it and try the next provider.
             await usageRepository.recordError(
               model,
-              log.unavailable(model, failure),
+              log.failed(model, failure),
               new Date(),
             );
-            continue;
+            break;
           }
 
-          // Any other failure would hit this provider's other models the same
-          // way, so give up on it and try the next provider.
+          // Anything else says nothing about this provider's other models (a
+          // retired model, a 503, an empty answer), so skip just this one.
           await usageRepository.recordError(
             model,
-            log.failed(model, failure),
+            failure.kind === "unavailable"
+              ? log.unavailable(model, failure)
+              : log.failed(model, failure),
             new Date(),
           );
-          break;
         }
       }
 

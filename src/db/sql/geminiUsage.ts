@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS gemini_usage (
   tpm      INTEGER NOT NULL DEFAULT 0,
   rpd      INTEGER NOT NULL DEFAULT 0,
   lastError     TEXT NOT NULL DEFAULT '',
-  lastErrorAest TEXT NOT NULL DEFAULT ''
+  lastErrorAest TEXT NOT NULL DEFAULT '',
+  lastSuccessAest TEXT NOT NULL DEFAULT ''
 )`;
 
 export const SELECT_GEMINI_EFFECTIVE_USAGE = `
@@ -20,8 +21,8 @@ SELECT
 FROM gemini_usage`;
 
 export const RECORD_GEMINI_USAGE = `
-INSERT INTO gemini_usage (model, day, minute, aestTime, rpm, tpm, rpd)
-VALUES (?, ?, ?, ?, 1, ?, 1)
+INSERT INTO gemini_usage (model, day, minute, aestTime, rpm, tpm, rpd, lastSuccessAest)
+VALUES (?, ?, ?, ?, 1, ?, 1, ?)
 ON CONFLICT(model) DO UPDATE SET
   rpd    = CASE WHEN day    = excluded.day    THEN rpd + 1 ELSE 1 END,
   rpm    = CASE WHEN minute = excluded.minute THEN rpm + 1 ELSE 1 END,
@@ -29,8 +30,7 @@ ON CONFLICT(model) DO UPDATE SET
   day    = excluded.day,
   minute = excluded.minute,
   aestTime = excluded.aestTime,
-  lastError     = '',
-  lastErrorAest = ''`;
+  lastSuccessAest = excluded.lastSuccessAest`;
 
 export const MARK_GEMINI_MINUTE_EXHAUSTED = `
 INSERT INTO gemini_usage (model, day, minute, aestTime, rpm, tpm, rpd)

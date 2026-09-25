@@ -15,9 +15,10 @@ import { RouterLog } from "../../src/router/routerLog";
 // Run it on demand with `npm run test:quota-fill`.
 //
 // It sends the same trivial prompt through the real Router, against the real
-// Gemini API and the real dev D1 usage table, all calls at once. Every call
-// reads the usage counts before any has recorded its use, so they all pick the
-// same first model and most get a real 429 back. It checks that the Router
+// Gemini API and the real dev D1 usage table, calls started 50 to 200 ms
+// apart, without waiting for each to finish. Many calls read the usage counts
+// before earlier ones have recorded their use, so they pick the same first
+// model and most get a real 429 back. It checks that the Router
 // recovers from that by moving on to the next model instead of failing.
 //
 // With enough calls every model fills up. Calls that find no model left may
@@ -65,6 +66,15 @@ class RecordingClient implements ProviderClient {
   }
 }
 
+const MIN_GAP_MS = 50;
+const MAX_GAP_MS = 200;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
 function countBy<T>(items: T[], key: (item: T) => string): [string, number][] {
   const counts = new Map<string, number>();
   for (const item of items) {
@@ -85,18 +95,26 @@ describe("quota fill (manual)", () => {
       const usageRepository = new GeminiUsageRepository(GEMINI_USAGE_DB);
       const attempts: Attempt[] = [];
 
-      const answers = await Promise.all(
-        Array.from({ length: calls }, (_, index) => {
-          const providerClient = new RecordingClient(
-            geminiClient,
-            index + 1,
-            attempts,
-          );
-          return new Router(new RouterLog(), [
+      // Start the calls one after another with a short random gap, without
+      // waiting for each to finish, so they overlap heavily but their answers
+      // don't all land at once.
+      const pending: ReturnType<Router["generate"]>[] = [];
+      for (let call = 1; call <= calls; call++) {
+        const providerClient = new RecordingClient(
+          geminiClient,
+          call,
+          attempts,
+        );
+        pending.push(
+          new Router(new RouterLog(), [
             { providerClient, usageRepository },
-          ]).generate(REQUEST);
-        }),
-      );
+          ]).generate(REQUEST),
+        );
+        if (call < calls) {
+          await sleep(randomBetween(MIN_GAP_MS, MAX_GAP_MS));
+        }
+      }
+      const answers = await Promise.all(pending);
 
       const replies: string[] = [];
       const failureKinds: string[] = [];

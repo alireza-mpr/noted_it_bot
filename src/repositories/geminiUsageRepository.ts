@@ -47,6 +47,7 @@ export class GeminiUsageRepository implements UsageRepository {
     tokens: number,
     now: Date,
   ): Promise<void> {
+    const at = dateTimeAest(now);
     await this.run(
       this.db
         .prepare(RECORD_GEMINI_USAGE)
@@ -54,8 +55,9 @@ export class GeminiUsageRepository implements UsageRepository {
           model.model,
           currentDay(now),
           currentMinute(now),
-          dateTimeAest(now),
+          at,
           tokens,
+          at,
         ),
     );
   }

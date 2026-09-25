@@ -232,7 +232,7 @@ from memory):
 | User messages (sender, text sent to Gemini, reply) | KV `MESSAGE_LOG`, keys `<timestamp>-<uuid>`, 14-day TTL | `npx wrangler kv key list --binding MESSAGE_LOG --env dev --remote`, then `npx wrangler kv key get --binding MESSAGE_LOG --env dev --remote "<key>"`; or dashboard → Workers KV → the namespace |
 | Router steps (`routerLog`) | Workers Logs (console) | dashboard → Workers & Pages → the Worker → Logs; live: `npx wrangler tail --env dev --format pretty` |
 | Whitelist rejections (`whitelistPolicyLogger`) | KV `MESSAGE_LOG`, keys `whitelist:<timestamp>-<uuid>`, and Workers Logs | same as above, add `--prefix whitelist:` to the list command |
-| Last failure per model | D1 table `gemini_usage` (`lastError`, `lastErrorAest`) | `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage"` |
+| Last failure per model | D1 table `gemini_usage` (`lastError`, `lastErrorAest`, `lastSuccessAest`) | `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError, lastSuccessAest FROM gemini_usage"` |
 
 Replace `dev` with `prod` (and the D1 name with `noted-it-prod-usage`) for prod.
 Test runs don't write to KV, and their router lines print to your terminal.
@@ -277,10 +277,11 @@ hard-coded Gemini model directly.
   correction if the assumption drifts.
 - **Storage:** one row per model in a `gemini_usage` table in a Cloudflare **D1**
   database (`model`, `day`, `minute`, `aestTime`, `rpm`, `tpm`, `rpd`, `lastError`,
-  `lastErrorAest`, all `NOT NULL`; `aestTime` is the last usage write in Australian
+  `lastErrorAest`, `lastSuccessAest`, all `NOT NULL`; `aestTime` is the last usage write in Australian
   Eastern time, to the second; `lastError` / `lastErrorAest` are the model's most
-  recent failure and when it happened, empty until it fails and cleared again by
-  its next successful call). Stale windows reset
+  recent failure and when it happened, empty until it fails and replaced only by
+  the next failure; `lastSuccessAest` is the time of its last successful call, so
+  an error older than that is stale and the model has recovered). Stale windows reset
   lazily on the next write; a model with no row counts as zero usage. The table
   is created on first use (each query is batched with
   `CREATE TABLE IF NOT EXISTS`, `src/db/schema/geminiUsageTable.ts`); all SQL:
@@ -300,9 +301,9 @@ hard-coded Gemini model directly.
   models in order, then moves on to the next provider (today there is one, Gemini;
   adding another means adding one more `{providerClient, usageRepository}` pair in
   `createRouter`). A failure only skips the model that failed and is saved on its
-  row, so one retired or broken model can't block the rest; the exception is a
-  401/403, where the key is bad for every model, so the router abandons that
-  provider and moves on to the next one.
+  row, so one retired or broken model can't block the rest; the exception is a 401/403, where the key is
+  bad for every model, so the router abandons that provider and moves on to the
+  next one.
   D1 calls are async, so `generate` is too. Each upsert
   is a single atomic statement. The D1 binding is in [wrangler.toml](wrangler.toml)
   for both envs; **create the databases and paste their ids over the placeholder
@@ -348,12 +349,12 @@ hard-coded Gemini model directly.
   - **Last error per model.** A rate limit, 503 or other failure is also saved on
     that model's `gemini_usage` row (`lastError`, `lastErrorAest`), e.g.
     `unavailable (HTTP 503): UNAVAILABLE: This model is currently experiencing high demand…`.
-    Only the latest failure is kept, and a successful call to that model clears it: `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage"`.
+    Only the latest failure is kept, and it isn't cleared by a success: a later `lastSuccessAest` means the model has recovered: `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage"`.
 - **Caps** live in `src/lib/providers/registry.ts` (`limits`), copied from the
   AI Studio free-tier usage table. Try order is registry order.
 - **Verification:** `tests/integration/extractEvent.test.ts` runs a table of
-  messages through the real router and Gemini: a 429 moves to the next model,
-  any other failure fails the test. `tests/geminiResponse.test.ts` checks the
+  messages through the real router and Gemini: a failed model (429, 503, 404…)
+  moves on to the next one, and the test fails only if no model answers. `tests/geminiResponse.test.ts` checks the
   parser against a real captured 503 (`tests/fixtures/gemini503Unavailable.ts`).
 
 ### Access control (whitelist)
