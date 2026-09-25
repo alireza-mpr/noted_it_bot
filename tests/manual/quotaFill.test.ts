@@ -22,16 +22,13 @@ import { RouterLog } from "../../src/router/routerLog";
 // recovers from that by moving on to the next model instead of failing.
 //
 // With enough calls every model fills up. Calls that find no model left may
-// then fail with rateLimited, unavailable or badRequest; any other kind of
+// then fail with rateLimited or unavailable; any other kind of
 // failure, or a wrong reply, is a bug. The number of calls is QUOTA_FILL_CALLS, set to 100
 // by `npm run test:quota-fill`; override it with e.g.
 // `QUOTA_FILL_CALLS=150 npm run test:quota-fill`.
 
 // Failures that are what running out of models looks like, not a bug.
-// badRequest is here because the registry keeps retired models (404) on
-// purpose for smoke testing, so a run that exhausts the chain ends on them;
-// the "skipped past" line of the summary still shows every one.
-const EXHAUSTED_KINDS = ["rateLimited", "unavailable", "badRequest"];
+const EXHAUSTED_KINDS = ["rateLimited", "unavailable"];
 const REQUEST: ProviderRequest = { userPrompt: "Reply with Pong nothing else" };
 
 interface Attempt {

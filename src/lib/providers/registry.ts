@@ -30,8 +30,6 @@ export const PROVIDERS: ProviderConfig[] = [
   gemini("gemini-3.6-flash", { rpm: 5, tpm: 250_000, rpd: 20 }),
   gemini("gemini-3.5-flash", { rpm: 5, tpm: 250_000, rpd: 20 }),
   gemini("gemini-3-flash-preview", { rpm: 5, tpm: 250_000, rpd: 20 }),
-  gemini("gemini-2.5-flash-lite", { rpm: 10, tpm: 250_000, rpd: 20 }),
-  gemini("gemini-2.5-flash", { rpm: 5, tpm: 250_000, rpd: 20 }),
 ];
 
 export const GEMINI_MODELS = PROVIDERS.filter(
