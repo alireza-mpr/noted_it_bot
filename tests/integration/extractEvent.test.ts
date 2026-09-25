@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { extractEvent } from "../../src/index";
+import { extractEvent } from "../../src/lib/extractedEvents/extractEvent";
 import { createRouter, type RouterEnv } from "../../src/router/router";
 import type {
   ExtractedEvent,

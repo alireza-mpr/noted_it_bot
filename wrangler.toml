@@ -7,7 +7,7 @@ enabled = true
 [env.dev]
 name = "noted-it-dev-bot"
 [env.dev.vars]
-APP_VERSION = "0.0.0-dev-local"
+APP_VERSION = "0.1.0-dev-local"
 [[env.dev.kv_namespaces]]
 binding = "I18N"
 id = "e0e7f8d9713349c5ae59be6961935109"
@@ -33,7 +33,7 @@ remote = true
 [env.prod]
 name = "noted-it-bot"
 [env.prod.vars]
-APP_VERSION = "0.0.0-dev-local"
+APP_VERSION = "0.1.0-dev-local"
 [[env.prod.kv_namespaces]]
 binding = "I18N"
 id = "296e4c6114df451ca33774a2edf28ce5"

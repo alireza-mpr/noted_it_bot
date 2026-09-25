@@ -42,10 +42,29 @@ today's date in the event's timezone when no start date is stated.
 ## How it works
 
 Telegram calls the Worker's URL as a webhook for every update (no polling, no
-always-on process). [src/index.ts](src/index.ts) verifies the request came from
-Telegram (via a shared secret token), checks the sender against the
-[whitelist](#access-control-whitelist), then routes to a command handler or
-(for anything else) event extraction via Gemini.
+always-on process). [src/index.ts](src/index.ts) is deliberately tiny: it
+verifies the request came from Telegram (via a shared secret token), initialises
+the shared pieces (whitelist policy, message logger), builds the router and the
+Telegram client, and hands the update to `handleUpdate`. Everything else is
+under `src/telegram/`:
+
+- `handleUpdate.ts` reads the update, works out the reply language, checks the
+  sender against the [whitelist](#access-control-whitelist) (`/lang` is exempt),
+  and routes: a command, or (for anything else) event extraction via Gemini.
+  It never throws; errors are reported to the chat, because Telegram retries
+  any non-2xx update and would block the queue.
+- `commands/` has one file per command (`/start`, `/ver`, `/diag`, `/lang`) and
+  `findCommand.ts`, the lookup used for routing.
+- `eventMessage.ts` is the forwarded-event flow: extract, log the message,
+  decline untrustworthy repeat rules, build the calendar event and caption, send
+  the `.ics`.
+- `replier.ts` is the one place that does "translate the template, fill `{0}`,
+  send", used by every reply; `telegramClient.ts` (`sendMessage`,
+  `sendDocument`), `telegramTypes.ts` and `telegramHtml.ts` are the Telegram API
+  pieces.
+
+`Env` is in `src/env.ts`; `extractEvent` is in
+`src/lib/extractedEvents/extractEvent.ts`.
 
 ## Local dev
 
@@ -100,7 +119,7 @@ than a simulated setup (every KV/D1 call is a network round trip) and leave
 - `.github/workflows/deploy.yml` — two jobs:
   - `deploy-dev` runs automatically on every push to `main`. On success, it
     pushes a git tag matching exactly what `/ver` reports for that deploy
-    (e.g. `v0.0.42-beta-abc1234`), so a specific dev deployment can be found
+    (e.g. `v0.1.42-beta-abc1234`), so a specific dev deployment can be found
     later with `git tag`. A failed deploy leaves no tag.
   - `deploy-prod` **never runs automatically** — it's `workflow_dispatch`-only
     (manually triggered), gated to only run against a `v*.*.*` tag. See
@@ -261,12 +280,12 @@ hard-coded Gemini model directly.
   is created on first use (each query is batched with
   `CREATE TABLE IF NOT EXISTS`, `src/db/schema/geminiUsageTable.ts`); all SQL:
   `src/db/sql/geminiUsage.ts`.
-- **Where it runs.** `index.ts` talks to a router and never to Gemini: it
+- **Where it runs.** The bot code talks to a router and never to Gemini: it
   depends on the `LlmClient` interface (`src/lib/providers/providerClient.ts`, one method:
   `generate({systemPrompt?, userPrompt, temperature?, responseSchema?})`), which
-  `Router` (`src/router/router.ts`) implements. The request handler builds it
-  once with `createRouter(env)` (in `src/router/router.ts`) and passes it to
-  `extractEvent(router, text)` and `/diag`. The router owns the loop and has two
+  `Router` (`src/router/router.ts`) implements. `index.ts` builds it once with
+  `createRouter(env)` (in `src/router/router.ts`) and passes it into `handleUpdate`,
+  which hands it to `extractEvent(router, text)` and `/diag`. The router owns the loop and has two
   collaborators: the **repository** (`src/repositories/geminiUsageRepository.ts`,
   D1 binding `GEMINI_USAGE_DB`) says which models are available and stores usage
   and errors, and the **provider client** (`GeminiClient`,
