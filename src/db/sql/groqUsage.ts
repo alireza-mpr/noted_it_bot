@@ -1,7 +1,12 @@
+// One row per Groq model. remainingRequests and limitRequests (the daily count
+// and its limit, as of the last response) are only for reading; routing uses
+// retryAfterUntil, in epoch milliseconds so it compares the same in any timezone.
 export const CREATE_GROQ_USAGE_TABLE = `
 CREATE TABLE IF NOT EXISTS groq_usage (
   model    TEXT NOT NULL PRIMARY KEY,
   aestTime TEXT NOT NULL DEFAULT '',
+  remainingRequests INTEGER,
+  limitRequests     INTEGER,
   retryAfterUntil INTEGER NOT NULL DEFAULT 0,
   lastError       TEXT NOT NULL DEFAULT '',
   lastErrorAest   TEXT NOT NULL DEFAULT '',
@@ -13,11 +18,13 @@ SELECT model, retryAfterUntil
 FROM groq_usage`;
 
 export const RECORD_GROQ_USAGE = `
-INSERT INTO groq_usage (model, aestTime, lastSuccessAest)
-VALUES (?, ?, ?)
+INSERT INTO groq_usage (model, aestTime, remainingRequests, limitRequests, lastSuccessAest)
+VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(model) DO UPDATE SET
-  aestTime        = excluded.aestTime,
-  lastSuccessAest = excluded.lastSuccessAest`;
+  aestTime          = excluded.aestTime,
+  remainingRequests = COALESCE(excluded.remainingRequests, remainingRequests),
+  limitRequests     = COALESCE(excluded.limitRequests, limitRequests),
+  lastSuccessAest   = excluded.lastSuccessAest`;
 
 export const MARK_GROQ_EXHAUSTED = `
 INSERT INTO groq_usage (model, aestTime, retryAfterUntil)

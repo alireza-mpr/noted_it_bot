@@ -7,6 +7,7 @@ import {
   SELECT_GROQ_USAGE,
 } from "../db/sql/groqUsage";
 import type { ProviderConfig } from "../providers/ProviderConfig";
+import type { ProviderRateLimit } from "../providers/providerClient";
 import { GROQ_MODELS } from "../providers/registry";
 import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
 import { dateTimeAest } from "../time/dateTimeAest";
@@ -41,10 +42,19 @@ export class GroqUsageRepository implements UsageRepository {
     model: ProviderConfig,
     _tokens: number,
     now: Date,
+    rateLimit?: ProviderRateLimit,
   ): Promise<void> {
     const at = dateTimeAest(now);
     await this.run(
-      this.db.prepare(RECORD_GROQ_USAGE).bind(model.model, at, at),
+      this.db
+        .prepare(RECORD_GROQ_USAGE)
+        .bind(
+          model.model,
+          at,
+          rateLimit?.remainingRequests ?? null,
+          rateLimit?.limitRequests ?? null,
+          at,
+        ),
     );
   }
 

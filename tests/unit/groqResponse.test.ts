@@ -15,7 +15,7 @@ describe("parseGroqResponse", () => {
       usage: { total_tokens: 97 },
     });
 
-    expect(parseGroqResponse(MODEL, 200, body, null)).toEqual({
+    expect(parseGroqResponse(MODEL, 200, body, new Headers())).toEqual({
       result: "ok",
       model: MODEL,
       text: "Pong",
@@ -23,9 +23,25 @@ describe("parseGroqResponse", () => {
     });
   });
 
+  it("reports the daily request count and limit from the headers", () => {
+    const body = JSON.stringify({
+      choices: [{ message: { content: "Pong" }, finish_reason: "stop" }],
+      usage: { total_tokens: 97 },
+    });
+    const headers = new Headers({
+      "x-ratelimit-remaining-requests": "999",
+      "x-ratelimit-limit-requests": "1000",
+    });
+
+    expect(parseGroqResponse(MODEL, 200, body, headers)).toMatchObject({
+      result: "ok",
+      rateLimit: { remainingRequests: 999, limitRequests: 1000 },
+    });
+  });
+
   it("reads retry-after on a 429", () => {
     expect(
-      parseGroqResponse(MODEL, 429, error("requests", "Please try again in 2s."), "2"),
+      parseGroqResponse(MODEL, 429, error("requests", "Please try again in 2s."), new Headers({ "retry-after": "2" })),
     ).toMatchObject({
       result: "failed",
       failure: { kind: "rateLimited", httpStatus: 429, retryAfterSeconds: 2 },
@@ -33,8 +49,8 @@ describe("parseGroqResponse", () => {
   });
 
   it("leaves retryAfterSeconds out when a 429 has no usable retry-after", () => {
-    for (const header of [null, "", "soon"]) {
-      const answer = parseGroqResponse(MODEL, 429, "{}", header);
+    for (const headers of [new Headers(), new Headers({ "retry-after": "" }), new Headers({ "retry-after": "soon" })]) {
+      const answer = parseGroqResponse(MODEL, 429, "{}", headers);
 
       expect(answer).toMatchObject({ failure: { kind: "rateLimited" } });
       expect(
@@ -54,7 +70,7 @@ describe("parseGroqResponse", () => {
     [500, "serverError"],
   ])("maps HTTP %i to %s", (status, kind) => {
     expect(
-      parseGroqResponse(MODEL, status, error("x", "boom"), null),
+      parseGroqResponse(MODEL, status, error("x", "boom"), new Headers()),
     ).toMatchObject({ result: "failed", failure: { kind, httpStatus: status } });
   });
 
@@ -63,7 +79,7 @@ describe("parseGroqResponse", () => {
       choices: [{ message: { content: "" }, finish_reason: "length" }],
     });
 
-    expect(parseGroqResponse(MODEL, 200, body, null)).toMatchObject({
+    expect(parseGroqResponse(MODEL, 200, body, new Headers())).toMatchObject({
       result: "failed",
       failure: { kind: "emptyResponse", detail: "empty response (finish_reason: length)" },
     });

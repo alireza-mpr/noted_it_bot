@@ -25,11 +25,13 @@ function describeError(data: GroqBody | null, body: string): string {
   return text.length > 300 ? `${text.slice(0, 300)}…` : text;
 }
 
-// retry-after is in whole seconds and is sent only on a 429.
-function parseRetryAfter(header: string | null): number | undefined {
-  const seconds = Number(header);
-  return header !== null && Number.isFinite(seconds) && seconds > 0
-    ? seconds
+type Headers = { get(name: string): string | null };
+
+function headerNumber(headers: Headers, name: string): number | undefined {
+  const raw = headers.get(name);
+  const value = Number(raw);
+  return raw !== null && raw.trim() !== "" && Number.isFinite(value)
+    ? value
     : undefined;
 }
 
@@ -37,7 +39,7 @@ export function parseGroqResponse(
   model: string,
   httpStatus: number,
   body: string,
-  retryAfter: string | null,
+  headers: Headers,
 ): ProviderResult {
   const data = parseJson(body);
   const fail = (failure: ProviderFailure): ProviderResult => ({
@@ -47,9 +49,11 @@ export function parseGroqResponse(
   const detail = () => describeError(data, body);
 
   if (httpStatus === 429) {
+    // retry-after is in whole seconds and is sent only on a 429.
+    const retryAfter = headerNumber(headers, "retry-after");
     return fail({
       kind: "rateLimited",
-      retryAfterSeconds: parseRetryAfter(retryAfter),
+      retryAfterSeconds: retryAfter !== undefined && retryAfter > 0 ? retryAfter : undefined,
       httpStatus,
       detail: detail(),
     });
@@ -79,10 +83,16 @@ export function parseGroqResponse(
     });
   }
 
+  const remainingRequests = headerNumber(headers, "x-ratelimit-remaining-requests");
+  const limitRequests = headerNumber(headers, "x-ratelimit-limit-requests");
   return {
     result: "ok",
     model,
     text,
     totalTokens: data?.usage?.total_tokens ?? 0,
+    ...(remainingRequests !== undefined &&
+      limitRequests !== undefined && {
+        rateLimit: { remainingRequests, limitRequests },
+      }),
   };
 }

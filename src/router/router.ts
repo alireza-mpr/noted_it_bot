@@ -4,6 +4,7 @@ import { GroqClient } from "../providers/groq/groqClient";
 import type { ProviderConfig } from "../providers/ProviderConfig";
 import type {
   ProviderFailure,
+  ProviderRateLimit,
   ProviderRequest,
   ProviderResult,
   ProviderClient,
@@ -15,7 +16,12 @@ import { RouterLog } from "./routerLog";
 export interface UsageRepository {
   selectAvailableModels(now: Date): Promise<ProviderConfig[]>;
 
-  recordUsage(model: ProviderConfig, tokens: number, now: Date): Promise<void>;
+  recordUsage(
+    model: ProviderConfig,
+    tokens: number,
+    now: Date,
+    rateLimit?: ProviderRateLimit,
+  ): Promise<void>;
 
   markQuotaExhausted(
     model: ProviderConfig,
@@ -61,6 +67,7 @@ export class Router {
               model,
               answer.totalTokens,
               new Date(),
+              answer.rateLimit,
             );
             log.succeeded(model, answer.totalTokens);
             return answer;

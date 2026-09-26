@@ -46,7 +46,7 @@ export class GroqClient implements ProviderClient {
         model.id,
         response.status,
         await response.text(),
-        response.headers.get("retry-after"),
+        response.headers,
       );
     } catch (err) {
       if ((err as Error).name === "TimeoutError") {
