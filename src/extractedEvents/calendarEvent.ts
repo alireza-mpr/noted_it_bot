@@ -8,7 +8,6 @@ import {
 } from "@internationalized/date";
 import { resolveTimezone, resolveYear, zonedTimeToUtc } from "../time/timezone";
 import { buildRrule, describeRecurrence, planRecurrence } from "./recurrence";
-import { toSupportedLanguage } from "../translation/language";
 
 export interface BuiltCalendarEvent {
   icsFilename: string;
@@ -393,8 +392,6 @@ export function buildCalendarEvent(
       : `🗓️ ${dateLabel} ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`,
   );
 
-  // The end date is written in the same language as the sentence around it.
-  const sentenceLang = toSupportedLanguage(lang) ?? "en";
   return {
     icsFilename: "event.ics",
     icsContent: lines.join("\r\n"),
@@ -404,9 +401,8 @@ export function buildCalendarEvent(
     recurrence: recurrence
       ? describeRecurrence(
           recurrence,
-          sentenceLang,
           until
-            ? new Intl.DateTimeFormat(sentenceLang, {
+            ? new Intl.DateTimeFormat("en", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",

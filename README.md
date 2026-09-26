@@ -202,14 +202,10 @@ per language, maps each message id (`START_MESSAGE`, `TZ_LINK_MESSAGE`, …) to 
 is the `MESSAGES` object in `src/interactiveMessages/messages.ts`. Code refers to messages only by id, typed as
 `MessageId`, so a message that isn't in the catalog doesn't compile. `translateStatic`
 (`src/translation/translate.ts`) looks the id up, so no reply calls a model to be translated, and an
-abuser can't run up the LLM quota by trying languages. The recurrence sentence ("Repeats every 2 weeks on
-Monday and Wednesday, until 5 Jan 2027") can't be listed in advance, so `describeRecurrence`
-(`src/extractedEvents/recurrence.ts`) builds it directly in the reply language from the phrase tables in
-`src/translation/recurrencePhrases.ts`: a template per pattern and plural form (picked with
-`Intl.PluralRules`), ordinals that agree with the weekday's gender where the language needs it, and weekday
-names, lists and numbers from `Intl`. `tests/unit/recurrence.test.ts` checks that every language fills every
-placeholder for every kind of pattern. **Adding a language** also means adding its entry there (TypeScript
-won't compile without it).
+abuser can't run up the LLM quota by trying languages. The recurrence line under an event ("Repeats every 2 weeks on Monday and Wednesday, until Jan 5, 2027") is
+event content, like the title and location, not one of the bot's own messages, so it is **not translated**:
+`describeRecurrence` (`src/extractedEvents/recurrence.ts`) always writes it in English. It is the readable
+copy of the repeat rule, which the `.ics` file carries exactly, for someone setting the repeat by hand on a phone.
 
 **Changing a message.** Edit the English in `src/interactiveMessages/messages.ts`, then update the value under
 the same id in all 15 JSON files. Nothing forces this: the old translations keep being served until you do, so

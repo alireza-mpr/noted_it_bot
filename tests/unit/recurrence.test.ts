@@ -265,111 +265,47 @@ describe("recurrenceProblem (decline conditions)", () => {
   });
 });
 
-describe("describeRecurrence", () => {
+describe("describeRecurrence (an English sentence, not translated)", () => {
   it("weekly on a weekday", () => {
-    expect(describeRecurrence(rec(), "en")).toBe("Repeats every Thursday");
+    expect(describeRecurrence(rec())).toBe("Repeats every Thursday");
   });
 
-  it("multiple weekdays, interval and until", () => {
+  it("multiple weekdays, interval and an end date", () => {
     expect(
       describeRecurrence(
         rec({ interval: 2, weekdays: ["MO", "WE"], end_kind: "until" }),
-        "en",
         "5 Jan 2027",
       ),
     ).toBe("Repeats every 2 weeks on Monday and Wednesday, until 5 Jan 2027");
   });
 
+  it("leaves the end off when it has no date to show", () => {
+    expect(describeRecurrence(rec({ end_kind: "until" }))).toBe("Repeats every Thursday");
+  });
+
   it("monthly ordinal weekday and count", () => {
     expect(
       describeRecurrence(
-        rec({
-          frequency: "monthly",
-          weekdays: ["FR"],
-          ordinal: 1,
-          end_kind: "count",
-          count: 4,
-        }),
-        "en",
+        rec({ frequency: "monthly", weekdays: ["FR"], ordinal: 1, end_kind: "count", count: 4 }),
       ),
     ).toBe("Repeats on the first Friday of every month, 4 times");
-  });
-
-  it("monthly day of the month", () => {
     expect(
-      describeRecurrence(
-        rec({ frequency: "monthly", weekdays: null, month_day: 22 }),
-        "en",
-      ),
-    ).toBe("Repeats on the 22nd of every month");
+      describeRecurrence(rec({ frequency: "monthly", weekdays: ["FR"], ordinal: -1, end_kind: "count", count: 1 })),
+    ).toBe("Repeats on the last Friday of every month, 1 time");
   });
 
-  it("falls back to English for an unsupported language", () => {
-    expect(describeRecurrence(rec(), "he")).toBe("Repeats every Thursday");
-    expect(describeRecurrence(rec(), undefined)).toBe("Repeats every Thursday");
-  });
-
-  it("writes the sentence in the reply language", () => {
-    expect(describeRecurrence(rec({ weekdays: ["MO", "WE"] }), "de")).toBe(
-      "Wiederholt sich jeden Montag und Mittwoch",
-    );
-    expect(describeRecurrence(rec({ frequency: "daily", weekdays: null, interval: 3 }), "fa")).toBe(
-      "هر ۳ روز یک‌بار تکرار می‌شود",
-    );
-    expect(describeRecurrence(rec({ frequency: "monthly", weekdays: null, month_day: 1 }), "fr")).toBe(
-      "Se répète le 1er de chaque mois",
-    );
-  });
-
-  it("uses the language's plural forms", () => {
-    const daily = (interval: number, lang: string) =>
-      describeRecurrence(rec({ frequency: "daily", weekdays: null, interval }), lang);
-    expect(daily(2, "ru")).toBe("Повторяется каждые 2 дня");
-    expect(daily(5, "ru")).toBe("Повторяется каждые 5 дней");
-    expect(daily(21, "ru")).toBe("Повторяется каждый 21 день");
-    expect(daily(2, "ar")).toBe("يتكرر كل يومين");
-    expect(
-      describeRecurrence(rec({ frequency: "weekly", weekdays: null, interval: 3 }), "pl"),
-    ).toBe("Powtarza się co 3 tygodnie");
-  });
-
-  it("makes the ordinal agree with the weekday", () => {
-    const monthly = (weekdays: Recurrence["weekdays"], ordinal: number, lang: string) =>
-      describeRecurrence(rec({ frequency: "monthly", weekdays, ordinal }), lang);
-    expect(monthly(["MO", "WE", "SU"], 1, "ru")).toBe(
-      "Повторяется каждый месяц: первый понедельник, первая среда и первое воскресенье",
-    );
-    expect(monthly(["SU"], -1, "it")).toBe("Si ripete l’ultima domenica di ogni mese");
-    expect(monthly(["MO"], 2, "pt")).toBe("Repete-se na segunda segunda-feira de cada mês");
-  });
-
-  it("fills every placeholder in every language and shape", () => {
-    const shapes: Partial<Recurrence>[] = [
-      { frequency: "daily", weekdays: null },
-      { frequency: "weekly", weekdays: null },
-      { frequency: "weekly", weekdays: ["MO", "SA"] },
-      { frequency: "monthly", weekdays: null },
-      { frequency: "monthly", weekdays: null, month_day: 15 },
-      { frequency: "monthly", weekdays: ["WE", "SU"], ordinal: -1 },
-      { frequency: "yearly", weekdays: null },
-    ];
-    const ends: Partial<Recurrence>[] = [
-      { end_kind: "never" },
-      { end_kind: "until" },
-      { end_kind: "count", count: 1 },
-      { end_kind: "count", count: 3 },
-      { end_kind: "count", count: 12 },
-    ];
-    for (const lang of SUPPORTED_LANGUAGES) {
-      for (const shape of shapes) {
-        for (const interval of [1, 2, 3, 5, 11, 21, 100]) {
-          for (const end of ends) {
-            const text = describeRecurrence(rec({ ...shape, ...end, interval }), lang, "DATE");
-            expect(text, `${lang} ${JSON.stringify({ ...shape, ...end, interval })}`).not.toMatch(/[{}]/);
-            expect(text.includes("DATE")).toBe(end.end_kind === "until");
-          }
-        }
-      }
+  it("monthly day of the month, with English ordinals", () => {
+    for (const [day, suffix] of [[1, "1st"], [2, "2nd"], [3, "3rd"], [11, "11th"], [12, "12th"], [22, "22nd"], [23, "23rd"], [31, "31st"]] as const) {
+      expect(
+        describeRecurrence(rec({ frequency: "monthly", weekdays: null, month_day: day })),
+      ).toBe(`Repeats on the ${suffix} of every month`);
     }
+  });
+
+  it("daily, yearly and every-N intervals", () => {
+    expect(describeRecurrence(rec({ frequency: "daily", weekdays: null }))).toBe("Repeats every day");
+    expect(describeRecurrence(rec({ frequency: "daily", weekdays: null, interval: 3 }))).toBe("Repeats every 3 days");
+    expect(describeRecurrence(rec({ frequency: "yearly", weekdays: null }))).toBe("Repeats every year");
+    expect(describeRecurrence(rec({ frequency: "weekly", weekdays: null, interval: 2 }))).toBe("Repeats every 2 weeks");
   });
 });
