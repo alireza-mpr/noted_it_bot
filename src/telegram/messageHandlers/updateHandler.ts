@@ -9,9 +9,9 @@ import { DEFAULT_LANGUAGE, toSupportedLanguage } from "../../translation/languag
 import { getUserLanguageOverride } from "../../translation/userLanguage";
 import {
   userQuotaPolicy,
+  type QuotaReservation,
   type UserQuotaConsumeResult,
 } from "../../policy/userQuotaPolicy";
-import { whitelistPolicy } from "../../policy/whitelistPolicy";
 import type { Router } from "../../router/router";
 import { diagCommandHandler } from "../commands/diagCommandHandler";
 import {
@@ -48,20 +48,17 @@ async function consumeUserQuota(
   return result;
 }
 
-// Returns true (after replying) when the sender isn't allowed.
-async function rejectUnlessWhitelisted(
-  message: TelegramMessage,
-  replier: Replier,
-): Promise<boolean> {
-  const userId = message.from.id;
-  if (await whitelistPolicy.isWhiteListed(userId)) {
-    logger.info("whitelist check passed");
-    return false;
+// Gives back a unit taken for a message no model answered. A failure here is
+// logged, not raised: the user already has their reply.
+async function refundUserQuota(reservation: QuotaReservation): Promise<void> {
+  try {
+    await userQuotaPolicy.refund(reservation);
+    logger.info("quota refunded", {
+      remainingQuota: reservation.previousRemainingQuota,
+    });
+  } catch (err) {
+    logger.error("could not refund quota", describeError(err));
   }
-
-  await whitelistPolicy.logger.rejected(userId, message.chat.id);
-  await replier.say("NOT_WHITELISTED", String(userId));
-  return true;
 }
 
 interface ConsumedQuota {
@@ -78,29 +75,6 @@ async function handleMessage(
   consumed: ConsumedQuota,
   origin: string,
 ): Promise<void> {
-  // /lang is exempt, so even a rejected user can pick the language of the rejection.
-  if (!isLangCommand(message.text)) {
-    if (
-      flags.enforceUserWhitelisting &&
-      (await rejectUnlessWhitelisted(message, replier))
-    ) {
-      return;
-    }
-
-    if (flags.enforceUserDailyQuota && !isTzCommand(message.text)) {
-      const quota = await consumeUserQuota(
-        message,
-        replier,
-        flags.dailyQuota,
-      );
-      if (!quota.successful) {
-        return;
-      }
-      consumed.show = true;
-      consumed.remaining = quota.remainingQuota;
-    }
-  }
-
   if (message.text === "/start") return startCommandHandler(replier);
   if (message.text === "/ver") return versionCommandHandler(env, replier);
   // /diag is deliberately not registered via setMyCommands, so it stays hidden from the menu.
@@ -112,13 +86,44 @@ async function handleMessage(
     return tzCommandHandler(env, message, replier, origin);
   }
 
-  return eventMessageHandler(
+  const content = message.text ?? message.caption;
+  if (!content) {
+    logger.error("message had no text or caption", {
+      telegramMessage: message,
+    });
+    await replier.say("NO_TEXT_MESSAGE");
+    return;
+  }
+
+  // An unknown /command: nothing to extract, and not worth a reply.
+  if (content.startsWith("/")) {
+    return;
+  }
+
+  // Quota is only taken for a message that goes to a model, and is given back
+  // if no model answers it.
+  let reservation: QuotaReservation | undefined;
+  if (flags.enforceUserDailyQuota) {
+    const quota = await consumeUserQuota(message, replier, flags.dailyQuota);
+    if (!quota.successful) {
+      return;
+    }
+    consumed.show = true;
+    consumed.remaining = quota.remainingQuota;
+    reservation = quota.reservation;
+  }
+
+  const answered = await eventMessageHandler(
     message,
+    content,
     router,
     replier,
     consumed.remaining,
     consumed.show,
   );
+  if (!answered && reservation) {
+    await refundUserQuota(reservation);
+  }
 }
 
 // Extracts the user-preferred language from the storage. Fall back to English if the stored preference can't be read.

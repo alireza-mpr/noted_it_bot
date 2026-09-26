@@ -35,6 +35,8 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.toml", environment: "dev" },
       remoteBindings: true,
       miniflare: {
+        // Local only, so repository tests run real SQL without touching the remote dev database.
+        d1Databases: ["TEST_DB"],
         bindings: {
           GEMINI_API_KEY: geminiApiKey,
           ...(secret("GROQ_API_KEY") && { GROQ_API_KEY: secret("GROQ_API_KEY") }),

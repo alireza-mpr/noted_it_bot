@@ -7,7 +7,6 @@
   "LANG_SET_CONFIRMATION": "Entendido — a partir de agora vou responder em {0}.",
   "LANG_USAGE": "Qual idioma? Envie /lang seguido do nome ou do código de um idioma, por exemplo /lang Persian ou /lang fa. Para voltar à detecção automática pelas configurações do Telegram, envie /lang auto.",
   "LINK_LABEL": "aqui",
-  "NOT_WHITELISTED": "Este bot é só por convite no momento e você não está na minha lista. Peça ao criador do bot para adicioná-lo — seu Id é {0}.",
   "NO_AVAILABLE_MODEL_MESSAGE": "Desculpe! Todos os provedores de IA estão ocupados agora. Tente novamente em um minuto.",
   "NO_CALENDAR_EVENT_MESSAGE": "⚠️ Não consegui transformar isto em um evento de calendário.",
   "NO_TEXT_MESSAGE": "⚠️ Desculpe! Não encontrei nenhum texto na sua mensagem.",

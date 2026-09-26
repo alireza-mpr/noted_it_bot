@@ -2,7 +2,6 @@ import type { Env } from "../env";
 import { runLogSession } from "../logging/logger";
 import { messageLogger } from "../logging/messageLogger";
 import { userQuotaPolicy } from "../policy/userQuotaPolicy";
-import { whitelistPolicy } from "../policy/whitelistPolicy";
 import { createRouter } from "../router/router";
 import { updateHandler } from "./messageHandlers/updateHandler";
 import { handleTzPage, handleTzSave } from "../web/tzRoutes";
@@ -33,7 +32,6 @@ export default {
         return new Response("Unauthorized", { status: 401 });
       }
 
-      whitelistPolicy.init(env.USAGE_DB, env.MESSAGE_LOG);
       userQuotaPolicy.init(env.USAGE_DB);
       messageLogger.init(env.MESSAGE_LOG);
 

@@ -57,27 +57,16 @@ async function buildCaption(
   return `${caption}\n\n${escapeHtmlAttribute(quotaLine)}`;
 }
 
+// Returns whether a model answered, so the caller knows whether the quota
+// taken for this message should be given back.
 export async function eventMessageHandler(
   message: TelegramMessage,
+  content: string,
   router: Router,
   replier: Replier,
   remainingQuota: number,
   showQuota: boolean,
-): Promise<void> {
-  const content = message.text ?? message.caption;
-  if (!content) {
-    logger.error("message had no text or caption", {
-      telegramMessage: message,
-    });
-    await replier.sayWithQuota("NO_TEXT_MESSAGE", remainingQuota, showQuota);
-    return;
-  }
-
-  // An unknown /command: nothing to extract, and not worth a reply.
-  if (content.startsWith("/")) {
-    return;
-  }
-
+): Promise<boolean> {
   const downstream = await extractEvent(router, content);
   await messageLogger.log("provider response received", {
     userId: message.from.id,
@@ -93,7 +82,7 @@ export async function eventMessageHandler(
       failure: downstream.failure,
     });
     await replier.say("NO_AVAILABLE_MODEL_MESSAGE");
-    return;
+    return false;
   }
 
   const event: ExtractedEvent = JSON.parse(downstream.message);
@@ -108,7 +97,7 @@ export async function eventMessageHandler(
       remainingQuota,
       showQuota,
     );
-    return;
+    return true;
   }
 
   const calendarEvent = buildCalendarEvent(
@@ -125,7 +114,7 @@ export async function eventMessageHandler(
       remainingQuota,
       showQuota,
     );
-    return;
+    return true;
   }
 
   logger.info("calendar event created", {
@@ -137,4 +126,5 @@ export async function eventMessageHandler(
     calendarEvent.icsContent,
     await buildCaption(calendarEvent, replier, remainingQuota, showQuota),
   );
+  return true;
 }

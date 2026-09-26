@@ -61,9 +61,6 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
   USER_DAILY_QUOTA_REMAINING: "🔢 You have {0} remaining request(s) for today.",
 
-  // {0} is the user's numeric Telegram id, enough to whitelist them.
-  NOT_WHITELISTED: "This bot is invite-only right now, and I don't have you on the list. Ask the creator of the bot to add you — your Id is {0}.",
-
   PAGE_TITLE: "Set your time zone",
 
   PAGE_DETECTED: "Your device says you're in:",

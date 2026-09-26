@@ -46,15 +46,15 @@ Telegram calls the Worker's URL as a webhook for every update (no polling, no
 always-on process). [src/telegram/telegramWebhook.ts](src/telegram/telegramWebhook.ts) is the Worker's
 entry point (`main` in `wrangler.toml`) and is deliberately tiny: it
 verifies the request came from Telegram (via a shared secret token), initialises
-the shared pieces (whitelist policy, message logger), builds the router and the
+the shared pieces (quota policy, message logger), builds the router and the
 Telegram client, and hands the update to `updateHandler`. The rest of the Telegram
 code sits next to it in `src/telegram/`:
 
 - `messageHandlers/updateHandler.ts` is the flow for one update: `updateHandler` reads it and works
-  out the reply language, then `handleMessage` checks the sender against the
-  [whitelist](#access-control-whitelist) (`/lang` is exempt) and dispatches: a
+  out the reply language, then `handleMessage` dispatches: a
   command (a plain `if` per command, so that is where a new one is added), or,
-  for anything else, event extraction via Gemini. `updateHandler` never throws;
+  for anything else, event extraction via Gemini, behind the
+  [daily quota](#access-and-daily-quota). `updateHandler` never throws;
   errors are reported to the chat, because Telegram retries any non-2xx update and
   would block the queue.
 - `commands/` has one handler file per command (`startCommandHandler.ts`,
@@ -242,7 +242,7 @@ uses a small web page instead, served by the Worker itself, with no model involv
    sends the confirmation to the chat.
 
 An exact zone name typed after the command (`/tz asia/tehran`) is applied directly without the page; any other text
-just gets the link. `/tz` doesn't use up daily quota (there's no model call), but it is behind the whitelist.
+just gets the link. `/tz` doesn't use up daily quota (there's no model call).
 
 **Who is asking.** The page and endpoint learn the user from a signed token, never from anything the browser
 sends (`src/web/tzToken.ts`): `base64url(payload).base64url(HMAC-SHA256)`, keyed by `WEBHOOK_SECRET` with a domain
@@ -252,7 +252,7 @@ prefix, so no new secret is needed. The payload is `{uid, lang, purpose, exp}`. 
 off. Neither can be used for the other's job, tampering is detected, and a token must be spelled exactly as it was
 signed. Requests with a missing, forged, expired or wrong-purpose token get a `403` and touch neither D1 nor Telegram.
 The page is served with a per-response CSP nonce, `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and no
-framing. A save token can be reused until it expires, which lets a whitelisted user change only their own row.
+framing. A save token can be reused until it expires, which lets a user change only their own row.
 
 **Testing it.** `tests/unit/tzToken.test.ts`, `tzRoutes.test.ts` and `tzCommand.test.ts` cover the tokens, both routes
 and the command. To see the real page, run `npx wrangler dev`, send `/tz` to the bot and open the link.
@@ -307,15 +307,15 @@ org is in another one). There are no direct `console.*` calls in `src/`: everyth
 a `Logger`, which prints one JSON line to the console (so Workers Logs still has it) and queues
 the same event for Axiom.
 
-- The existing loggers — `RouterLog`, `MessageLogger`, `WhitelistPolicyLogger` and
+- The existing loggers — `RouterLog`, `MessageLogger` and
   `UserQuotaPolicyLogger` — each take a `Logger` (default `new Logger("<name>")`).
 - Every other call site uses a module-level `new Logger("<name>")`; the name becomes the event's
   `source`. Pass extra structured fields as the second argument (`logger.error("threw", describeError(err))`,
   `logger.info("extracted", { model, tokens })`) rather than gluing them into the message.
   Don't use `message`, `source`, `level`, `seq`, `correlation_id`, `service`, `version` or `_time` as field names;
   they're the event's own keys.
-- **A message is a fixed sentence; the data goes in fields.** `"rejected non-whitelisted user"` with
-  `userId` and `chatId` fields, never `"rejected non-whitelisted user id 42, chat 7"`. That keeps a
+- **A message is a fixed sentence; the data goes in fields.** `"daily quota exhausted"` with
+  a `userId` field, never `"daily quota exhausted for user 42"`. That keeps a
   message groupable and lets you filter on the fields (`where userId == 42`).
 
 **One request = one `correlation_id`.** `runLogSession` (called from the webhook's `fetch`)
@@ -346,10 +346,9 @@ failure is only printed to the console and never affects the reply. Message text
 | `message` | fields | when |
 |---|---|---|
 | `update received` | `command`, `lang` | start of every update |
-| `whitelist check passed` | | sender is whitelisted |
-| `rejected non-whitelisted user` (warn) | `userId`, `chatId` | sender is not |
 | `quota consumed` | `remainingQuota` | daily quota decremented |
 | `daily quota exhausted` (warn) | `userId` | quota used up |
+| `quota refunded` | `remainingQuota` | no model answered, so the unit was given back |
 | `available models` / `attempting model` / `model succeeded` | `models`, `model`, `tokens` | router steps (warn/error for rate limited, unavailable, failed) |
 | `extracted` | `sourceText`, `event` | event extraction result |
 | `message received` | `userId`, `receivedMessage`, `providerRequest`, `providerResponse`, `model` | message log entry |
@@ -373,7 +372,6 @@ places, depending on what they are (dashboard menu names are from memory):
 |---|---|---|
 | User messages (sender, text sent to Gemini, reply) | KV `MESSAGE_LOG`, keys `<timestamp>-<uuid>`, 14-day TTL | `npx wrangler kv key list --binding MESSAGE_LOG --env dev --remote`, then `npx wrangler kv key get --binding MESSAGE_LOG --env dev --remote "<key>"`; or dashboard → Workers KV → the namespace |
 | Router steps (`routerLog`) | Workers Logs (console) | dashboard → Workers & Pages → the Worker → Logs; live: `npx wrangler tail --env dev --format pretty` |
-| Whitelist rejections (`whitelistPolicyLogger`) | KV `MESSAGE_LOG`, keys `whitelist:<timestamp>-<uuid>`, and Workers Logs | same as above, add `--prefix whitelist:` to the list command |
 | Last failure per model | D1 table `gemini_usage` (`lastError`, `lastErrorAest`, `lastSuccessAest`) | `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError, lastSuccessAest FROM gemini_usage"` |
 
 Replace `dev` with `prod` (and the D1 name with `noted-it-prod-usage`) for prod.
@@ -500,44 +498,11 @@ extraction, `/diag`, reply translation and `/lang` resolution.
   moves on to the next one, and the test fails only if no model answers. `tests/unit/geminiResponse.test.ts` checks the
   parser against a real captured 503 (`tests/unit/fixtures/gemini503Unavailable.ts`).
 
-### Access control (whitelist)
+### Access and daily quota
 
-The bot is invite-only: `whitelistPolicy.isWhiteListed` in `src/policy/whitelistPolicy.ts` (its D1 and KV bindings are set once per request by `whitelistPolicy.init`) checks the sender's numeric Telegram user id against the `whitelist` table in the `USAGE_DB` D1 database before processing anything (including `/start`) —
-a non-whitelisted user gets a polite rejection message instead. **The one
-exception is `/lang`**, which works for everyone regardless of whitelist
-status, so even a rejected user can set their preferred language and get
-the rejection message itself back in it. There's no admin command for
-whitelisting; entries are added manually. The table has one column, `userId`
-(`INTEGER PRIMARY KEY`), and is created on first use like the other tables
-(`src/db/sql/whitelist.ts`, `src/repositories/whitelistRepository.ts`). The bot's own rejection
-message includes the user's id, so it can be relayed to you.
-
-```bash
-# Add one user (creating the table first if the bot hasn't run yet).
-# --remote is required — d1 commands default to a LOCAL simulated database,
-# which silently does nothing to the real deployed bot.
-npx wrangler d1 execute noted-it-dev-usage --remote --command "CREATE TABLE IF NOT EXISTS whitelist (userId INTEGER NOT NULL PRIMARY KEY); INSERT OR IGNORE INTO whitelist (userId) VALUES (123456789)"
-
-# Remove one user, or list everyone:
-npx wrangler d1 execute noted-it-dev-usage --remote --command "DELETE FROM whitelist WHERE userId = 123456789"
-npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT userId FROM whitelist"
-```
-
-The whitelist used to live in a `WHITELIST` KV namespace (plain numeric-id keys), and
-that binding has been removed. To copy the old entries over, find the namespace id
-with `npx wrangler kv namespace list`, then (needs `jq`; entries keyed by a username
-instead of a numeric id are skipped, since they can't be matched any more):
-
-```bash
-npx wrangler kv key list --namespace-id <WHITELIST_NAMESPACE_ID> --remote \
-  | jq -r '"CREATE TABLE IF NOT EXISTS whitelist (userId INTEGER NOT NULL PRIMARY KEY);", (.[].name | select(test("^[0-9]+$")) | "INSERT OR IGNORE INTO whitelist (userId) VALUES (\(.));")' > whitelist.sql
-npx wrangler d1 execute noted-it-dev-usage --remote --file whitelist.sql   # and noted-it-prod-usage for prod
-```
-
-Rejections are logged by `whitelistPolicy.logger`
-(`WhitelistPolicyLogger` in `src/policy/whitelistPolicyLogger.ts`) to `MESSAGE_LOG` under
-`whitelist:<timestamp>-<uuid>` (14-day TTL), as
-`{"logger":"whitelistPolicyLogger","time":{"date_time_aest":"2026-09-25 14:51:39"},"message":"rejected non-whitelisted user id 42, chat 7"}`.
+The bot is open to everyone. What limits abuse is the per-user daily quota: only a message that goes to a model
+uses a unit, and the unit is given back if no model answers. Commands never use quota. How it works, and what each
+kind of message costs in D1 rows, is in [docs/USER_QUOTA_DESIGN.md](docs/USER_QUOTA_DESIGN.md).
 
 ### Rolling back
 

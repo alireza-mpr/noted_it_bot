@@ -7,7 +7,6 @@
   "LANG_SET_CONFIRMATION": "알겠습니다 — 지금부터 {0}(으)로 답할게요.",
   "LANG_USAGE": "어떤 언어로 할까요? /lang 뒤에 언어 이름이나 코드를 붙여 보내세요. 예: /lang Persian 또는 /lang fa. Telegram 설정에서 자동 감지로 돌아가려면 /lang auto를 보내세요.",
   "LINK_LABEL": "여기",
-  "NOT_WHITELISTED": "이 봇은 현재 초대 전용이며, 회원님은 제 목록에 없어요. 봇 제작자에게 추가를 요청하세요 — 회원님의 Id는 {0}입니다.",
   "NO_AVAILABLE_MODEL_MESSAGE": "죄송합니다! 모든 AI 제공업체가 지금 바빠요. 1분 후에 다시 시도해 주세요.",
   "NO_CALENDAR_EVENT_MESSAGE": "⚠️ 이것을 캘린더 일정으로 바꾸지 못했어요.",
   "NO_TEXT_MESSAGE": "⚠️ 죄송해요! 메시지에서 텍스트를 찾지 못했어요.",

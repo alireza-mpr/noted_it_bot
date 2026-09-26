@@ -1,7 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { runLogSession } from "../../src/logging/logger";
 import { UserQuotaPolicyLogger } from "../../src/policy/userQuotaPolicyLogger";
-import { WhitelistPolicyLogger } from "../../src/policy/whitelistPolicyLogger";
 import type { ProviderConfig } from "../../src/providers/ProviderConfig";
 import { RouterLog } from "../../src/router/routerLog";
 
@@ -86,23 +85,6 @@ describe("RouterLog", () => {
 });
 
 describe("policy loggers", () => {
-  it("logs a rejected user with a fixed message and separate userId/chatId fields", async () => {
-    const logger = new WhitelistPolicyLogger();
-    logger.init({ put: async () => {} } as unknown as KVNamespace);
-
-    const events = await capture(() => logger.rejected(83302592, 83302592));
-
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({
-      level: "warn",
-      source: "whitelistPolicyLogger",
-      message: "rejected non-whitelisted user",
-      userId: 83302592,
-      chatId: 83302592,
-    });
-    expect(String(events[0].message)).not.toMatch(/\d/);
-  });
-
   it("logs an exhausted quota with a fixed message and a userId field", async () => {
     const events = await capture(() => new UserQuotaPolicyLogger().exhausted(42));
 
@@ -115,13 +97,4 @@ describe("policy loggers", () => {
     });
   });
 
-  it("keeps the KV rejection record's readable message unchanged", async () => {
-    const puts: string[] = [];
-    const logger = new WhitelistPolicyLogger();
-    logger.init({ put: async (_key: string, value: string) => void puts.push(value) } as unknown as KVNamespace);
-
-    await capture(() => logger.rejected(42, 7));
-
-    expect(JSON.parse(puts[0]).message).toBe("rejected non-whitelisted user id 42, chat 7");
-  });
 });

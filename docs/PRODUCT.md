@@ -63,12 +63,9 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
 - The bot's own name ("Noted") is never translated.
 
 ### Access control
-- Invite-only: a whitelist keyed by **numeric user id**
-  managed manually in the `whitelist` table of the D1 database.
-- Non-whitelisted users get a friendly rejection that shows their numeric ID so
-  it can be relayed to get them added.
-- `/lang` is open to everyone, so even a rejected user gets the message in
-  their own language.
+- Open to everyone, with a per-user daily quota (3 messages that go to a model).
+  Commands don't use quota, and a message no model answers is given back. See
+  [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
 
 ### Commands
 | Command  | Purpose                                                        |
@@ -122,8 +119,7 @@ appear in the `/` autocomplete menu.
   - Review Gemini "thinking" token overhead on tasks that don't need it.
   - Extend the test suite to assert quality doesn't regress on the cheaper tiers.
 - [ ] **Confirm the first prod release** under the new versioning scheme (tag →
-      manual dispatch → webhook and command list registered → whitelist
-      verified) and smoke-test `@noted_it_bot`.
+      manual dispatch → webhook and command list registered) and smoke-test `@noted_it_bot`.
 
 ### Product
 - [ ] Relative and weekday dates ("tomorrow", "next Friday") — needs a reliable
@@ -138,11 +134,9 @@ appear in the `/` autocomplete menu.
 ### Platform & ops
 - [ ] Migrate event extraction off the legacy Gemini `generateContent` endpoint
       to the Interactions API once structured output is verified there.
-- [ ] Admin tooling for the whitelist (today it's manual `wrangler d1` commands).
 - [ ] Automate `package.json` version bumps alongside prod tags (currently manual).
 - [ ] Prod approval gate proper — needs a paid GitHub plan on a private repo;
       manual dispatch is the interim guard.
 - [ ] Dev tag housekeeping — one tag per dev deploy will accumulate.
-- [ ] Broaden tests further: handler flow, whitelist, translation placeholders
+- [ ] Broaden tests further: handler flow, translation placeholders
       (recurrence and ICS output now have unit tests).
-- [ ] Rate limiting / per-user usage caps to bound Gemini cost.

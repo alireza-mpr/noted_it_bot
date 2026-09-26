@@ -7,7 +7,6 @@
   "LANG_SET_CONFIRMATION": "了解しました。これからは{0}で返信します。",
   "LANG_USAGE": "どの言語にしますか？/lang に続けて言語名またはコードを送ってください（例：/lang Persian または /lang fa）。Telegram の設定からの自動検出に戻すには、/lang auto を送ってください。",
   "LINK_LABEL": "こちら",
-  "NOT_WHITELISTED": "このボットは現在、招待制です。あなたはリストに載っていません。ボットの作成者に追加を依頼してください。あなたの Id は {0} です。",
   "NO_AVAILABLE_MODEL_MESSAGE": "申し訳ありません！現在、すべての AI プロバイダーが混み合っています。1 分後にもう一度お試しください。",
   "NO_CALENDAR_EVENT_MESSAGE": "⚠️ これをカレンダーの予定に変換できませんでした。",
   "NO_TEXT_MESSAGE": "⚠️ 申し訳ありません！メッセージにテキストが見つかりませんでした。",

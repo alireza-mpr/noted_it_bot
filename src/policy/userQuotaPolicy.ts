@@ -5,6 +5,16 @@ export interface UserQuotaConsumeResult {
   successful: boolean;
   remainingQuota: number;
   retryAt: number;
+  // Set when a unit was taken, so it can be given back if no model answers.
+  reservation?: QuotaReservation;
+}
+
+export interface QuotaReservation {
+  userId: number;
+  dailyQuota: number;
+  consumedAt: number;
+  previousRemainingQuota: number;
+  previousLastUsedAt: number;
 }
 
 export class UserQuotaPolicy {
@@ -24,6 +34,14 @@ export class UserQuotaPolicy {
     }
 
     return this.repository.tryConsume(userId, new Date(), dailyQuota);
+  }
+
+  async refund(reservation: QuotaReservation): Promise<void> {
+    if (!this.repository) {
+      throw new Error("userQuotaPolicy: call init first");
+    }
+
+    await this.repository.refund(reservation);
   }
 }
 

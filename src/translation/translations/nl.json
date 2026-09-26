@@ -7,7 +7,6 @@
   "LANG_SET_CONFIRMATION": "Begrepen — vanaf nu is mijn antwoordtaal: {0}.",
   "LANG_USAGE": "Welke taal? Stuur /lang gevolgd door een taalnaam of -code, bijvoorbeeld /lang Persian of /lang fa. Stuur /lang auto om terug te gaan naar automatische detectie via je Telegram-instellingen.",
   "LINK_LABEL": "hier",
-  "NOT_WHITELISTED": "Deze bot is momenteel alleen op uitnodiging en je staat niet op mijn lijst. Vraag de maker van de bot om je toe te voegen — je Id is {0}.",
   "NO_AVAILABLE_MODEL_MESSAGE": "Sorry! Alle AI-aanbieders zijn op dit moment bezet. Probeer het over een minuut opnieuw.",
   "NO_CALENDAR_EVENT_MESSAGE": "⚠️ Ik kon hier geen agenda-item van maken.",
   "NO_TEXT_MESSAGE": "⚠️ Sorry! Ik heb geen tekst in je bericht gevonden.",
