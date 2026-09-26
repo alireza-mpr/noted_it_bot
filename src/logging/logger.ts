@@ -9,7 +9,7 @@ interface LogEvent extends LogFields {
   level: LogLevel;
   source: string;
   message: string;
-  correlationId: string;
+  correlation_id: string;
   service: string;
   version: string | undefined;
 }
@@ -73,7 +73,7 @@ function emit(
       level,
       source,
       message: text,
-      correlationId: session?.correlationId,
+      correlation_id: session?.correlationId,
       ...(fields && truncateFields(fields)),
     }),
   );
@@ -88,7 +88,7 @@ function emit(
     level,
     source,
     message: text,
-    correlationId: session.correlationId,
+    correlation_id: session.correlationId,
     service: SERVICE_NAME,
     version: session.version,
   });

@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 describe("runLogSession", () => {
-  it("sends every event of one session in a single batch sharing one correlationId", async () => {
+  it("sends every event of one session in a single batch sharing one correlation_id", async () => {
     const sent = stubIngest();
     const ctx = fakeCtx();
     const logger = new Logger("testLogger");
@@ -72,7 +72,7 @@ describe("runLogSession", () => {
     const { events } = sent[0];
     expect(events.map((e) => e.message)).toEqual(["first", "second", "third"]);
     expect(events.map((e) => e.level)).toEqual(["info", "warn", "error"]);
-    expect(new Set(events.map((e) => e.correlationId)).size).toBe(1);
+    expect(new Set(events.map((e) => e.correlation_id)).size).toBe(1);
     expect(events[1]).toMatchObject({ source: "testLogger", model: "m1", service: "noted-it-bot", version: "1.2.3" });
     expect(typeof events[0]._time).toBe("string");
   });
@@ -89,7 +89,7 @@ describe("runLogSession", () => {
     expect(sent[0].headers["Content-Type"]).toBe("application/json");
   });
 
-  it("keeps concurrent sessions apart, each with its own correlationId", async () => {
+  it("keeps concurrent sessions apart, each with its own correlation_id", async () => {
     const sent = stubIngest();
     const ctx = fakeCtx();
     const logger = new Logger("t");
@@ -109,9 +109,9 @@ describe("runLogSession", () => {
     for (const { events } of sent) {
       const prefix = String(events[0].message)[0];
       expect(events.map((e) => e.message)).toEqual([`${prefix}-start`, `${prefix}-end`]);
-      expect(new Set(events.map((e) => e.correlationId)).size).toBe(1);
+      expect(new Set(events.map((e) => e.correlation_id)).size).toBe(1);
     }
-    expect(new Set(sent.map((s) => s.events[0].correlationId))).toEqual(new Set([idA, idB]));
+    expect(new Set(sent.map((s) => s.events[0].correlation_id))).toEqual(new Set([idA, idB]));
   });
 
   it("adds fields set with setLogField to events logged after it", async () => {
@@ -130,7 +130,7 @@ describe("runLogSession", () => {
     expect(sent[0].events[1]).toMatchObject({ userId: 42 });
   });
 
-  it("prints every line to the console as JSON carrying the same correlationId", async () => {
+  it("prints every line to the console as JSON carrying the same correlation_id", async () => {
     stubIngest();
     const ctx = fakeCtx();
     const logger = new Logger("testLogger");
@@ -145,8 +145,8 @@ describe("runLogSession", () => {
 
     expect(consoleLines.map((l) => l.method)).toEqual(["info", "warn", "error"]);
     const parsed = consoleLines.map((l) => JSON.parse(l.line));
-    expect(parsed[0]).toMatchObject({ level: "info", source: "testLogger", message: "one", model: "m1", correlationId: id });
-    expect(new Set(parsed.map((p) => p.correlationId))).toEqual(new Set([id]));
+    expect(parsed[0]).toMatchObject({ level: "info", source: "testLogger", message: "one", model: "m1", correlation_id: id });
+    expect(new Set(parsed.map((p) => p.correlation_id))).toEqual(new Set([id]));
   });
 
   it("describeError keeps the stack of an Error and stringifies anything else", () => {
