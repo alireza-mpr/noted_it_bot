@@ -1,5 +1,5 @@
 import eventExtractPrompt from "../prompts/event_extract.txt";
-import { NO_AVAILABLE_MODEL_MESSAGE } from "../interactiveMessages/messages";
+import { MESSAGES } from "../interactiveMessages/messages";
 import type { ProviderFailure } from "../providers/providerClient";
 import type { Router } from "../router/router";
 import { EVENT_SCHEMA } from "./event_schema";
@@ -18,7 +18,7 @@ export interface DownstreamResult {
 
 const NO_AVAILABLE_MODEL: DownstreamResult = {
   result: "failed",
-  message: NO_AVAILABLE_MODEL_MESSAGE,
+  message: MESSAGES.NO_AVAILABLE_MODEL_MESSAGE,
 };
 
 export async function extractEvent(

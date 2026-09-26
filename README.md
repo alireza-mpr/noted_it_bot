@@ -198,17 +198,24 @@ language is the user's `/lang` choice if they made one, else Telegram's `message
 (`pt-BR` becomes `pt`, and so on).
 
 Every fixed message is translated **ahead of time**: `src/translation/translations/<lang>.json`, one file
-per language, maps the exact English text to its translation. `translateText`
-(`src/translation/translate.ts`) looks the text up there, so those replies never call a model, and an
-abuser can't run up the LLM quota by trying languages. The only strings not in the files are the generated
-recurrence sentences ("Repeats every 2 weeks on Monday and Wednesday…"); those still go to a model, but only
-for a supported language and only while building an event (which already spends a quota unit), and the
-result is cached in the `I18N` KV namespace, keyed by a hash of the English text + language. A model failure
-falls back to English.
+per language, maps each message id (`START_MESSAGE`, `TZ_LINK_MESSAGE`, …) to its translation; the English
+is the `MESSAGES` object in `src/interactiveMessages/messages.ts`. Code refers to messages only by id, typed as
+`MessageId`, so a message that isn't in the catalog doesn't compile. `translateStatic`
+(`src/translation/translate.ts`) looks the id up, so no reply calls a model to be translated, and an
+abuser can't run up the LLM quota by trying languages. The recurrence sentence ("Repeats every 2 weeks on
+Monday and Wednesday, until 5 Jan 2027") can't be listed in advance, so `describeRecurrence`
+(`src/extractedEvents/recurrence.ts`) builds it directly in the reply language from the phrase tables in
+`src/translation/recurrencePhrases.ts`: a template per pattern and plural form (picked with
+`Intl.PluralRules`), ordinals that agree with the weekday's gender where the language needs it, and weekday
+names, lists and numbers from `Intl`. `tests/unit/recurrence.test.ts` checks that every language fills every
+placeholder for every kind of pattern. **Adding a language** also means adding its entry there (TypeScript
+won't compile without it).
 
-**Changing a message.** Edit the English in `src/interactiveMessages/messages.ts`, then change the same
-English text used as the key in all 15 JSON files and translate the value. `tests/unit/translations.test.ts`
-fails until every language has every message, no stale key is left behind, and each translation still has the
+**Changing a message.** Edit the English in `src/interactiveMessages/messages.ts`, then update the value under
+the same id in all 15 JSON files. Nothing forces this: the old translations keep being served until you do, so
+remember to change them in the same commit. **Adding a message** means a new id in `MESSAGES` and in every JSON
+file. `tests/unit/translations.test.ts` fails until every language has every id, no stale id is left behind,
+and each translation still has the
 same `{0}` placeholders, HTML tags, emoji and `/lang` / `/tz` command names as the English. **Adding a
 language** means adding its code to `SUPPORTED_LANGUAGES`, a JSON file, and its import in
 `src/translation/translations/index.ts`. The translations were written by an AI assistant and haven't been
@@ -254,13 +261,9 @@ framing. A save token can be reused until it expires, which lets a whitelisted u
 **Testing it.** `tests/unit/tzToken.test.ts`, `tzRoutes.test.ts` and `tzCommand.test.ts` cover the tokens, both routes
 and the command. To see the real page, run `npx wrangler dev`, send `/tz` to the bot and open the link.
 
-**One-time setup**: create the `I18N` KV namespace per environment (it only caches the generated recurrence
-sentences) and put its ID in [wrangler.toml](wrangler.toml) (it ships with a placeholder ID):
-
-```bash
-npx wrangler kv namespace create I18N --env dev
-npx wrangler kv namespace create I18N --env prod
-```
+The recurrence sentences used to be translated by a model and cached in an `I18N` KV namespace; that
+binding has been removed, and the namespaces can be deleted (`npx wrangler kv namespace list`, then
+`npx wrangler kv namespace delete --namespace-id <id>`).
 
 The language override used to live in a `USER_LANG` KV namespace, keyed `chat:<chatId>`; that
 binding has been removed. For private chats the chat id is the user id, so the old entries can be

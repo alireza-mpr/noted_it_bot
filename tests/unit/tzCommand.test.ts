@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { TZ_BUTTON_LABEL, TZ_LINK_MESSAGE, TZ_SET_CONFIRMATION } from "../../src/interactiveMessages/messages";
 import { isTzCommand, tzCommandHandler } from "../../src/telegram/commands/tzCommandHandler";
 import type { Replier } from "../../src/telegram/replier";
 import type { TelegramMessage } from "../../src/telegram/telegramTypes";
@@ -66,7 +65,7 @@ describe("tzCommandHandler", () => {
     expect(d1.statements).toHaveLength(0);
     expect(sayWithLink).toHaveBeenCalledTimes(1);
     const [template, button, url] = sayWithLink.mock.calls[0];
-    expect([template, button]).toEqual([TZ_LINK_MESSAGE, TZ_BUTTON_LABEL]);
+    expect([template, button]).toEqual(["TZ_LINK_MESSAGE", "TZ_BUTTON_LABEL"]);
     expect(url.startsWith(`${ORIGIN}/tz?token=`)).toBe(true);
 
     const token = decodeURIComponent(url.slice(`${ORIGIN}/tz?token=`.length));
@@ -94,7 +93,7 @@ describe("tzCommandHandler", () => {
       expect(sayWithLink, text).not.toHaveBeenCalled();
       expect(d1.writes(), text).toHaveLength(1);
       expect(d1.writes()[0].args, text).toEqual([42, "Asia/Tehran"]);
-      expect(say.mock.calls[0], text).toEqual([TZ_SET_CONFIRMATION, "Asia/Tehran"]);
+      expect(say.mock.calls[0], text).toEqual(["TZ_SET_CONFIRMATION", "Asia/Tehran"]);
     }
   });
 });

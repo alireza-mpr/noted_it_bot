@@ -1,15 +1,4 @@
-import {
-  PAGE_CHOOSE,
-  PAGE_CONFIRM,
-  PAGE_DETECTED,
-  PAGE_ERROR,
-  PAGE_EXPIRED,
-  PAGE_LOCAL_TIME,
-  PAGE_SAVE,
-  PAGE_SAVED,
-  PAGE_SEARCH,
-  PAGE_TITLE,
-} from "../interactiveMessages/messages";
+import type { MessageId } from "../interactiveMessages/messages";
 import { translateStatic } from "../translation/translate";
 
 const RTL_LANGUAGES = new Set(["fa", "ar"]);
@@ -181,21 +170,21 @@ export interface TzPageInput {
 }
 
 export function renderTzPage({ lang, saveToken, nonce }: TzPageInput): string {
-  const t = (text: string) => translateStatic(text, lang);
+  const t = (id: MessageId) => translateStatic(id, lang);
   const config = {
     token: saveToken,
     lang,
     strings: {
-      title: t(PAGE_TITLE),
-      detected: t(PAGE_DETECTED),
-      localTime: t(PAGE_LOCAL_TIME),
-      confirm: t(PAGE_CONFIRM),
-      choose: t(PAGE_CHOOSE),
-      search: t(PAGE_SEARCH),
-      save: t(PAGE_SAVE),
-      saved: t(PAGE_SAVED),
-      expired: t(PAGE_EXPIRED),
-      error: t(PAGE_ERROR),
+      title: t("PAGE_TITLE"),
+      detected: t("PAGE_DETECTED"),
+      localTime: t("PAGE_LOCAL_TIME"),
+      confirm: t("PAGE_CONFIRM"),
+      choose: t("PAGE_CHOOSE"),
+      search: t("PAGE_SEARCH"),
+      save: t("PAGE_SAVE"),
+      saved: t("PAGE_SAVED"),
+      expired: t("PAGE_EXPIRED"),
+      error: t("PAGE_ERROR"),
     },
   };
   const dir = RTL_LANGUAGES.has(lang) ? "rtl" : "ltr";
@@ -207,7 +196,7 @@ export function renderTzPage({ lang, saveToken, nonce }: TzPageInput): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
-<title>${escapeHtml(t(PAGE_TITLE))}</title>
+<title>${escapeHtml(t("PAGE_TITLE"))}</title>
 <style nonce="${nonce}">${STYLE}</style>
 </head>
 <body>
@@ -243,9 +232,9 @@ export function renderMessagePage(lang: string, message: string, nonce: string):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
-<title>${escapeHtml(translateStatic(PAGE_TITLE, lang))}</title>
+<title>${escapeHtml(translateStatic("PAGE_TITLE", lang))}</title>
 <style nonce="${nonce}">${STYLE}</style>
 </head>
-<body><main><h1>${escapeHtml(translateStatic(PAGE_TITLE, lang))}</h1><p id="status">${escapeHtml(message)}</p></main></body>
+<body><main><h1>${escapeHtml(translateStatic("PAGE_TITLE", lang))}</h1><p id="status">${escapeHtml(message)}</p></main></body>
 </html>`;
 }

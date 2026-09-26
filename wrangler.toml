@@ -10,10 +10,6 @@ name = "noted-it-dev-bot"
 [env.dev.vars]
 APP_VERSION = "0.2.0-dev-local"
 [[env.dev.kv_namespaces]]
-binding = "I18N"
-id = "e0e7f8d9713349c5ae59be6961935109"
-remote = true
-[[env.dev.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "f1a94b61a6ea499ba534adab79d3b3fc"
 remote = true
@@ -27,9 +23,6 @@ remote = true
 name = "noted-it-bot"
 [env.prod.vars]
 APP_VERSION = "0.2.0-dev-local"
-[[env.prod.kv_namespaces]]
-binding = "I18N"
-id = "296e4c6114df451ca33774a2edf28ce5"
 [[env.prod.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "0995f983386447d89941d1a4de8ac90b"

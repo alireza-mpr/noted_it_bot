@@ -1,5 +1,11 @@
 import type { ExtractedEvent, Recurrence, Weekday } from "./extractedEvent";
 import { resolveTimezone, resolveYear } from "../time/timezone";
+import { toSupportedLanguage } from "../translation/language";
+import {
+  RECURRENCE_PHRASES,
+  type Ordinal,
+  type PluralForms,
+} from "../translation/recurrencePhrases";
 
 // Below this, a message that reads as recurring is declined rather than
 // guessed at — a wrong repeat rule silently fills someone's calendar.
@@ -18,24 +24,6 @@ export type RecurrencePlan =
 // Index = Date#getUTCDay().
 const WEEKDAY_BY_INDEX: Weekday[] = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
 const VALID_WEEKDAYS = new Set<string>(WEEKDAY_BY_INDEX);
-
-const DAY_NAMES: Record<Weekday, string> = {
-  MO: "Monday",
-  TU: "Tuesday",
-  WE: "Wednesday",
-  TH: "Thursday",
-  FR: "Friday",
-  SA: "Saturday",
-  SU: "Sunday",
-};
-
-const ORDINAL_NAMES: Record<number, string> = {
-  1: "first",
-  2: "second",
-  3: "third",
-  4: "fourth",
-  [-1]: "last",
-};
 
 function toDate(d: YMD): Date {
   return new Date(Date.UTC(d.year, d.month - 1, d.day));
@@ -292,59 +280,79 @@ export function buildRrule(r: Recurrence, untilValue: string | null): string {
   return parts.join(";");
 }
 
-function ordinalSuffix(n: number): string {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) {
-    return "th";
-  }
-  return { 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th";
+// The weekday's name in `lang`, from Intl. 4 Jan 2026 was a Sunday.
+function weekdayName(day: Weekday, lang: string): string {
+  return new Intl.DateTimeFormat(lang, { weekday: "long", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2026, 0, 4 + WEEKDAY_BY_INDEX.indexOf(day))),
+  );
 }
 
-// An English sentence describing the pattern, for translation. "{0}" stands
-// in for the end date (formatted per language by the caller) so the template
-// itself stays cacheable across events.
-export function describeRecurrence(r: Recurrence): string {
-  const every = (unit: string, plural: string) =>
-    r.interval === 1 ? `every ${unit}` : `every ${r.interval} ${plural}`;
-  const days = r.weekdays?.length
-    ? new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(
-        r.weekdays.map((d) => DAY_NAMES[d]),
-      )
-    : null;
+function pickForm(forms: PluralForms, n: number, lang: string): string {
+  if (n === 1 && forms["1"] !== undefined) {
+    return forms["1"];
+  }
+  return forms[new Intl.PluralRules(lang).select(n)] ?? forms.other;
+}
 
-  let phrase: string;
-  switch (r.frequency) {
-    case "daily":
-      phrase = every("day", "days");
-      break;
-    case "weekly":
-      phrase = days
-        ? r.interval === 1
-          ? `every ${days}`
-          : `every ${r.interval} weeks on ${days}`
-        : every("week", "weeks");
-      break;
-    case "monthly": {
-      const month =
-        r.interval === 1 ? "every month" : `every ${r.interval} months`;
-      if (days && r.ordinal != null) {
-        phrase = `on the ${ORDINAL_NAMES[r.ordinal]} ${days} of ${month}`;
-      } else if (r.month_day != null) {
-        phrase = `on the ${r.month_day}${ordinalSuffix(r.month_day)} of ${month}`;
-      } else {
-        phrase = month;
-      }
-      break;
-    }
-    default:
-      phrase = every("year", "years");
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
+}
+
+// The pattern as a sentence in `lang` (English for an unsupported language),
+// built from the phrase tables in src/translation/recurrencePhrases.ts, so no
+// model is involved. `untilLabel` is the end date, already formatted for the
+// language; it's only used when the series ends on a date.
+export function describeRecurrence(
+  r: Recurrence,
+  lang: string | undefined,
+  untilLabel: string | null = null,
+): string {
+  const language = toSupportedLanguage(lang) ?? "en";
+  const phrases = RECURRENCE_PHRASES[language];
+  const number = new Intl.NumberFormat(language, { useGrouping: false });
+  const list = (items: string[]) =>
+    new Intl.ListFormat(language, { style: "long", type: "conjunction" }).format(items);
+  const n = number.format(r.interval);
+  const weekdays = r.weekdays?.length ? r.weekdays : null;
+
+  let text: string;
+  if (r.frequency === "weekly" && weekdays) {
+    const days = list(weekdays.map((d) => weekdayName(d, language)));
+    text = fill(pickForm(phrases.weeklyOn, r.interval, language), { n, days });
+  } else if (r.frequency === "monthly" && weekdays && r.ordinal != null) {
+    const nth = phrases.nth[String(r.ordinal) as Ordinal];
+    const days = list(
+      weekdays.map((d) => {
+        const template =
+          typeof nth === "string" ? nth : nth[phrases.weekdayGender?.[d] ?? "m"] ?? nth.m;
+        return fill(template, { weekday: weekdayName(d, language) });
+      }),
+    );
+    text = fill(pickForm(phrases.monthlyOnWeekday, r.interval, language), { n, days });
+  } else if (r.frequency === "monthly" && r.month_day != null) {
+    const day = phrases.monthDay
+      ? phrases.monthDay(r.month_day)
+      : number.format(r.month_day);
+    text = fill(pickForm(phrases.monthlyOnDay, r.interval, language), { n, day });
+  } else {
+    const forms =
+      r.frequency === "daily"
+        ? phrases.daily
+        : r.frequency === "weekly"
+          ? phrases.weekly
+          : r.frequency === "monthly"
+            ? phrases.monthly
+            : phrases.yearly;
+    text = fill(pickForm(forms, r.interval, language), { n });
   }
 
-  let text = `Repeats ${phrase}`;
-  if (r.end_kind === "until") {
-    text += ", until {0}";
-  } else if (r.end_kind === "count") {
-    text += `, ${r.count} ${r.count === 1 ? "time" : "times"}`;
+  if (r.end_kind === "until" && untilLabel) {
+    text = fill(phrases.until, { text, date: untilLabel });
+  } else if (r.end_kind === "count" && r.count != null) {
+    text = fill(pickForm(phrases.count, r.count, language), {
+      text,
+      n: number.format(r.count),
+    });
   }
   return text;
 }

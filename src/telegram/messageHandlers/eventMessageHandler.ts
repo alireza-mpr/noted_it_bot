@@ -1,14 +1,4 @@
 import {
-  ALL_DAY_NOTE,
-  CALENDAR_CAPTION_TEMPLATE,
-  LINK_LABEL,
-  NO_CALENDAR_EVENT_MESSAGE,
-  NO_TEXT_MESSAGE,
-  RECURRENCE_DECLINED_MESSAGE,
-  RECURRING_NOTE,
-  USER_DAILY_QUOTA_REMAINING,
-} from "../../interactiveMessages/messages";
-import {
   buildCalendarEvent,
   type BuiltCalendarEvent,
 } from "../../extractedEvents/calendarEvent";
@@ -16,6 +6,7 @@ import { computeEventUid } from "../../extractedEvents/eventUid";
 import { extractEvent } from "../../extractedEvents/extractEvent";
 import type { ExtractedEvent } from "../../extractedEvents/extractedEvent";
 import { recurrenceProblem } from "../../extractedEvents/recurrence";
+import type { MessageId } from "../../interactiveMessages/messages";
 import { fillPlaceholder } from "../../translation/placeholders";
 import { messageLogger } from "../../logging/messageLogger";
 import type { Router } from "../../router/router";
@@ -32,18 +23,12 @@ async function buildCaption(
   remainingQuota: number,
   showQuota: boolean,
 ): Promise<string> {
-  const [captionTemplate, linkLabel] = await Promise.all([
-    replier.translate(CALENDAR_CAPTION_TEMPLATE),
-    replier.translate(LINK_LABEL),
-  ]);
+  const captionTemplate = replier.translate("CALENDAR_CAPTION_TEMPLATE");
+  const linkLabel = replier.translate("LINK_LABEL");
 
   const summaryLines = [...calendarEvent.summaryLines];
   if (calendarEvent.recurrence) {
-    const sentence = await replier.translate(
-      calendarEvent.recurrence.template,
-      calendarEvent.recurrence.untilLabel ?? "",
-    );
-    summaryLines.push(`🔁 ${sentence}`);
+    summaryLines.push(`🔁 ${calendarEvent.recurrence}`);
   }
 
   const googleUrl = escapeHtmlAttribute(calendarEvent.googleCalendarUrl);
@@ -51,13 +36,13 @@ async function buildCaption(
   const summaryBlock = summaryLines.map(escapeHtmlAttribute).join("\n");
   let caption = `${summaryBlock}\n\n🔔 ${fillPlaceholder(captionTemplate, link)}`;
 
-  const notes = [
-    calendarEvent.recurrence ? RECURRING_NOTE : null,
-    calendarEvent.allDay ? ALL_DAY_NOTE : null,
+  const notes: (MessageId | null)[] = [
+    calendarEvent.recurrence ? "RECURRING_NOTE" : null,
+    calendarEvent.allDay ? "ALL_DAY_NOTE" : null,
   ];
   for (const note of notes) {
     if (note) {
-      caption += `\n\n${await replier.translate(note)}`;
+      caption += `\n\n${replier.translate(note)}`;
     }
   }
 
@@ -65,8 +50,8 @@ async function buildCaption(
     return caption;
   }
 
-  const quotaLine = await replier.translate(
-    USER_DAILY_QUOTA_REMAINING,
+  const quotaLine = replier.translate(
+    "USER_DAILY_QUOTA_REMAINING",
     String(remainingQuota),
   );
   return `${caption}\n\n${escapeHtmlAttribute(quotaLine)}`;
@@ -84,7 +69,7 @@ export async function eventMessageHandler(
     logger.error("message had no text or caption", {
       telegramMessage: message,
     });
-    await replier.sayWithQuota(NO_TEXT_MESSAGE, remainingQuota, showQuota);
+    await replier.sayWithQuota("NO_TEXT_MESSAGE", remainingQuota, showQuota);
     return;
   }
 
@@ -107,7 +92,7 @@ export async function eventMessageHandler(
       detail: downstream.message,
       failure: downstream.failure,
     });
-    await replier.say(downstream.message);
+    await replier.say("NO_AVAILABLE_MODEL_MESSAGE");
     return;
   }
 
@@ -119,7 +104,7 @@ export async function eventMessageHandler(
       response: downstream.message,
     });
     await replier.sayWithQuota(
-      RECURRENCE_DECLINED_MESSAGE,
+      "RECURRENCE_DECLINED_MESSAGE",
       remainingQuota,
       showQuota,
     );
@@ -136,7 +121,7 @@ export async function eventMessageHandler(
       response: downstream.message,
     });
     await replier.sayWithQuota(
-      NO_CALENDAR_EVENT_MESSAGE,
+      "NO_CALENDAR_EVENT_MESSAGE",
       remainingQuota,
       showQuota,
     );

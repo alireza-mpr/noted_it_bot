@@ -1,9 +1,5 @@
 import type { Env } from "../../env";
 import {
-  USER_DAILY_QUOTA_EXCEEDED,
-  NOT_WHITELISTED,
-} from "../../interactiveMessages/messages";
-import {
   featureFlags,
   type FeatureFlags,
 } from "../../featureFlags/featureFlags";
@@ -42,7 +38,7 @@ async function consumeUserQuota(
   if (!result.successful) {
     await userQuotaPolicy.logger.exhausted(userId);
     await replier.say(
-      USER_DAILY_QUOTA_EXCEEDED,
+      "USER_DAILY_QUOTA_EXCEEDED",
       formatWait(result.retryAt, Date.now()),
     );
     return result;
@@ -64,7 +60,7 @@ async function rejectUnlessWhitelisted(
   }
 
   await whitelistPolicy.logger.rejected(userId, message.chat.id);
-  await replier.say(NOT_WHITELISTED, String(userId));
+  await replier.say("NOT_WHITELISTED", String(userId));
   return true;
 }
 
@@ -170,7 +166,7 @@ export async function updateHandler(
     command: text?.startsWith("/") ? text.split(/[\s@]/)[0] : null,
     lang,
   });
-  const replier = new Replier(env, router, telegramClient, message.chat.id, lang);
+  const replier = new Replier(telegramClient, message.chat.id, lang);
 
   const consumed: ConsumedQuota = { show: false, remaining: 0 };
   let outcome: "ok" | "error" = "ok";

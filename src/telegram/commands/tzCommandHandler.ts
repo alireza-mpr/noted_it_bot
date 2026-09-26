@@ -1,4 +1,3 @@
-import { TZ_BUTTON_LABEL, TZ_LINK_MESSAGE, TZ_SET_CONFIRMATION } from "../../interactiveMessages/messages";
 import { Logger } from "../../logging/logger";
 import { canonicalTimezone } from "../../time/canonicalTimezone";
 import { setUserTimezone, type UserTimezoneEnv } from "../../time/userTimezone";
@@ -29,7 +28,7 @@ export async function tzCommandHandler(
   if (exact) {
     await setUserTimezone(env, message.from.id, exact);
     logger.info("timezone set", { timezone: exact, via: "command" });
-    await replier.say(TZ_SET_CONFIRMATION, exact);
+    await replier.say("TZ_SET_CONFIRMATION", exact);
     return;
   }
 
@@ -40,5 +39,5 @@ export async function tzCommandHandler(
     exp: nowMs + OPEN_TOKEN_TTL_MS,
   });
   logger.info("time zone link sent");
-  await replier.sayWithLink(TZ_LINK_MESSAGE, TZ_BUTTON_LABEL, `${origin}/tz?token=${token}`);
+  await replier.sayWithLink("TZ_LINK_MESSAGE", "TZ_BUTTON_LABEL", `${origin}/tz?token=${token}`);
 }

@@ -8,6 +8,7 @@ import {
 } from "@internationalized/date";
 import { resolveTimezone, resolveYear, zonedTimeToUtc } from "../time/timezone";
 import { buildRrule, describeRecurrence, planRecurrence } from "./recurrence";
+import { toSupportedLanguage } from "../translation/language";
 
 export interface BuiltCalendarEvent {
   icsFilename: string;
@@ -18,10 +19,9 @@ export interface BuiltCalendarEvent {
   // it never needs translation. Ready to join with "\n" and prepend to the
   // caption.
   summaryLines: string[];
-  // Present for a repeating event. `template` is an English sentence to be
-  // translated ("{0}" = the end date, already formatted for the reply
-  // language in `untilLabel`).
-  recurrence: { template: string; untilLabel: string | null } | null;
+  // Present for a repeating event: the pattern as a sentence in the reply
+  // language ("Repeats every 2 weeks on Monday, until 5 Jan 2027").
+  recurrence: string | null;
 }
 
 function parseTime(time: string): { hour: number; minute: number } {
@@ -393,6 +393,8 @@ export function buildCalendarEvent(
       : `🗓️ ${dateLabel} ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`,
   );
 
+  // The end date is written in the same language as the sentence around it.
+  const sentenceLang = toSupportedLanguage(lang) ?? "en";
   return {
     icsFilename: "event.ics",
     icsContent: lines.join("\r\n"),
@@ -400,10 +402,11 @@ export function buildCalendarEvent(
     allDay,
     summaryLines,
     recurrence: recurrence
-      ? {
-          template: describeRecurrence(recurrence),
-          untilLabel: until
-            ? new Intl.DateTimeFormat(lang || "en", {
+      ? describeRecurrence(
+          recurrence,
+          sentenceLang,
+          until
+            ? new Intl.DateTimeFormat(sentenceLang, {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
@@ -413,7 +416,7 @@ export function buildCalendarEvent(
                 new Date(Date.UTC(until.year, until.month - 1, until.day)),
               )
             : null,
-        }
+        )
       : null,
   };
 }

@@ -1,10 +1,4 @@
 import {
-  LANG_NOT_SUPPORTED,
-  LANG_RESET_CONFIRMATION,
-  LANG_SET_CONFIRMATION,
-  LANG_USAGE,
-} from "../../interactiveMessages/messages";
-import {
   DEFAULT_LANGUAGE,
   getLanguageDisplayName,
   resolveLanguage,
@@ -35,7 +29,7 @@ export async function langCommandHandler(
   const userId = message.from.id;
 
   if (!arg) {
-    await replier.say(LANG_USAGE);
+    await replier.say("LANG_USAGE");
     return;
   }
 
@@ -44,14 +38,14 @@ export async function langCommandHandler(
     logger.info("language override cleared");
     await replier
       .withLang(toSupportedLanguage(message.from.language_code) ?? DEFAULT_LANGUAGE)
-      .say(LANG_RESET_CONFIRMATION);
+      .say("LANG_RESET_CONFIRMATION");
     return;
   }
 
   const resolved = resolveLanguage(arg);
   if (!resolved) {
     logger.info("language not supported");
-    await replier.say(LANG_NOT_SUPPORTED, supportedLanguageNames());
+    await replier.say("LANG_NOT_SUPPORTED", supportedLanguageNames());
     return;
   }
 
@@ -59,5 +53,5 @@ export async function langCommandHandler(
   logger.info("language override set", { language: resolved });
   await replier
     .withLang(resolved)
-    .say(LANG_SET_CONFIRMATION, getLanguageDisplayName(resolved));
+    .say("LANG_SET_CONFIRMATION", getLanguageDisplayName(resolved));
 }

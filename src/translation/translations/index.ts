@@ -13,9 +13,11 @@ import pt from "./pt.json";
 import ru from "./ru.json";
 import tr from "./tr.json";
 import zh from "./zh.json";
+import type { MessageId } from "../../interactiveMessages/messages";
 import type { SupportedLanguage } from "../language";
 
-export const TRANSLATIONS: Record<Exclude<SupportedLanguage, "en">, Record<string, string>> = {
+// Keyed by message id; tests/unit/translations.test.ts checks every id is present.
+export const TRANSLATIONS: Record<Exclude<SupportedLanguage, "en">, Partial<Record<MessageId, string>>> = {
   ar,
   de,
   es,

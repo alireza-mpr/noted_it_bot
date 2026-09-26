@@ -1,6 +1,5 @@
-import { START_MESSAGE } from "../../interactiveMessages/messages";
 import type { Replier } from "../replier";
 
 export async function startCommandHandler(replier: Replier): Promise<void> {
-  await replier.say(START_MESSAGE, "Noted");
+  await replier.say("START_MESSAGE", "Noted");
 }

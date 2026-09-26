@@ -1,10 +1,10 @@
-// All English text the bot ever sends to a user, in one place. Anything with
-// dynamic content (a name, a time, a link) uses {0}/{1}-style placeholders —
-// translateText() is instructed to preserve these verbatim, so callers
-// substitute real values locally after translation instead of re-translating
-// per-message content.
+// All English text the bot ever sends to a user, in one place, keyed by the
+// message id that the translation files in src/translation/translations use.
+// Anything with dynamic content (a name, a time, a link) uses {0}-style
+// placeholders that callers fill in after translation.
 
-export const START_MESSAGE = `Heya! I am {0} bot 👋.
+export const MESSAGES = {
+  START_MESSAGE: `Heya! I am {0} bot 👋.
 
 📆 Forward me any message with an event in it. I'll pull out the details and send you a one-tap link to add it to Google Calendar, plus a file for Apple Calendar, Outlook, or anywhere else.
 
@@ -16,86 +16,73 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
 🌎 I reply in your Telegram language by default. To change it, send the /lang command, e.g. /lang fa to get my replies in Farsi.
 
-🤓 Beta.`;
+🤓 Beta.`,
 
-// {0} gets wrapped in literal { } after substitution (the surrounding braces
-// here are intentional, not a typo) — that's how the clickable link itself
-// gets visually set apart, per explicit choice after comparing live options.
-// The leading 🔔 is prepended at send time, not baked in here (see
-// eventMessage.ts) — kept separate from the translated template like the link
-// itself. A directional emoji (👉/👈 flipped per text direction) was tried
-// first but still looked off amid RTL bidi text, so 🔔 replaced it.
-export const CALENDAR_CAPTION_TEMPLATE =
-  "<b>Click {{0}} to add to Google Calendar.</b>\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.";
+  // {0} gets wrapped in literal { } after substitution (the surrounding braces
+  // here are intentional, not a typo) — that's how the clickable link itself
+  // gets visually set apart, per explicit choice after comparing live options.
+  // The leading 🔔 is prepended at send time, not baked in here (see
+  // eventMessage.ts) — kept separate from the translated template like the link
+  // itself. A directional emoji (👉/👈 flipped per text direction) was tried
+  // first but still looked off amid RTL bidi text, so 🔔 replaced it.
+  CALENDAR_CAPTION_TEMPLATE: "<b>Click {{0}} to add to Google Calendar.</b>\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.",
 
-export const LINK_LABEL = "here";
+  LINK_LABEL: "here",
 
-export const ALL_DAY_NOTE =
-  "<i>🤔 By the way, no specific time was mentioned, so this was added as an all-day event.</i>";
+  ALL_DAY_NOTE: "<i>🤔 By the way, no specific time was mentioned, so this was added as an all-day event.</i>",
 
-export const RECURRING_NOTE =
-  "<i>🔁 This event repeats. The link above adds today's session; on a phone it usually won't add the repeat, so open it on a computer for the full series, or set it to repeat yourself using the pattern above.</i>";
+  RECURRING_NOTE: "<i>🔁 This event repeats. The link above adds today's session; on a phone it usually won't add the repeat, so open it on a computer for the full series, or set it to repeat yourself using the pattern above.</i>",
 
-export const RECURRENCE_DECLINED_MESSAGE =
-  "⚠️ This looks like a repeating event, but I couldn't tell for sure how often it repeats, so I didn't create it. Please send it again with clearer wording, e.g. \"every Thursday at 7:30pm\".";
+  RECURRENCE_DECLINED_MESSAGE: "⚠️ This looks like a repeating event, but I couldn't tell for sure how often it repeats, so I didn't create it. Please send it again with clearer wording, e.g. \"every Thursday at 7:30pm\".",
 
-export const NO_CALENDAR_EVENT_MESSAGE =
-  "⚠️ I couldn't turn this into a calendar event.";
+  NO_CALENDAR_EVENT_MESSAGE: "⚠️ I couldn't turn this into a calendar event.",
 
-export const NO_TEXT_MESSAGE =
-  "⚠️ Sorry! I couldn't find any text in your message.";
+  NO_TEXT_MESSAGE: "⚠️ Sorry! I couldn't find any text in your message.",
 
-export const NO_AVAILABLE_MODEL_MESSAGE =
-  "Sorry! All the AI providers are busy right now. Please try again in a minute.";
+  NO_AVAILABLE_MODEL_MESSAGE: "Sorry! All the AI providers are busy right now. Please try again in a minute.",
 
-export const GENERIC_ERROR_MESSAGE =
-  "⚠️ Something went wrong on my end — I've logged it to fix later.";
+  GENERIC_ERROR_MESSAGE: "⚠️ Something went wrong on my end — I've logged it to fix later.",
 
-export const LANG_USAGE =
-  "Which language? Send /lang followed by a language name or code, e.g. /lang Persian or /lang fa. To go back to auto-detecting from your Telegram settings, send /lang auto.";
+  LANG_USAGE: "Which language? Send /lang followed by a language name or code, e.g. /lang Persian or /lang fa. To go back to auto-detecting from your Telegram settings, send /lang auto.",
 
-export const LANG_SET_CONFIRMATION = "Got it — I'll reply in {0} from now on.";
+  LANG_SET_CONFIRMATION: "Got it — I'll reply in {0} from now on.",
 
-export const LANG_RESET_CONFIRMATION =
-  "Back to auto-detecting your language from Telegram settings.";
+  LANG_RESET_CONFIRMATION: "Back to auto-detecting your language from Telegram settings.",
 
-export const LANG_NOT_SUPPORTED =
-  "I can't reply in that language yet. I can reply in: {0}.";
+  LANG_NOT_SUPPORTED: "I can't reply in that language yet. I can reply in: {0}.",
 
-export const TZ_LINK_MESSAGE =
-  "Tap the button below to set your time zone. The link works for 1 minute.";
+  TZ_LINK_MESSAGE: "Tap the button below to set your time zone. The link works for 1 minute.",
 
-export const TZ_BUTTON_LABEL = "Set my time zone";
+  TZ_BUTTON_LABEL: "Set my time zone",
 
-export const TZ_SET_CONFIRMATION =
-  "Got it — I'll use the {0} time zone for you from now on.";
+  TZ_SET_CONFIRMATION: "Got it — I'll use the {0} time zone for you from now on.",
 
-export const USER_DAILY_QUOTA_EXCEEDED =
-  "🙅🏻‍♂️ You don't have enough daily quota left for today. Try again in {0}.";
+  USER_DAILY_QUOTA_EXCEEDED: "🙅🏻‍♂️ You don't have enough daily quota left for today. Try again in {0}.",
 
-export const USER_DAILY_QUOTA_REMAINING =
-  "🔢 You have {0} remaining request(s) for today.";
+  USER_DAILY_QUOTA_REMAINING: "🔢 You have {0} remaining request(s) for today.",
 
-// {0} is the user's numeric Telegram id, enough to whitelist them.
-export const NOT_WHITELISTED =
-  "This bot is invite-only right now, and I don't have you on the list. Ask the creator of the bot to add you — your Id is {0}.";
+  // {0} is the user's numeric Telegram id, enough to whitelist them.
+  NOT_WHITELISTED: "This bot is invite-only right now, and I don't have you on the list. Ask the creator of the bot to add you — your Id is {0}.",
 
-export const PAGE_TITLE = "Set your time zone";
+  PAGE_TITLE: "Set your time zone",
 
-export const PAGE_DETECTED = "Your device says you're in:";
+  PAGE_DETECTED: "Your device says you're in:",
 
-export const PAGE_LOCAL_TIME = "It is {0} there now.";
+  PAGE_LOCAL_TIME: "It is {0} there now.",
 
-export const PAGE_CONFIRM = "Yes, use this time zone";
+  PAGE_CONFIRM: "Yes, use this time zone",
 
-export const PAGE_CHOOSE = "No, choose another";
+  PAGE_CHOOSE: "No, choose another",
 
-export const PAGE_SEARCH = "Search for a city or region";
+  PAGE_SEARCH: "Search for a city or region",
 
-export const PAGE_SAVE = "Save";
+  PAGE_SAVE: "Save",
 
-export const PAGE_SAVED = "Saved. You can close this page and go back to Telegram.";
+  PAGE_SAVED: "Saved. You can close this page and go back to Telegram.",
 
-export const PAGE_EXPIRED = "This link has expired. Send /tz to the bot again.";
+  PAGE_EXPIRED: "This link has expired. Send /tz to the bot again.",
 
-export const PAGE_ERROR = "Something went wrong. Please try again.";
+  PAGE_ERROR: "Something went wrong. Please try again.",
+};
+
+export type MessageId = keyof typeof MESSAGES;

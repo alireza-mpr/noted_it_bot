@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { PAGE_EXPIRED, PAGE_TITLE, TZ_SET_CONFIRMATION } from "../../src/interactiveMessages/messages";
+import { MESSAGES } from "../../src/interactiveMessages/messages";
 import { TRANSLATIONS } from "../../src/translation/translations";
 import { handleTzPage, handleTzSave } from "../../src/web/tzRoutes";
 import { OPEN_TOKEN_TTL_MS, SAVE_TOKEN_TTL_MS, signTzToken, verifyTzToken } from "../../src/web/tzToken";
@@ -81,7 +81,7 @@ describe("GET /tz", () => {
     for (const [lang, dir] of [["fa", "rtl"], ["ar", "rtl"], ["de", "ltr"], ["en", "ltr"]] as const) {
       const html = await (await handleTzPage(pageRequest(await openToken({ lang })), env, NOW)).text();
       expect(html).toContain(`<html lang="${lang}" dir="${dir}">`);
-      const expected = lang === "en" ? PAGE_TITLE : TRANSLATIONS[lang][PAGE_TITLE];
+      const expected = lang === "en" ? MESSAGES.PAGE_TITLE : TRANSLATIONS[lang].PAGE_TITLE;
       expect(html).toContain(`<title>${expected}</title>`);
     }
   });
@@ -109,7 +109,7 @@ describe("GET /tz", () => {
       const now = name === "expired" ? NOW + OPEN_TOKEN_TTL_MS + 1 : NOW;
       const response = await handleTzPage(pageRequest(token), env, now);
       expect(response.status, name).toBe(403);
-      expect(await response.text(), name).toContain(PAGE_EXPIRED);
+      expect(await response.text(), name).toContain(MESSAGES.PAGE_EXPIRED);
     }
     expect(d1.statements).toHaveLength(0);
   });
@@ -118,7 +118,7 @@ describe("GET /tz", () => {
     const { env } = setup();
     const response = await handleTzPage(pageRequest("bad", { "Accept-Language": "fa-IR,fa;q=0.9,en;q=0.8" }), env, NOW);
     expect(response.status).toBe(403);
-    expect(await response.text()).toContain(TRANSLATIONS.fa[PAGE_EXPIRED]);
+    expect(await response.text()).toContain(TRANSLATIONS.fa.PAGE_EXPIRED);
   });
 });
 
@@ -133,7 +133,7 @@ describe("POST /tz/save", () => {
     expect(d1.writes()[0].sql).toContain("timezone = excluded.timezone");
     expect(d1.writes()[0].args).toEqual([UID, "Asia/Tehran"]);
     expect(sendMessage).toHaveBeenCalledTimes(1);
-    expect(sendMessage.mock.calls[0]).toEqual([UID, TRANSLATIONS.fa[TZ_SET_CONFIRMATION].replace("{0}", "Asia/Tehran")]);
+    expect(sendMessage.mock.calls[0]).toEqual([UID, TRANSLATIONS.fa.TZ_SET_CONFIRMATION!.replace("{0}", "Asia/Tehran")]);
   });
 
   it("takes the user only from the token, never from the request body", async () => {

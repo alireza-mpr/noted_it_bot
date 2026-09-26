@@ -1,4 +1,3 @@
-import { PAGE_EXPIRED, TZ_SET_CONFIRMATION } from "../interactiveMessages/messages";
 import { Logger, describeError, setLogField } from "../logging/logger";
 import type { TelegramClient } from "../telegram/telegramClient";
 import { fillPlaceholder } from "../translation/placeholders";
@@ -42,7 +41,7 @@ function json(status: number, body: unknown): Response {
 function expiredPage(request: Request): Response {
   const lang = languageFromHeader(request);
   const nonce = newNonce();
-  return new Response(renderMessagePage(lang, translateStatic(PAGE_EXPIRED, lang), nonce), {
+  return new Response(renderMessagePage(lang, translateStatic("PAGE_EXPIRED", lang), nonce), {
     status: 403,
     headers: pageSecurityHeaders(nonce),
   });
@@ -114,7 +113,7 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
   try {
     await deps.telegram.sendMessage(
       uid,
-      fillPlaceholder(translateStatic(TZ_SET_CONFIRMATION, lang), timezone),
+      fillPlaceholder(translateStatic("TZ_SET_CONFIRMATION", lang), timezone),
     );
   } catch (err) {
     logger.warn("could not send the time zone confirmation", describeError(err));

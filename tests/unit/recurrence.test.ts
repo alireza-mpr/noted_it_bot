@@ -8,6 +8,7 @@ import type {
   ExtractedEvent,
   Recurrence,
 } from "../../src/extractedEvents/extractedEvent";
+import { SUPPORTED_LANGUAGES } from "../../src/translation/language";
 
 // Fixed "now": Monday 21 Sep 2026, 12:00 Melbourne (AEST, UTC+10).
 const MON_NOON = new Date("2026-09-21T02:00:00Z");
@@ -150,7 +151,7 @@ describe("recurring events: rule and end condition", () => {
       }),
     );
     expect(built.icsContent).toContain("UNTIL=20261129T125900Z");
-    expect(built.recurrence?.untilLabel).toContain("2026");
+    expect(built.recurrence).toBe("Repeats every Thursday, until Nov 29, 2026");
   });
 
   it("an end month earlier than the start rolls into the next year", () => {
@@ -264,17 +265,19 @@ describe("recurrenceProblem (decline conditions)", () => {
   });
 });
 
-describe("describeRecurrence (English template, translated later)", () => {
+describe("describeRecurrence", () => {
   it("weekly on a weekday", () => {
-    expect(describeRecurrence(rec())).toBe("Repeats every Thursday");
+    expect(describeRecurrence(rec(), "en")).toBe("Repeats every Thursday");
   });
 
   it("multiple weekdays, interval and until", () => {
     expect(
       describeRecurrence(
         rec({ interval: 2, weekdays: ["MO", "WE"], end_kind: "until" }),
+        "en",
+        "5 Jan 2027",
       ),
-    ).toBe("Repeats every 2 weeks on Monday and Wednesday, until {0}");
+    ).toBe("Repeats every 2 weeks on Monday and Wednesday, until 5 Jan 2027");
   });
 
   it("monthly ordinal weekday and count", () => {
@@ -287,6 +290,7 @@ describe("describeRecurrence (English template, translated later)", () => {
           end_kind: "count",
           count: 4,
         }),
+        "en",
       ),
     ).toBe("Repeats on the first Friday of every month, 4 times");
   });
@@ -295,7 +299,77 @@ describe("describeRecurrence (English template, translated later)", () => {
     expect(
       describeRecurrence(
         rec({ frequency: "monthly", weekdays: null, month_day: 22 }),
+        "en",
       ),
     ).toBe("Repeats on the 22nd of every month");
+  });
+
+  it("falls back to English for an unsupported language", () => {
+    expect(describeRecurrence(rec(), "he")).toBe("Repeats every Thursday");
+    expect(describeRecurrence(rec(), undefined)).toBe("Repeats every Thursday");
+  });
+
+  it("writes the sentence in the reply language", () => {
+    expect(describeRecurrence(rec({ weekdays: ["MO", "WE"] }), "de")).toBe(
+      "Wiederholt sich jeden Montag und Mittwoch",
+    );
+    expect(describeRecurrence(rec({ frequency: "daily", weekdays: null, interval: 3 }), "fa")).toBe(
+      "هر ۳ روز یک‌بار تکرار می‌شود",
+    );
+    expect(describeRecurrence(rec({ frequency: "monthly", weekdays: null, month_day: 1 }), "fr")).toBe(
+      "Se répète le 1er de chaque mois",
+    );
+  });
+
+  it("uses the language's plural forms", () => {
+    const daily = (interval: number, lang: string) =>
+      describeRecurrence(rec({ frequency: "daily", weekdays: null, interval }), lang);
+    expect(daily(2, "ru")).toBe("Повторяется каждые 2 дня");
+    expect(daily(5, "ru")).toBe("Повторяется каждые 5 дней");
+    expect(daily(21, "ru")).toBe("Повторяется каждый 21 день");
+    expect(daily(2, "ar")).toBe("يتكرر كل يومين");
+    expect(
+      describeRecurrence(rec({ frequency: "weekly", weekdays: null, interval: 3 }), "pl"),
+    ).toBe("Powtarza się co 3 tygodnie");
+  });
+
+  it("makes the ordinal agree with the weekday", () => {
+    const monthly = (weekdays: Recurrence["weekdays"], ordinal: number, lang: string) =>
+      describeRecurrence(rec({ frequency: "monthly", weekdays, ordinal }), lang);
+    expect(monthly(["MO", "WE", "SU"], 1, "ru")).toBe(
+      "Повторяется каждый месяц: первый понедельник, первая среда и первое воскресенье",
+    );
+    expect(monthly(["SU"], -1, "it")).toBe("Si ripete l’ultima domenica di ogni mese");
+    expect(monthly(["MO"], 2, "pt")).toBe("Repete-se na segunda segunda-feira de cada mês");
+  });
+
+  it("fills every placeholder in every language and shape", () => {
+    const shapes: Partial<Recurrence>[] = [
+      { frequency: "daily", weekdays: null },
+      { frequency: "weekly", weekdays: null },
+      { frequency: "weekly", weekdays: ["MO", "SA"] },
+      { frequency: "monthly", weekdays: null },
+      { frequency: "monthly", weekdays: null, month_day: 15 },
+      { frequency: "monthly", weekdays: ["WE", "SU"], ordinal: -1 },
+      { frequency: "yearly", weekdays: null },
+    ];
+    const ends: Partial<Recurrence>[] = [
+      { end_kind: "never" },
+      { end_kind: "until" },
+      { end_kind: "count", count: 1 },
+      { end_kind: "count", count: 3 },
+      { end_kind: "count", count: 12 },
+    ];
+    for (const lang of SUPPORTED_LANGUAGES) {
+      for (const shape of shapes) {
+        for (const interval of [1, 2, 3, 5, 11, 21, 100]) {
+          for (const end of ends) {
+            const text = describeRecurrence(rec({ ...shape, ...end, interval }), lang, "DATE");
+            expect(text, `${lang} ${JSON.stringify({ ...shape, ...end, interval })}`).not.toMatch(/[{}]/);
+            expect(text.includes("DATE")).toBe(end.end_kind === "until");
+          }
+        }
+      }
+    }
   });
 });
