@@ -36,7 +36,11 @@ export class GeminiClient implements ProviderClient {
           }),
         },
       );
-      return parseGeminiResponse(response.status, await response.text());
+      return parseGeminiResponse(
+        model.id,
+        response.status,
+        await response.text(),
+      );
     } catch (err) {
       if ((err as Error).name === "TimeoutError") {
         return {

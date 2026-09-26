@@ -81,6 +81,7 @@ export async function eventMessageHandler(
     receivedMessage: content,
     providerRequest: content,
     providerResponse: downstream.message,
+    model: downstream.model ?? null,
   });
 
   if (downstream.result === "failed") {

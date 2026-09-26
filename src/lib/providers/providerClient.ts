@@ -29,7 +29,7 @@ export type ProviderFailure =
     });
 
 export type ProviderResult =
-  | { result: "ok"; text: string; totalTokens: number }
+  | { result: "ok"; model: string; text: string; totalTokens: number }
   | { result: "failed"; failure: ProviderFailure };
 
 // What the router depends on: one call to one specific model.

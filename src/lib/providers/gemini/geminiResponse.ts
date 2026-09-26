@@ -30,6 +30,7 @@ function describeError(data: GeminiBody | null, body: string): string {
 }
 
 export function parseGeminiResponse(
+  model: string,
   httpStatus: number,
   body: string,
 ): ProviderResult {
@@ -84,6 +85,7 @@ export function parseGeminiResponse(
 
   return {
     result: "ok",
+    model,
     text,
     totalTokens: data?.usageMetadata?.totalTokenCount ?? 0,
   };

@@ -9,6 +9,8 @@ export interface DownstreamResult {
   result: "ok" | "failed";
   message: string;
   failure?: ProviderFailure;
+  // The model that produced a successful answer.
+  model?: string;
 }
 
 const NO_AVAILABLE_MODEL: DownstreamResult = {
@@ -35,7 +37,11 @@ export async function extractEvent(
       "extractEvent: extracted",
       JSON.stringify({ source: telegramMessageText, event }),
     );
-    return { result: "ok", message: JSON.stringify(event) };
+    return {
+      result: "ok",
+      message: JSON.stringify(event),
+      model: answer.model,
+    };
   } catch (err) {
     console.error("extractEvent: threw", err);
     return {

@@ -9,6 +9,8 @@ export interface MessageLogEntry {
   receivedMessage: string;
   providerRequest: string;
   providerResponse: string;
+  // The model that answered; null when no model did.
+  model: string | null;
 }
 
 export class MessageLogger {

@@ -212,7 +212,8 @@ namespace by `messageLogger` (`MessageLogger` in `src/logging/messageLogger.ts`,
 initialised per request in the handler): the sender's Telegram `username` and
 numeric user id (the id is always present even when the username isn't,
 since it's optional in Telegram), the message/caption text as received,
-what was sent to Gemini, and Gemini's response, plus a
+what was sent to Gemini, Gemini's response, and the `model` that gave it (null
+when no model answered), plus a
 `{logger: "messageLogger", time: {date_time_aest}}` header — each entry expires
 automatically after **14 days**
 (`expirationTtl`). Logging failures are swallowed (best-effort) and never
