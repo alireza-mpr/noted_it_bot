@@ -65,10 +65,10 @@ export const LANG_NOT_UNDERSTOOD =
   'I couldn\'t figure out what language "{0}" refers to. Try a language name (e.g. "Persian") or a code (e.g. "fa").';
 
 export const USER_DAILY_QUOTA_EXCEEDED =
-  "🙅🏻‍♂️ Not enough daily quota remaining for today. Try again in {0}.";
+  "🙅🏻‍♂️ Not enough daily quota remaining for you for today. Try again in {0}.";
 
 export const USER_DAILY_QUOTA_REMAINING =
-  "✔ You have {0} remaining request(s) for today.";
+  " 🔢 You have {0} remaining request(s) for today.";
 
 // {0} is the user's numeric Telegram id, enough to whitelist them.
 export const NOT_WHITELISTED =
