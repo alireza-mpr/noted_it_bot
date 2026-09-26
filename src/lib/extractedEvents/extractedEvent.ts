@@ -17,7 +17,7 @@ export interface Recurrence {
 
 export interface ExtractedEvent {
   title: string | null;
-  calendar: "gregorian" | "jalali" | "unknown";
+  calendar: string; // "gregorian", or an Intl calendar id such as "persian" (event_schema.ts lists the ones offered)
   // "weekday" with year/month/day null is the normal shape for a recurring
   // event with no stated start date ("every Sunday at 5pm").
   date_kind: "absolute" | "relative" | "weekday" | "none";

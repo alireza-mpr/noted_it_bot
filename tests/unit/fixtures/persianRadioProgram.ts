@@ -37,3 +37,14 @@ export const GEMINI_3_1_FLASH_LITE_RADIO_EVENT: ExtractedEvent = {
   },
   confidence: 0.9,
 };
+
+// What gemini-3.5-flash-lite returned in some runs for the same message: the
+// Jalali date copied as written (1 Mehr 1405) and labelled "persian", with the
+// stated 20:00 and a daily repeat. Same hand-filled fields as above.
+export const GEMINI_3_5_FLASH_LITE_JALALI_RADIO_EVENT: ExtractedEvent = {
+  ...GEMINI_3_1_FLASH_LITE_RADIO_EVENT,
+  calendar: "persian",
+  year: 1405,
+  month: 7,
+  day: 1,
+};

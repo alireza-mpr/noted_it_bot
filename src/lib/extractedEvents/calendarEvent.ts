@@ -1,4 +1,11 @@
 import type { ExtractedEvent } from "./extractedEvent";
+import {
+  CalendarDate,
+  GregorianCalendar,
+  createCalendar,
+  toCalendar,
+  type CalendarIdentifier,
+} from "@internationalized/date";
 import { resolveTimezone, resolveYear, zonedTimeToUtc } from "../time/timezone";
 import { buildRrule, describeRecurrence, planRecurrence } from "./recurrence";
 
@@ -106,11 +113,78 @@ function foldIcsLine(line: string): string {
   return parts.join("\r\n ");
 }
 
-// Only Gregorian events with a resolvable date become a calendar event:
-// an absolute date, or — for a repeating event with no stated start — a
+// The model copies a date as written and names its calendar (an Intl calendar
+// id such as "persian"); the conversion to Gregorian is left to the library.
+// Returns null when the date can't be converted reliably: a calendar the
+// library doesn't know, no stated year, a day that doesn't exist, or a
+// monthly/yearly repeat, whose months differ between the calendars.
+function toGregorian(event: ExtractedEvent): ExtractedEvent | null {
+  if (event.calendar === "gregorian") {
+    return event;
+  }
+
+  // createCalendar falls back to Gregorian for a name it doesn't know, so check
+  // it gave back the calendar that was asked for.
+  const calendar = createCalendar(event.calendar as CalendarIdentifier);
+  if (calendar.identifier !== event.calendar) {
+    return null;
+  }
+
+  const recurrence = event.recurrence ?? null;
+  if (recurrence?.frequency === "monthly" || recurrence?.frequency === "yearly") {
+    return null;
+  }
+
+  const gregorianDate = (year: number, month: number, day: number) => {
+    const date = new CalendarDate(calendar, year, month, day);
+    // The library clamps a day that doesn't exist (30 Esfand in a common year).
+    if (date.year !== year || date.month !== month || date.day !== day) {
+      return null;
+    }
+    const { year: y, month: m, day: d } = toCalendar(date, new GregorianCalendar());
+    return { year: y, month: m, day: d };
+  };
+
+  let { year, month, day } = event;
+  if (month !== null && day !== null) {
+    const start = year === null ? null : gregorianDate(year, month, day);
+    if (!start) {
+      return null;
+    }
+    ({ year, month, day } = start);
+  }
+
+  let untilFields = {};
+  if (recurrence?.until_month != null && recurrence.until_day != null) {
+    const until =
+      recurrence.until_year == null
+        ? null
+        : gregorianDate(
+            recurrence.until_year,
+            recurrence.until_month,
+            recurrence.until_day,
+          );
+    if (!until) {
+      return null;
+    }
+    untilFields = {
+      recurrence: {
+        ...recurrence,
+        until_year: until.year,
+        until_month: until.month,
+        until_day: until.day,
+      },
+    };
+  }
+
+  return { ...event, calendar: "gregorian", year, month, day, ...untilFields };
+}
+
+// Only events with a resolvable Gregorian date (or one in a calendar the library converts) become a calendar
+// event: an absolute date, or — for a repeating event with no stated start — a
 // weekday pattern whose first occurrence we work out from today. Other
-// relative dates stay unresolved (event_extract.txt) and non-Gregorian
-// calendars aren't supported yet, so this returns null for anything else.
+// relative dates stay unresolved (event_extract.txt) and other calendars
+// aren't supported, so this returns null for anything else.
 //
 // A date without a time (start_time null) becomes an all-day event rather
 // than guessing a time — a guessed time would look like a real, specific
@@ -118,12 +192,13 @@ function foldIcsLine(line: string): string {
 //
 // `now` is injectable so date arithmetic is testable.
 export function buildCalendarEvent(
-  event: ExtractedEvent,
+  extracted: ExtractedEvent,
   uid: string,
   lang?: string,
   now: Date = new Date(),
 ): BuiltCalendarEvent | null {
-  if (event.calendar !== "gregorian") {
+  const event = toGregorian(extracted);
+  if (!event) {
     return null;
   }
 

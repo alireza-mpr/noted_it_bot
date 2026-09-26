@@ -6,6 +6,7 @@ Rules for the date and time:
 - Only extract explicit, unambiguous dates (e.g. "19 Sep"). Do not infer relative dates such as "tomorrow" or "next Friday" — for those, set date_kind accordingly and leave year/month/day null.
 - If a date is given without a time, leave start_time and end_time null. Do not guess a time.
 - Assume all times are in the Australia/Melbourne timezone unless another timezone is explicitly stated in the message.
+- Set calendar (eg Gregorian, Hijri) to the calendar the date is written in. If it is not one of the calendars the schema allows, use "unknown". Copy the year, month and day exactly as written (turn a month name into its number) and never convert them to Gregorian.
 - If no explicit date can be found at all, set date_kind to "none" — unless the message describes a repeating pattern (see below).
 
 Rules for recurrence:
