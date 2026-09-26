@@ -6,7 +6,6 @@ export interface Env {
   GROQ_API_KEY: string;
   AXIOM_TOKEN: string;
   I18N: KVNamespace;
-  USER_LANG: KVNamespace;
   MESSAGE_LOG: KVNamespace;
   USAGE_DB: D1Database;
 }

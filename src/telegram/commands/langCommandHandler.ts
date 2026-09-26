@@ -34,7 +34,7 @@ export async function langCommandHandler(
   replier: Replier,
 ): Promise<void> {
   const arg = (message.text ?? "").slice(PREFIX.length).trim();
-  const chatId = message.chat.id;
+  const userId = message.from.id;
 
   if (!arg) {
     await replier.say(LANG_USAGE);
@@ -42,7 +42,7 @@ export async function langCommandHandler(
   }
 
   if (arg.toLowerCase() === "auto") {
-    await clearUserLanguageOverride(env, chatId);
+    await clearUserLanguageOverride(env, userId);
     logger.info("language override cleared");
     await replier
       .withLang(message.from.language_code ?? DEFAULT_LANGUAGE)
@@ -56,7 +56,7 @@ export async function langCommandHandler(
     return;
   }
 
-  await setUserLanguageOverride(env, chatId, resolved);
+  await setUserLanguageOverride(env, userId, resolved);
   logger.info("language override set", { language: resolved });
   await replier
     .withLang(resolved)

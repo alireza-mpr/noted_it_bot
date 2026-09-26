@@ -14,10 +14,6 @@ binding = "I18N"
 id = "e0e7f8d9713349c5ae59be6961935109"
 remote = true
 [[env.dev.kv_namespaces]]
-binding = "USER_LANG"
-id = "d05a28ba60ae461e935926195327875d"
-remote = true
-[[env.dev.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "f1a94b61a6ea499ba534adab79d3b3fc"
 remote = true
@@ -34,9 +30,6 @@ APP_VERSION = "0.2.0-dev-local"
 [[env.prod.kv_namespaces]]
 binding = "I18N"
 id = "296e4c6114df451ca33774a2edf28ce5"
-[[env.prod.kv_namespaces]]
-binding = "USER_LANG"
-id = "82f0418d9bc74193b895070de1eb2028"
 [[env.prod.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "0995f983386447d89941d1a4de8ac90b"

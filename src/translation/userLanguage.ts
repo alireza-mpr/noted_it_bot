@@ -1,17 +1,19 @@
+import { UserPreferenceRepository } from "../repositories/userPreferenceRepository";
+
 export interface UserLanguageEnv {
-  USER_LANG: KVNamespace;
+  USAGE_DB: D1Database;
 }
 
 // An explicit /lang choice overrides Telegram's auto-detected
-// message.from.language_code for all of that chat's future replies.
-export async function getUserLanguageOverride(env: UserLanguageEnv, chatId: number): Promise<string | null> {
-  return env.USER_LANG.get(`chat:${chatId}`);
+// message.from.language_code for all of that user's future replies.
+export async function getUserLanguageOverride(env: UserLanguageEnv, userId: number): Promise<string | null> {
+  return new UserPreferenceRepository(env.USAGE_DB).getLang(userId);
 }
 
-export async function setUserLanguageOverride(env: UserLanguageEnv, chatId: number, lang: string): Promise<void> {
-  await env.USER_LANG.put(`chat:${chatId}`, lang);
+export async function setUserLanguageOverride(env: UserLanguageEnv, userId: number, lang: string): Promise<void> {
+  await new UserPreferenceRepository(env.USAGE_DB).setLang(userId, lang);
 }
 
-export async function clearUserLanguageOverride(env: UserLanguageEnv, chatId: number): Promise<void> {
-  await env.USER_LANG.delete(`chat:${chatId}`);
+export async function clearUserLanguageOverride(env: UserLanguageEnv, userId: number): Promise<void> {
+  await new UserPreferenceRepository(env.USAGE_DB).clearLang(userId);
 }

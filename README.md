@@ -198,17 +198,37 @@ once per language, ever. Falls back to English on any translation failure.
 
 Users can override the auto-detected language with `/lang <language>` (e.g.
 `/lang Persian` or `/lang fa` — free-text names are resolved via Gemini), or
-reset to auto-detection with `/lang auto`. The override is stored per chat in
-a separate `USER_LANG` KV namespace.
+reset to auto-detection with `/lang auto`. The override is stored per user in the
+`user_preference` table of the `USAGE_DB` D1 database (`src/db/sql/userPreference.ts`,
+`src/repositories/userPreferenceRepository.ts`): `userId` (primary key), `lang` (`NULL` means
+auto-detect) and `timezone` (defaults to `UTC`; nothing reads it yet). The table is created on
+first use like the others.
 
-**One-time setup**: create both KV namespaces per environment and put their
-IDs in [wrangler.toml](wrangler.toml) (it ships with placeholder IDs):
+**One-time setup**: create the `I18N` KV namespace per environment and put its
+ID in [wrangler.toml](wrangler.toml) (it ships with a placeholder ID):
 
 ```bash
 npx wrangler kv namespace create I18N --env dev
 npx wrangler kv namespace create I18N --env prod
-npx wrangler kv namespace create USER_LANG --env dev
-npx wrangler kv namespace create USER_LANG --env prod
+```
+
+The language override used to live in a `USER_LANG` KV namespace, keyed `chat:<chatId>`; that
+binding has been removed. For private chats the chat id is the user id, so the old entries can be
+copied over (needs `jq`; group chats, whose ids are negative, and anything that isn't a valid
+language code are skipped). Find the namespace id with `npx wrangler kv namespace list`:
+
+```bash
+NS=<USER_LANG_NAMESPACE_ID>
+{
+  echo "CREATE TABLE IF NOT EXISTS user_preference (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT NOT NULL DEFAULT 'UTC');"
+  npx wrangler kv key list --namespace-id "$NS" --remote | jq -r '.[].name | select(test("^chat:[0-9]+$"))' | while read -r key; do
+    lang=$(npx wrangler kv key get --namespace-id "$NS" --remote "$key")
+    if [[ "$lang" =~ ^[a-z]{2,3}(-[A-Z]{2})?$ ]]; then
+      echo "INSERT INTO user_preference (userId, lang) VALUES (${key#chat:}, '$lang') ON CONFLICT(userId) DO UPDATE SET lang = excluded.lang;"
+    fi
+  done
+} > user_preference.sql
+npx wrangler d1 execute noted-it-dev-usage --remote --file user_preference.sql   # and noted-it-prod-usage for prod
 ```
 
 ### Message logging

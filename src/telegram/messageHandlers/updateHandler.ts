@@ -126,7 +126,7 @@ async function readUserLanguage(
   message: TelegramMessage,
 ): Promise<string> {
   try {
-    const langOverride = await getUserLanguageOverride(env, message.chat.id);
+    const langOverride = await getUserLanguageOverride(env, message.from.id);
     return langOverride ?? message.from.language_code ?? DEFAULT_LANGUAGE;
   } catch (err) {
     logger.error("could not read the user's language, using English", describeError(err));
