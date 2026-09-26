@@ -14,6 +14,7 @@ import {
   setUserLanguageOverride,
 } from "../../translation/userLanguage";
 import type { Env } from "../../env";
+import type { Router } from "../../router/router";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
 
@@ -25,6 +26,7 @@ export function isLangCommand(text: string | undefined): boolean {
 
 export async function langCommandHandler(
   env: Env,
+  router: Router,
   message: TelegramMessage,
   replier: Replier,
 ): Promise<void> {
@@ -44,7 +46,7 @@ export async function langCommandHandler(
     return;
   }
 
-  const resolved = await resolveLanguageCode(env, arg);
+  const resolved = await resolveLanguageCode(router, arg);
   if (!resolved) {
     await replier.say(LANG_NOT_UNDERSTOOD, arg);
     return;

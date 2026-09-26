@@ -101,7 +101,7 @@ async function handleMessage(
   // /diag is deliberately not registered via setMyCommands, so it stays hidden from the menu.
   if (message.text === "/diag") return diagCommandHandler(router, replier);
   if (isLangCommand(message.text)) {
-    return langCommandHandler(env, message, replier);
+    return langCommandHandler(env, router, message, replier);
   }
 
   return eventMessageHandler(
@@ -144,7 +144,7 @@ export async function updateHandler(
   }
 
   const lang = await readUserLanguage(env, message);
-  const replier = new Replier(env, telegramClient, message.chat.id, lang);
+  const replier = new Replier(env, router, telegramClient, message.chat.id, lang);
 
   const consumed: ConsumedQuota = { show: false, remaining: 0 };
   try {

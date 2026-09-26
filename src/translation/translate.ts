@@ -1,12 +1,10 @@
 import translateSystemPrompt from "../prompts/translate_system.txt";
 import translateUserPrompt from "../prompts/translate_user.txt";
+import type { Router } from "../router/router";
 
 export interface TranslateEnv {
   I18N: KVNamespace;
-  GEMINI_API_KEY: string;
 }
-
-const TRANSLATE_MODEL = "gemini-3.1-flash-lite";
 
 function buildUserPrompt(lang: string, text: string): string {
   return translateUserPrompt
@@ -30,7 +28,12 @@ async function cacheKey(text: string, lang: string): Promise<string> {
 // placeholder tokens like "{0}"; the system instruction tells Gemini to
 // preserve them untouched so callers can splice in dynamic content (e.g. a
 // link) after translation without re-translating per-event content.
-export async function translateText(env: TranslateEnv, text: string, lang: string | undefined): Promise<string> {
+export async function translateText(
+  env: TranslateEnv,
+  router: Router,
+  text: string,
+  lang: string | undefined,
+): Promise<string> {
   if (!lang || lang === "en") {
     return text;
   }
@@ -42,34 +45,19 @@ export async function translateText(env: TranslateEnv, text: string, lang: strin
   }
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${TRANSLATE_MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": env.GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: translateSystemPrompt.trim() }] },
-          contents: [{ role: "user", parts: [{ text: buildUserPrompt(lang, text) }] }],
-          generationConfig: { temperature: 0 },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      console.error("translateText: Gemini returned", response.status, await response.text());
+    const answer = await router.generate({
+      systemPrompt: translateSystemPrompt.trim(),
+      userPrompt: buildUserPrompt(lang, text),
+      temperature: 0,
+    });
+    if (answer.result === "failed") {
+      console.error("translateText: no model translated", JSON.stringify(answer.failure));
       return text;
     }
 
-    const data = await response.json<{
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    }>();
-
-    const translated = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const translated = answer.text.trim();
     if (!translated) {
-      console.error("translateText: no text in Gemini response", JSON.stringify(data));
+      console.error("translateText: empty translation", answer.model);
       return text;
     }
 

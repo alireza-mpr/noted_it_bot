@@ -5,22 +5,24 @@ import {
 import { fillPlaceholder } from "../translation/placeholders";
 import { translateText } from "../translation/translate";
 import type { TranslateEnv } from "../translation/translate";
+import type { Router } from "../router/router";
 import type { TelegramClient } from "./telegramClient";
 
 export class Replier {
   constructor(
     private readonly env: TranslateEnv,
+    private readonly router: Router,
     private readonly telegram: TelegramClient,
     private readonly chatId: number,
     readonly lang: string,
   ) {}
 
   withLang(lang: string): Replier {
-    return new Replier(this.env, this.telegram, this.chatId, lang);
+    return new Replier(this.env, this.router, this.telegram, this.chatId, lang);
   }
 
   async translate(template: string, value?: string): Promise<string> {
-    const text = await translateText(this.env, template, this.lang);
+    const text = await translateText(this.env, this.router, template, this.lang);
     return value === undefined ? text : fillPlaceholder(text, value);
   }
 

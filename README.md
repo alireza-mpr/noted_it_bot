@@ -267,8 +267,7 @@ Test runs don't write to KV, and their router lines print to your terminal.
 
 Gemini enforces per-model quotas on the free tier, so usage is counted per model
 and the next model with headroom is picked. **Status:** wired into event
-extraction and `/diag`. `/lang` resolution and reply translation still call one
-hard-coded Gemini model directly.
+extraction, `/diag`, reply translation and `/lang` resolution.
 
 - **Daily window = Pacific time.** Google's rate-limits page states: "Requests
   per day (RPD) quotas reset at midnight Pacific time." The day key is the
