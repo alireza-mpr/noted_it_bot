@@ -63,7 +63,7 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
 - The bot's own name ("Noted") is never translated.
 
 ### Access control
-- Open to everyone, with a per-user daily quota (3 messages that go to a model).
+- Open to everyone, with a per-user daily quota (`appConfig.dailyQuota`, currently 5 messages that go to a model).
   Commands don't use quota, and a message no model answers is given back. See
   [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
 

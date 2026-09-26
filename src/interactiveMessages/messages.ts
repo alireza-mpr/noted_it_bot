@@ -18,6 +18,9 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
 🤓 Beta.`,
 
+  // Appended to START_MESSAGE when the daily quota is on; {0} is appConfig.dailyQuota.
+  START_QUOTA_NOTE: "🎁 On the free plan, you can send up to {0} requests a day.",
+
   // {0} gets wrapped in literal { } after substitution (the surrounding braces
   // here are intentional, not a typo) — that's how the clickable link itself
   // gets visually set apart, per explicit choice after comparing live options.

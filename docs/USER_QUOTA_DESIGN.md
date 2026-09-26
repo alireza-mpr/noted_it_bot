@@ -1,7 +1,7 @@
 # User Quota — Design & D1 Cost
 
-Each user gets a daily quota of messages (`featureFlags.dailyQuota`, currently
-3) that go to a model. This document describes how the quota is taken and
+Each user gets a daily quota of messages (`appConfig.dailyQuota`, currently
+5) that go to a model. This document describes how the quota is taken and
 given back, and what each kind of message costs in D1 rows. The numbers are
 there so the free and paid limits can be checked against expected load.
 
@@ -101,7 +101,7 @@ long before reads.
 | Rate-limited | no writes; about 2.5M a day on reads | effectively unlimited |
 
 For example, at the worst-case 18 writes per successful message, the free plan
-covers about 1,800 users a day who each use their full quota of 3.
+covers about 1,100 users a day who each use their full quota of 5.
 
 **Workers requests usually run out first.** Workers Free allows 100k requests
 a day. Every Telegram update is one request, whether it's served, denied or

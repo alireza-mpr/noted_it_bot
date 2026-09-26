@@ -223,8 +223,8 @@ Users can override the auto-detected language with `/lang <language>`: a code (`
 `user_preference` table of the `USAGE_DB` D1 database (`src/db/sql/userPreference.ts`,
 `src/repositories/userPreferenceRepository.ts`): `userId` (primary key), `lang` (`NULL` means
 auto-detect; `/lang auto` calls `setLang(userId, null, …)`) and `timezone` (set by `/tz` through
-`setTimezone`; when a user's row is first created by `/lang` it gets `featureFlags.defaultTimezone`,
-`UTC`, from [featureFlags.ts](src/featureFlags/featureFlags.ts)). The bot stores the time zone but
+`setTimezone`; when a user's row is first created by `/lang` it gets `appConfig.defaultTimezone`,
+`UTC`, from [appConfig.ts](src/appConfig/appConfig.ts)). The bot stores the time zone but
 nothing reads it yet. The table is created on first use like the others.
 
 ### Setting the time zone (`/tz`)

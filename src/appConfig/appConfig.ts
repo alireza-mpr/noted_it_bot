@@ -1,11 +1,11 @@
-export interface FeatureFlags {
+export interface AppConfig {
   enforceUserDailyQuota: boolean;
   dailyQuota: number;
   defaultTimezone: string;
 }
 
-export const featureFlags: FeatureFlags = {
+export const appConfig: AppConfig = {
   enforceUserDailyQuota: true,
-  dailyQuota: 3,
+  dailyQuota: 5,
   defaultTimezone: "UTC",
 };

@@ -1,8 +1,5 @@
 import type { Env } from "../../env";
-import {
-  featureFlags,
-  type FeatureFlags,
-} from "../../featureFlags/featureFlags";
+import { appConfig, type AppConfig } from "../../appConfig/appConfig";
 import { describeError, Logger, setLogField } from "../../logging/logger";
 import { formatWait } from "../../time/formatWait";
 import { DEFAULT_LANGUAGE, toSupportedLanguage } from "../../translation/language";
@@ -71,16 +68,16 @@ async function handleMessage(
   env: Env,
   router: Router,
   replier: Replier,
-  flags: FeatureFlags,
+  config: AppConfig,
   consumed: ConsumedQuota,
   origin: string,
 ): Promise<void> {
-  if (message.text === "/start") return startCommandHandler(replier);
+  if (message.text === "/start") return startCommandHandler(replier, config);
   if (message.text === "/ver") return versionCommandHandler(env, replier);
   // /diag is deliberately not registered via setMyCommands, so it stays hidden from the menu.
   if (message.text === "/diag") return diagCommandHandler(router, replier);
   if (isLangCommand(message.text)) {
-    return langCommandHandler(env, message, replier, flags.defaultTimezone);
+    return langCommandHandler(env, message, replier, config.defaultTimezone);
   }
   if (isTzCommand(message.text)) {
     return tzCommandHandler(env, message, replier, origin);
@@ -103,8 +100,8 @@ async function handleMessage(
   // Quota is only taken for a message that goes to a model, and is given back
   // if no model answers it.
   let reservation: QuotaReservation | undefined;
-  if (flags.enforceUserDailyQuota) {
-    const quota = await consumeUserQuota(message, replier, flags.dailyQuota);
+  if (config.enforceUserDailyQuota) {
+    const quota = await consumeUserQuota(message, replier, config.dailyQuota);
     if (!quota.successful) {
       return;
     }
@@ -181,7 +178,7 @@ export async function updateHandler(
       env,
       router,
       replier,
-      featureFlags,
+      appConfig,
       consumed,
       new URL(request.url).origin,
     );
