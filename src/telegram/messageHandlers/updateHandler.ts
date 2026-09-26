@@ -60,14 +60,19 @@ async function rejectUnlessWhitelisted(
   return true;
 }
 
+interface ConsumedQuota {
+  show: boolean;
+  remaining: number;
+}
+
 async function handleMessage(
   message: TelegramMessage,
   env: Env,
   router: Router,
   replier: Replier,
   flags: FeatureFlags,
+  consumed: ConsumedQuota,
 ): Promise<void> {
-  let remainingQuota = 0;
   // /lang is exempt, so even a rejected user can pick the language of the rejection.
   if (!isLangCommand(message.text)) {
     if (
@@ -86,7 +91,8 @@ async function handleMessage(
       if (!quota.successful) {
         return;
       }
-      remainingQuota = quota.remainingQuota;
+      consumed.show = true;
+      consumed.remaining = quota.remainingQuota;
     }
   }
 
@@ -102,8 +108,8 @@ async function handleMessage(
     message,
     router,
     replier,
-    remainingQuota,
-    flags.enforceUserDailyQuota,
+    consumed.remaining,
+    consumed.show,
   );
 }
 
@@ -140,10 +146,11 @@ export async function updateHandler(
   const lang = await readUserLanguage(env, message);
   const replier = new Replier(env, telegramClient, message.chat.id, lang);
 
+  const consumed: ConsumedQuota = { show: false, remaining: 0 };
   try {
-    await handleMessage(message, env, router, replier, featureFlags);
+    await handleMessage(message, env, router, replier, featureFlags, consumed);
   } catch (err) {
     console.error("Unhandled error processing update", err);
-    await replier.reportError();
+    await replier.reportError(consumed.remaining, consumed.show);
   }
 }

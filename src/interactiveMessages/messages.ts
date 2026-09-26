@@ -68,8 +68,8 @@ export const USER_DAILY_QUOTA_EXCEEDED =
   "🙅🏻‍♂️ Not enough daily quota remaining for today. Try again in {0}.";
 
 export const USER_DAILY_QUOTA_REMAINING =
-  "✔ Your have {0} remaining request(s) for today.";
+  "✔ You have {0} remaining request(s) for today.";
 
 // {0} is the user's numeric Telegram id, enough to whitelist them.
 export const NOT_WHITELISTED =
-  "This bot is invite-only right now, and I don't have you on the list. Ask Alireza to add you — your Id is {0}.";
+  "This bot is invite-only right now, and I don't have you on the list. Ask the creator of the bot to add you — your Id is {0}.";

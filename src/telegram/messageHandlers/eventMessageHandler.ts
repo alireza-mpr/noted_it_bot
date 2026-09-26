@@ -79,7 +79,7 @@ export async function eventMessageHandler(
   const content = message.text ?? message.caption;
   if (!content) {
     console.error("Message had no text or caption", JSON.stringify(message));
-    await replier.say(NO_TEXT_MESSAGE);
+    await replier.sayWithQuota(NO_TEXT_MESSAGE, remainingQuota, showQuota);
     return;
   }
 
@@ -111,7 +111,11 @@ export async function eventMessageHandler(
   const problem = recurrenceProblem(event);
   if (problem) {
     console.error("Declined recurring event", problem, downstream.message);
-    await replier.say(RECURRENCE_DECLINED_MESSAGE);
+    await replier.sayWithQuota(
+      RECURRENCE_DECLINED_MESSAGE,
+      remainingQuota,
+      showQuota,
+    );
     return;
   }
 
@@ -125,7 +129,11 @@ export async function eventMessageHandler(
       "Could not build a calendar event from extraction",
       downstream.message,
     );
-    await replier.say(NO_CALENDAR_EVENT_MESSAGE);
+    await replier.sayWithQuota(
+      NO_CALENDAR_EVENT_MESSAGE,
+      remainingQuota,
+      showQuota,
+    );
     return;
   }
 
