@@ -1,7 +1,19 @@
 import type { Env } from "../../env";
-import { NOT_WHITELISTED } from "../../interactiveMessages/messages";
+import {
+  USER_DAILY_QUOTA_EXCEEDED,
+  NOT_WHITELISTED,
+} from "../../interactiveMessages/messages";
+import {
+  featureFlags,
+  type FeatureFlags,
+} from "../../featureFlags/featureFlags";
+import { formatWait } from "../../time/formatWait";
 import { DEFAULT_LANGUAGE } from "../../translation/language";
 import { getUserLanguageOverride } from "../../translation/userLanguage";
+import {
+  userQuotaPolicy,
+  type UserQuotaConsumeResult,
+} from "../../policy/userQuotaPolicy";
 import { whitelistPolicy } from "../../policy/whitelistPolicy";
 import type { Router } from "../../router/router";
 import { diagCommandHandler } from "../commands/diagCommandHandler";
@@ -16,18 +28,35 @@ import { Replier } from "../replier";
 import type { TelegramClient } from "../telegramClient";
 import type { TelegramMessage, TelegramUpdate } from "../telegramTypes";
 
+async function consumeUserQuota(
+  message: TelegramMessage,
+  replier: Replier,
+  dailyQuota: number,
+): Promise<UserQuotaConsumeResult> {
+  const userId = message.from.id;
+  const result = await userQuotaPolicy.tryConsume(userId, dailyQuota);
+  if (!result.successful) {
+    await userQuotaPolicy.logger.exhausted(userId);
+    await replier.say(
+      USER_DAILY_QUOTA_EXCEEDED,
+      formatWait(result.retryAt, Date.now()),
+    );
+  }
+  return result;
+}
+
 // Returns true (after replying) when the sender isn't allowed.
 async function rejectUnlessWhitelisted(
   message: TelegramMessage,
   replier: Replier,
 ): Promise<boolean> {
-  const { id: userId, username } = message.from;
-  if (await whitelistPolicy.isWhiteListed({ username, userId })) {
+  const userId = message.from.id;
+  if (await whitelistPolicy.isWhiteListed(userId)) {
     return false;
   }
 
-  await whitelistPolicy.logger.rejected(username, userId, message.chat.id);
-  await replier.say(NOT_WHITELISTED, username ?? String(userId));
+  await whitelistPolicy.logger.rejected(userId, message.chat.id);
+  await replier.say(NOT_WHITELISTED, String(userId));
   return true;
 }
 
@@ -36,13 +65,29 @@ async function handleMessage(
   env: Env,
   router: Router,
   replier: Replier,
+  flags: FeatureFlags,
 ): Promise<void> {
+  let remainingQuota = 0;
   // /lang is exempt, so even a rejected user can pick the language of the rejection.
-  if (
-    !isLangCommand(message.text) &&
-    (await rejectUnlessWhitelisted(message, replier))
-  ) {
-    return;
+  if (!isLangCommand(message.text)) {
+    if (
+      flags.enforceUserWhitelisting &&
+      (await rejectUnlessWhitelisted(message, replier))
+    ) {
+      return;
+    }
+
+    if (flags.enforceUserDailyQuota) {
+      const quota = await consumeUserQuota(
+        message,
+        replier,
+        flags.dailyQuota,
+      );
+      if (!quota.successful) {
+        return;
+      }
+      remainingQuota = quota.remainingQuota;
+    }
   }
 
   if (message.text === "/start") return startCommandHandler(replier);
@@ -53,7 +98,13 @@ async function handleMessage(
     return langCommandHandler(env, message, replier);
   }
 
-  return eventMessageHandler(message, router, replier);
+  return eventMessageHandler(
+    message,
+    router,
+    replier,
+    remainingQuota,
+    flags.enforceUserDailyQuota,
+  );
 }
 
 // Extracts the user-preferred language from the storage. Fall back to English if the stored preference can't be read.
@@ -90,7 +141,7 @@ export async function updateHandler(
   const replier = new Replier(env, telegramClient, message.chat.id, lang);
 
   try {
-    await handleMessage(message, env, router, replier);
+    await handleMessage(message, env, router, replier, featureFlags);
   } catch (err) {
     console.error("Unhandled error processing update", err);
     await replier.reportError();

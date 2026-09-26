@@ -57,7 +57,7 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
 - The bot's own name ("Noted") is never translated.
 
 ### Access control
-- Invite-only: a whitelist keyed by **username or numeric user id**
+- Invite-only: a whitelist keyed by **numeric user id**
   (case-insensitive), managed manually in Cloudflare KV.
 - Non-whitelisted users get a friendly rejection that shows their numeric ID so
   it can be relayed to get them added.
@@ -79,7 +79,7 @@ appear in the `/` autocomplete menu.
 - Always acknowledges Telegram updates (so one failure can never block the
   update queue); users see a generic error, details go to logs.
 - Workers Logs enabled; rejected access attempts logged as warnings.
-- Message log (username, user id, message, Gemini request/response) kept in KV
+- Message log (user id, message, Gemini request/response) kept in KV
   for **14 days**, as disclosed in `/start`.
 
 ### Delivery pipeline

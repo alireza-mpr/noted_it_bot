@@ -12,12 +12,8 @@ export class WhitelistPolicyLogger {
     this.inited = true;
   }
 
-  async rejected(
-    username: string | undefined,
-    userId: number,
-    chatId: number,
-  ): Promise<void> {
-    const message = `rejected non-whitelisted user ${username ? `@${username}` : "(no username)"}, id ${userId}, chat ${chatId}`;
+  async rejected(userId: number, chatId: number): Promise<void> {
+    const message = `rejected non-whitelisted user id ${userId}, chat ${chatId}`;
     console.warn("WhitelistPolicyLogger:", message);
 
     try {

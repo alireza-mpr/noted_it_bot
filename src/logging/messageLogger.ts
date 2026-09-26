@@ -4,8 +4,7 @@ const LOGGER = "messageLogger";
 const TTL_SECONDS = 14 * 24 * 60 * 60; // 14 days, per the /start disclosure ("I may keep your messages to fix bugs")
 
 export interface MessageLogEntry {
-  username: string | null;
-  userId: number | null;
+  userId: number;
   receivedMessage: string;
   providerRequest: string;
   providerResponse: string;

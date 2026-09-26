@@ -5,7 +5,6 @@ export interface TelegramUpdate {
     chat: { id: number };
     from: {
       id: number;
-      username?: string;
       language_code?: string;
     };
   };

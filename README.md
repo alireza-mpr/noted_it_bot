@@ -214,9 +214,7 @@ npx wrangler kv namespace create USER_LANG --env prod
 Per the `/start` disclosure ("I may keep your messages to fix bugs"), every
 message that goes through event extraction is logged to a `MESSAGE_LOG` KV
 namespace by `messageLogger` (`MessageLogger` in `src/logging/messageLogger.ts`,
-initialised per request in the handler): the sender's Telegram `username` and
-numeric user id (the id is always present even when the username isn't,
-since it's optional in Telegram), the message/caption text as received,
+initialised per request in the handler): the sender's numeric Telegram user id, the message/caption text as received,
 what was sent to Gemini, Gemini's response, and the `model` that gave it (null
 when no model answered), plus a
 `{logger: "messageLogger", time: {date_time_aest}}` header — each entry expires
@@ -374,16 +372,11 @@ a non-whitelisted user gets a polite rejection message instead. **The one
 exception is `/lang`**, which works for everyone regardless of whitelist
 status, so even a rejected user can set their preferred language and get
 the rejection message itself back in it. There's no admin command for
-whitelisting; entries are added manually, and a user passes if **either**
+whitelisting; entries are added manually, and a user passes if
 of these is whitelisted:
 
-- **By username** (lowercase, no `@`) — lets you proactively whitelist
-  someone before they've ever messaged the bot, just from knowing their `@handle`.
-- **By numeric Telegram user id**, as a plain unprefixed key — the only
-  option for a user with no public username (it's optional in Telegram, so
-  there's nothing to whitelist them by otherwise). The bot's own rejection
-  message includes the user's id, so it can be relayed to you for this. No
-  collision risk with usernames — a Telegram username can never be purely numeric.
+- **By numeric Telegram user id**, as a plain unprefixed key. The bot's own
+  rejection message includes the user's id, so it can be relayed to you for this.
 
 ```bash
 npx wrangler kv namespace create WHITELIST --env dev
@@ -397,7 +390,7 @@ npx wrangler kv namespace create WHITELIST --env prod
 Rejections are logged by `whitelistPolicy.logger`
 (`WhitelistPolicyLogger` in `src/policy/whitelistPolicyLogger.ts`) to `MESSAGE_LOG` under
 `whitelist:<timestamp>-<uuid>` (14-day TTL), as
-`{"logger":"whitelistPolicyLogger","time":{"date_time_aest":"2026-09-25 14:51:39"},"message":"rejected non-whitelisted user @bob, id 42, chat 7"}`.
+`{"logger":"whitelistPolicyLogger","time":{"date_time_aest":"2026-09-25 14:51:39"},"message":"rejected non-whitelisted user id 42, chat 7"}`.
 
 ### Rolling back
 

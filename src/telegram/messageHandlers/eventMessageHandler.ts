@@ -6,6 +6,7 @@ import {
   NO_TEXT_MESSAGE,
   RECURRENCE_DECLINED_MESSAGE,
   RECURRING_NOTE,
+  USER_DAILY_QUOTA_REMAINING,
 } from "../../interactiveMessages/messages";
 import {
   buildCalendarEvent,
@@ -25,6 +26,8 @@ import type { TelegramMessage } from "../telegramTypes";
 async function buildCaption(
   calendarEvent: BuiltCalendarEvent,
   replier: Replier,
+  remainingQuota: number,
+  showQuota: boolean,
 ): Promise<string> {
   const [captionTemplate, linkLabel] = await Promise.all([
     replier.translate(CALENDAR_CAPTION_TEMPLATE),
@@ -54,13 +57,24 @@ async function buildCaption(
       caption += `\n\n${await replier.translate(note)}`;
     }
   }
-  return caption;
+
+  if (!showQuota) {
+    return caption;
+  }
+
+  const quotaLine = await replier.translate(
+    USER_DAILY_QUOTA_REMAINING,
+    String(remainingQuota),
+  );
+  return `${caption}\n\n${escapeHtmlAttribute(quotaLine)}`;
 }
 
 export async function eventMessageHandler(
   message: TelegramMessage,
   router: Router,
   replier: Replier,
+  remainingQuota: number,
+  showQuota: boolean,
 ): Promise<void> {
   const content = message.text ?? message.caption;
   if (!content) {
@@ -76,7 +90,6 @@ export async function eventMessageHandler(
 
   const downstream = await extractEvent(router, content);
   await messageLogger.log({
-    username: message.from.username ?? null,
     userId: message.from.id,
     receivedMessage: content,
     providerRequest: content,
@@ -119,6 +132,11 @@ export async function eventMessageHandler(
   await replier.sendDocument(
     calendarEvent.icsFilename,
     calendarEvent.icsContent,
-    await buildCaption(calendarEvent, replier),
+    await buildCaption(
+      calendarEvent,
+      replier,
+      remainingQuota,
+      showQuota,
+    ),
   );
 }
