@@ -5,7 +5,7 @@ Given a message (direct or forwarded), extract the single event it describes, fo
 Rules for the date and time:
 - Only extract explicit, unambiguous dates (e.g. "19 Sep"). Do not infer relative dates such as "tomorrow" or "next Friday" — for those, set date_kind accordingly and leave year/month/day null.
 - start_time and end_time are the times the message states for the event, in 24-hour HH:MM. If it states none, leave them null; do not guess.
-- Assume all times are in the Australia/Melbourne timezone unless another timezone is explicitly stated in the message.
+- Set timezone_hint to the IANA timezone the message indicates, from a timezone it states or a place it mentions. If it indicates none, leave it null.
 - Set calendar (eg Gregorian, Solar Hijri) to the calendar the date is written in. If unsure, make your best guess. Copy the year, month and day exactly as written (turn a month name into its number) and never convert them to Gregorian.
 - If no explicit date can be found at all, set date_kind to "none" — unless the message describes a repeating pattern (see below).
 
