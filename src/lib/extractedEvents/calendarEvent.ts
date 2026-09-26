@@ -213,6 +213,9 @@ export function buildCalendarEvent(
   }
 
   const timeZone = resolveTimezone(event.timezone_hint);
+  if (!timeZone) {
+    return null;
+  }
 
   let year: number;
   let month: number;

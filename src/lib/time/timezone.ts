@@ -21,8 +21,20 @@ export function zonedTimeToUtc(
   return new Date(asUtc.getTime() + offsetMs);
 }
 
-export function resolveTimezone(timezoneHint: string | null): string {
-  return timezoneHint ?? DEFAULT_TIMEZONE;
+// The model's timezone hint as a canonical IANA name ("Iran" becomes
+// "Asia/Tehran"), the default when there is none, or null when Intl doesn't
+// recognise it ("Iran Standard Time"), so the caller can decline the event.
+export function resolveTimezone(timezoneHint: string | null): string | null {
+  if (!timezoneHint) {
+    return DEFAULT_TIMEZONE;
+  }
+  try {
+    return new Intl.DateTimeFormat("en", {
+      timeZone: timezoneHint,
+    }).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
 }
 
 // The extracted year can be null (the model isn't told to guess a year that

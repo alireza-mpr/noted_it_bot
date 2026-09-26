@@ -200,6 +200,9 @@ export function planRecurrence(
   }
 
   const timeZone = resolveTimezone(event.timezone_hint);
+  if (!timeZone) {
+    return { ok: false, reason: "unrecognised timezone" };
+  }
   const { ymd: today, minutes } = zonedNow(now, timeZone);
 
   let from: YMD;
