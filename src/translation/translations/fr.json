@@ -1,6 +1,7 @@
 {
   "ALL_DAY_NOTE": "<i>🤔 Au fait, aucune heure précise n'a été mentionnée, donc l'événement a été ajouté comme événement sur toute la journée.</i>",
   "CALENDAR_CAPTION_TEMPLATE": "<b>Cliquez {{0}} pour l'ajouter à Google Calendar.</b>\n📎 Pour Apple Calendar, Outlook ou toute autre application, appuyez sur le fichier joint.",
+  "EXTRACTING_EVENT_MESSAGE": "⏳ Je m'en occupe — extraction de l'événement de votre message…",
   "GENERIC_ERROR_MESSAGE": "⚠️ Une erreur s'est produite de mon côté — je l'ai enregistrée pour la corriger plus tard.",
   "LANG_NOT_SUPPORTED": "Je ne peux pas encore répondre dans cette langue. Je peux répondre en : {0}.",
   "LANG_RESET_CONFIRMATION": "Retour à la détection automatique de votre langue à partir des paramètres Telegram.",

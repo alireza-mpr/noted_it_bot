@@ -1,6 +1,7 @@
 {
   "ALL_DAY_NOTE": "<i>🤔 顺便说一下，消息中没有提到具体时间，所以已将其添加为全天事件。</i>",
   "CALENDAR_CAPTION_TEMPLATE": "<b>点击{{0}}即可添加到 Google Calendar。</b>\n📎 如需用于 Apple Calendar、Outlook 或其他应用，请点按附件文件。",
+  "EXTRACTING_EVENT_MESSAGE": "⏳ 正在处理——正在从你的消息中提取活动…",
   "GENERIC_ERROR_MESSAGE": "⚠️ 我这边出了点问题——我已记录下来，稍后会修复。",
   "LANG_NOT_SUPPORTED": "我暂时还不能用该语言回复。我可以使用以下语言回复：{0}。",
   "LANG_RESET_CONFIRMATION": "已恢复为根据 Telegram 设置自动检测语言。",

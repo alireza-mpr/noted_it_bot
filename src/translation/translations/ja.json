@@ -1,6 +1,7 @@
 {
   "ALL_DAY_NOTE": "<i>🤔 ちなみに、具体的な時刻が書かれていなかったため、終日の予定として追加しました。</i>",
   "CALENDAR_CAPTION_TEMPLATE": "<b>Google Calendar に追加するには{{0}}をクリックしてください。</b>\n📎 Apple Calendar、Outlook、その他のアプリ用には、添付ファイルをタップしてください。",
+  "EXTRACTING_EVENT_MESSAGE": "⏳ 処理中です — メッセージからイベントを抽出しています…",
   "GENERIC_ERROR_MESSAGE": "⚠️ こちら側で問題が発生しました。後で修正できるよう記録しました。",
   "LANG_NOT_SUPPORTED": "その言語ではまだ返信できません。返信できる言語：{0}。",
   "LANG_RESET_CONFIRMATION": "Telegram の設定からの言語自動検出に戻しました。",

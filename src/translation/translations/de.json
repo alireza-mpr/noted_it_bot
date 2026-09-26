@@ -1,6 +1,7 @@
 {
   "ALL_DAY_NOTE": "<i>🤔 Übrigens wurde keine bestimmte Uhrzeit genannt, daher wurde dies als ganztägiger Termin hinzugefügt.</i>",
   "CALENDAR_CAPTION_TEMPLATE": "<b>Klicke {{0}}, um es zu Google Calendar hinzuzufügen.</b>\n📎 Für Apple Calendar, Outlook oder alles andere tippe auf die angehängte Datei.",
+  "EXTRACTING_EVENT_MESSAGE": "⏳ Ich kümmere mich darum — der Termin wird aus deiner Nachricht herausgelesen…",
   "GENERIC_ERROR_MESSAGE": "⚠️ Auf meiner Seite ist etwas schiefgelaufen — ich habe es protokolliert, um es später zu beheben.",
   "LANG_NOT_SUPPORTED": "Ich kann noch nicht in dieser Sprache antworten. Ich kann in diesen Sprachen antworten: {0}.",
   "LANG_RESET_CONFIRMATION": "Zurück zur automatischen Erkennung deiner Sprache aus den Telegram-Einstellungen.",

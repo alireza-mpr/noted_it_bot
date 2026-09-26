@@ -13,7 +13,7 @@ import type { Router } from "../../router/router";
 import { escapeHtmlAttribute } from "../telegramHtml";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
-import { Logger } from "../../logging/logger";
+import { describeError, Logger } from "../../logging/logger";
 
 const logger = new Logger("eventMessageHandler");
 
@@ -57,6 +57,15 @@ async function buildCaption(
   return `${caption}\n\n${escapeHtmlAttribute(quotaLine)}`;
 }
 
+// Tells the user extraction has started. A failed send must not stop the extraction.
+async function sayExtracting(replier: Replier): Promise<void> {
+  try {
+    await replier.say("EXTRACTING_EVENT_MESSAGE");
+  } catch (err) {
+    logger.warn("could not send the extracting notice", { error: describeError(err) });
+  }
+}
+
 // Returns whether a model answered, so the caller knows whether the quota
 // taken for this message should be given back.
 export async function eventMessageHandler(
@@ -67,7 +76,9 @@ export async function eventMessageHandler(
   remainingQuota: number,
   showQuota: boolean,
 ): Promise<boolean> {
-  const downstream = await extractEvent(router, content);
+  const downstream = await extractEvent(router, content, () =>
+    sayExtracting(replier),
+  );
   await messageLogger.log("provider response received", {
     userId: message.from.id,
     receivedMessage: content,

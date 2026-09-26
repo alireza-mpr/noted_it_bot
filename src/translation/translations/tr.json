@@ -1,6 +1,7 @@
 {
   "ALL_DAY_NOTE": "<i>🤔 Bu arada, belirli bir saat belirtilmediği için bu, tüm gün süren bir etkinlik olarak eklendi.</i>",
   "CALENDAR_CAPTION_TEMPLATE": "<b>Google Calendar'a eklemek için {{0}} tıklayın.</b>\n📎 Apple Calendar, Outlook veya başka bir uygulama için ekli dosyaya dokunun.",
+  "EXTRACTING_EVENT_MESSAGE": "⏳ Üzerinde çalışıyorum — mesajınızdan etkinliği çıkarıyorum…",
   "GENERIC_ERROR_MESSAGE": "⚠️ Benim tarafımda bir şeyler ters gitti — daha sonra düzeltmek için kaydettim.",
   "LANG_NOT_SUPPORTED": "Henüz bu dilde yanıt veremiyorum. Şu dillerde yanıt verebilirim: {0}.",
   "LANG_RESET_CONFIRMATION": "Telegram ayarlarından dilinizi otomatik algılamaya geri döndüm.",

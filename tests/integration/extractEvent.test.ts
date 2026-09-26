@@ -190,11 +190,17 @@ describe("extractEvent", () => {
     "extracts from: %s",
     { timeout: 60_000 },
     async (message, expected) => {
+      let notified = 0;
       const downstream = await extractEvent(
         createRouter(env as unknown as RouterEnv),
         message,
+        async () => {
+          notified++;
+        },
       );
       expect(downstream.result).toBe("ok");
+      // Once, right before the first model is tried, however many it takes.
+      expect(notified).toBe(1);
 
       const parsed = JSON.parse(downstream.message) as ExtractedEvent;
       const normalized = {

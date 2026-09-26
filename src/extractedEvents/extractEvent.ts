@@ -24,13 +24,17 @@ const NO_AVAILABLE_MODEL: DownstreamResult = {
 export async function extractEvent(
   router: Router,
   telegramMessageText: string,
+  onModelFound?: () => Promise<void>,
 ): Promise<DownstreamResult> {
   try {
-    const answer = await router.generate({
-      systemPrompt: eventExtractPrompt,
-      userPrompt: telegramMessageText,
-      responseSchema: EVENT_SCHEMA,
-    });
+    const answer = await router.generate(
+      {
+        systemPrompt: eventExtractPrompt,
+        userPrompt: telegramMessageText,
+        responseSchema: EVENT_SCHEMA,
+      },
+      onModelFound,
+    );
     if (answer.result === "failed") {
       return { ...NO_AVAILABLE_MODEL, failure: answer.failure };
     }

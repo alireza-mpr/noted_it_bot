@@ -49,12 +49,19 @@ export class Router {
     private readonly meteredProviders: MeteredProvider[],
   ) {}
 
-  async generate(request: ProviderRequest): Promise<ProviderResult> {
+  // onModelFound runs once, right before the first model is tried, so the caller
+  // can tell the user work has started. It isn't called when no model is available.
+  async generate(
+    request: ProviderRequest,
+    onModelFound?: () => Promise<void>,
+  ): Promise<ProviderResult> {
     const { log, meteredProviders } = this;
     let lastFailure: ProviderFailure = {
       kind: "rateLimited",
       detail: "no model is under its usage limits",
     };
+
+    let notified = false;
 
     try {
       for (const { providerClient, usageRepository } of meteredProviders) {
@@ -62,6 +69,10 @@ export class Router {
         log.listed(models);
 
         for (const model of models) {
+          if (!notified) {
+            notified = true;
+            await onModelFound?.();
+          }
           log.attempted(model);
           const answer = await providerClient.call(model, request);
 
