@@ -11,7 +11,6 @@ export const START_MESSAGE = `Heya! I am {0} bot 👋.
 🕙 For now I read explicit dates only
 ("19 Sep - 8pm"), not "tomorrow".
 I work out the time zone from the message. If it doesn't say, set yours with the /tz command.
-Example: /tz Melbourne.
 
 🔁 Repeating events work too ("every Thursday, 7:30pm"). The link adds today's session everywhere; open it on a computer to get the whole series, or set the repeat yourself on a phone using the pattern I send.
 
@@ -47,7 +46,7 @@ export const NO_TEXT_MESSAGE =
   "⚠️ Sorry! I couldn't find any text in your message.";
 
 export const NO_AVAILABLE_MODEL_MESSAGE =
-  "Sorry! All the AI downstream providers are busy right now. Please try in 1 minute.";
+  "Sorry! All the AI providers are busy right now. Please try again in a minute.";
 
 export const GENERIC_ERROR_MESSAGE =
   "⚠️ Something went wrong on my end — I've logged it to fix later.";
@@ -60,11 +59,16 @@ export const LANG_SET_CONFIRMATION = "Got it — I'll reply in {0} from now on."
 export const LANG_RESET_CONFIRMATION =
   "Back to auto-detecting your language from Telegram settings.";
 
-export const LANG_NOT_UNDERSTOOD =
-  'I couldn\'t figure out what language "{0}" refers to. Try a language name (e.g. "Persian") or a code (e.g. "fa").';
+export const LANG_NOT_SUPPORTED =
+  "I can't reply in that language yet. I can reply in: {0}.";
 
 export const TZ_USAGE =
   "Which time zone? Send /tz followed by a city or country, e.g. /tz Melbourne or /tz Iran. You can also send an exact time zone name, e.g. /tz Asia/Tehran.";
+
+export const TZ_LINK_MESSAGE =
+  "Tap the button below to set your time zone. The link works for 1 minute.";
+
+export const TZ_BUTTON_LABEL = "Set my time zone";
 
 export const TZ_SET_CONFIRMATION =
   "Got it — I'll use the {0} time zone for you from now on.";
@@ -81,3 +85,23 @@ export const USER_DAILY_QUOTA_REMAINING =
 // {0} is the user's numeric Telegram id, enough to whitelist them.
 export const NOT_WHITELISTED =
   "This bot is invite-only right now, and I don't have you on the list. Ask the creator of the bot to add you — your Id is {0}.";
+
+export const PAGE_TITLE = "Set your time zone";
+
+export const PAGE_DETECTED = "Your device says you're in:";
+
+export const PAGE_LOCAL_TIME = "It is {0} there now.";
+
+export const PAGE_CONFIRM = "Yes, use this time zone";
+
+export const PAGE_CHOOSE = "No, choose another";
+
+export const PAGE_SEARCH = "Search for a city or region";
+
+export const PAGE_SAVE = "Save";
+
+export const PAGE_SAVED = "Saved. You can close this page and go back to Telegram.";
+
+export const PAGE_EXPIRED = "This link has expired. Send /tz to the bot again.";
+
+export const PAGE_ERROR = "Something went wrong. Please try again.";

@@ -191,15 +191,31 @@ for both environments, so those live once as plain **repository** secrets
 
 ### Multilingual replies
 
-The bot's own reply text (not extracted event content) is translated on demand
-based on Telegram's `message.from.language_code`, via `src/translation/translate.ts`.
-Translations are cached in a Workers KV namespace (`I18N` binding) keyed by a
-hash of the English text + language, so each fixed string is only translated
-once per language, ever. Falls back to English on any translation failure.
+The bot speaks a **fixed list of languages**: English plus `fa ar es fr de it pt ru tr zh ja ko hi nl pl`
+(`SUPPORTED_LANGUAGES` in `src/translation/language.ts`). Anything else falls back to English. The
+language is the user's `/lang` choice if they made one, else Telegram's `message.from.language_code`
+(`pt-BR` becomes `pt`, and so on).
 
-Users can override the auto-detected language with `/lang <language>` (e.g.
-`/lang Persian` or `/lang fa` — free-text names are resolved via Gemini), or
-reset to auto-detection with `/lang auto`. The override is stored per user in the
+Every fixed message is translated **ahead of time**: `src/translation/translations/<lang>.json`, one file
+per language, maps the exact English text to its translation. `translateText`
+(`src/translation/translate.ts`) looks the text up there, so those replies never call a model, and an
+abuser can't run up the LLM quota by trying languages. The only strings not in the files are the generated
+recurrence sentences ("Repeats every 2 weeks on Monday and Wednesday…"); those still go to a model, but only
+for a supported language and only while building an event (which already spends a quota unit), and the
+result is cached in the `I18N` KV namespace, keyed by a hash of the English text + language. A model failure
+falls back to English.
+
+**Changing a message.** Edit the English in `src/interactiveMessages/messages.ts`, then change the same
+English text used as the key in all 15 JSON files and translate the value. `tests/unit/translations.test.ts`
+fails until every language has every message, no stale key is left behind, and each translation still has the
+same `{0}` placeholders, HTML tags, emoji and `/lang` / `/tz` command names as the English. **Adding a
+language** means adding its code to `SUPPORTED_LANGUAGES`, a JSON file, and its import in
+`src/translation/translations/index.ts`. The translations were written by an AI assistant and haven't been
+reviewed by native speakers.
+
+Users can override the auto-detected language with `/lang <language>`: a code (`fa`, `pt-BR`), the English name
+(`Persian`) or the language's own name (`فارسی`, `Deutsch`), matched locally with no model call (see
+`resolveLanguage`). An unsupported language gets a reply listing the supported ones. `/lang auto` resets it. The override is stored per user in the
 `user_preference` table of the `USAGE_DB` D1 database (`src/db/sql/userPreference.ts`,
 `src/repositories/userPreferenceRepository.ts`): `userId` (primary key), `lang` (`NULL` means
 auto-detect; `/lang auto` calls `setLang(userId, null, …)`) and `timezone` (set by `/tz` through
@@ -213,8 +229,8 @@ stored if the platform's `Intl` recognises it as a real zone, so an invented one
 (`src/time/timezoneHint.ts`). Unlike the other commands `/tz` doesn't use up daily quota; it
 is still subject to the whitelist.
 
-**One-time setup**: create the `I18N` KV namespace per environment and put its
-ID in [wrangler.toml](wrangler.toml) (it ships with a placeholder ID):
+**One-time setup**: create the `I18N` KV namespace per environment (it only caches the generated recurrence
+sentences) and put its ID in [wrangler.toml](wrangler.toml) (it ships with a placeholder ID):
 
 ```bash
 npx wrangler kv namespace create I18N --env dev

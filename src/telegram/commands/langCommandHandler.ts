@@ -1,5 +1,5 @@
 import {
-  LANG_NOT_UNDERSTOOD,
+  LANG_NOT_SUPPORTED,
   LANG_RESET_CONFIRMATION,
   LANG_SET_CONFIRMATION,
   LANG_USAGE,
@@ -7,12 +7,13 @@ import {
 import {
   DEFAULT_LANGUAGE,
   getLanguageDisplayName,
-  resolveLanguageCode,
+  resolveLanguage,
+  supportedLanguageNames,
+  toSupportedLanguage,
 } from "../../translation/language";
 import { setUserLanguageOverride } from "../../translation/userLanguage";
 import type { Env } from "../../env";
 import { Logger } from "../../logging/logger";
-import type { Router } from "../../router/router";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
 
@@ -26,7 +27,6 @@ export function isLangCommand(text: string | undefined): boolean {
 
 export async function langCommandHandler(
   env: Env,
-  router: Router,
   message: TelegramMessage,
   replier: Replier,
   defaultTimezone: string,
@@ -43,14 +43,15 @@ export async function langCommandHandler(
     await setUserLanguageOverride(env, userId, null, defaultTimezone);
     logger.info("language override cleared");
     await replier
-      .withLang(message.from.language_code ?? DEFAULT_LANGUAGE)
+      .withLang(toSupportedLanguage(message.from.language_code) ?? DEFAULT_LANGUAGE)
       .say(LANG_RESET_CONFIRMATION);
     return;
   }
 
-  const resolved = await resolveLanguageCode(router, arg);
+  const resolved = resolveLanguage(arg);
   if (!resolved) {
-    await replier.say(LANG_NOT_UNDERSTOOD, arg);
+    logger.info("language not supported");
+    await replier.say(LANG_NOT_SUPPORTED, supportedLanguageNames());
     return;
   }
 

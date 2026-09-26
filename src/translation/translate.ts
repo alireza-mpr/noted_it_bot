@@ -2,6 +2,8 @@ import translateSystemPrompt from "../prompts/translate_system.txt";
 import translateUserPrompt from "../prompts/translate_user.txt";
 import type { Router } from "../router/router";
 import { describeError, Logger } from "../logging/logger";
+import { toSupportedLanguage } from "./language";
+import { TRANSLATIONS } from "./translations";
 
 const logger = new Logger("translateText");
 
@@ -23,24 +25,33 @@ async function cacheKey(text: string, lang: string): Promise<string> {
   return `i18n:${hex}`;
 }
 
-// Translates one of the bot's own fixed UI strings into `lang`, caching the
-// result in KV (keyed by a hash of the English text + lang, so editing the
-// English wording later automatically invalidates stale cached versions).
-// Falls back to the original English text on any cache-miss failure — a
-// translation outage should never block a reply. `text` may contain literal
-// placeholder tokens like "{0}"; the system instruction tells Gemini to
-// preserve them untouched so callers can splice in dynamic content (e.g. a
-// link) after translation without re-translating per-event content.
+// Translates a reply string into `lang`. Every fixed message is looked up in
+// the committed translation files (src/translation/translations), which never
+// calls a model. Only a string that isn't in them, such as the generated
+// recurrence sentences, goes to a model, cached in KV (keyed by a hash of the
+// English text + lang). That path is reached only for the supported languages,
+// and only through messages that already cost a quota unit. Falls back to the
+// original English text on any failure — a translation outage should never
+// block a reply. `text` may contain literal placeholder tokens like "{0}"; the
+// system instruction tells the model to preserve them untouched so callers can
+// splice in dynamic content (e.g. a link) after translation.
 export async function translateText(
   env: TranslateEnv,
   router: Router,
   text: string,
   lang: string | undefined,
 ): Promise<string> {
-  if (!lang || lang === "en") {
+  const supported = toSupportedLanguage(lang);
+  if (!supported || supported === "en") {
     return text;
   }
 
+  const fixed = TRANSLATIONS[supported][text];
+  if (fixed !== undefined) {
+    return fixed;
+  }
+
+  lang = supported;
   const key = await cacheKey(text, lang);
   const cached = await env.I18N.get(key);
   if (cached !== null) {

@@ -9,7 +9,7 @@ import {
 } from "../../featureFlags/featureFlags";
 import { describeError, Logger, setLogField } from "../../logging/logger";
 import { formatWait } from "../../time/formatWait";
-import { DEFAULT_LANGUAGE } from "../../translation/language";
+import { DEFAULT_LANGUAGE, toSupportedLanguage } from "../../translation/language";
 import { getUserLanguageOverride } from "../../translation/userLanguage";
 import {
   userQuotaPolicy,
@@ -109,7 +109,7 @@ async function handleMessage(
   // /diag is deliberately not registered via setMyCommands, so it stays hidden from the menu.
   if (message.text === "/diag") return diagCommandHandler(router, replier);
   if (isLangCommand(message.text)) {
-    return langCommandHandler(env, router, message, replier, flags.defaultTimezone);
+    return langCommandHandler(env, message, replier, flags.defaultTimezone);
   }
   if (isTzCommand(message.text)) {
     return tzCommandHandler(env, router, message, replier);
@@ -131,7 +131,11 @@ async function readUserLanguage(
 ): Promise<string> {
   try {
     const langOverride = await getUserLanguageOverride(env, message.from.id);
-    return langOverride ?? message.from.language_code ?? DEFAULT_LANGUAGE;
+    return (
+      toSupportedLanguage(langOverride) ??
+      toSupportedLanguage(message.from.language_code) ??
+      DEFAULT_LANGUAGE
+    );
   } catch (err) {
     logger.error("could not read the user's language, using English", describeError(err));
     return DEFAULT_LANGUAGE;

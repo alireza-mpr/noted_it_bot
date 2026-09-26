@@ -47,10 +47,12 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
   🔔 call-to-action with the link set apart in `{ }`.
 
 ### Multilingual replies
-- All bot replies are translated on demand into the user's Telegram language,
-  cached per string per language (translate once, ever), falling back to
-  English if translation fails.
-- `/lang <language>` — set your language by name or code ("Persian", "fa");
+- The bot speaks a fixed list of 16 languages (English, Persian, Arabic, Spanish, French,
+  German, Italian, Portuguese, Russian, Turkish, Chinese, Japanese, Korean, Hindi, Dutch,
+  Polish), in the user's Telegram language unless they pick one. Every fixed message is
+  translated ahead of time and shipped with the bot, so choosing a language never calls a
+  model. Anything else falls back to English.
+- `/lang <language>` — set your language by name or code ("Persian", "fa", "فارسی");
   `/lang auto` returns to Telegram's setting; `/lang` shows the current one
   (shown by its own name, e.g. "فارسی").
 - Dates and times in the summary follow the reply language, always Gregorian.
