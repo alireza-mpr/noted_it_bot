@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="{{lang}}" dir="{{dir}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>{{title}}</title>
+<style nonce="{{nonce}}">{{style}}</style>
+</head>
+<body>
+<main>
+<h1 id="title"></h1>
+<p id="status" role="status"></p>
+<section id="detected" hidden>
+<p id="detected-label"></p>
+<p class="zone" id="detected-zone"></p>
+<p id="detected-time"></p>
+<button type="button" id="confirm"></button>
+<button type="button" id="choose" class="secondary"></button>
+</section>
+<section id="chooser" hidden>
+<input id="search" type="search" autocomplete="off">
+<ul id="results"></ul>
+<p class="zone" id="picked-zone"></p>
+<p id="picked-time"></p>
+<button type="button" id="save" hidden></button>
+</section>
+</main>
+<script type="application/json" id="cfg">{{config}}</script>
+<script nonce="{{nonce}}">{{script}}</script>
+</body>
+</html>

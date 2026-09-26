@@ -238,7 +238,7 @@ uses a small web page instead, served by the Worker itself, with no model involv
 
 1. `/tz` replies with a button linking to `https://<worker>/tz?token=…`. The link's origin is taken from
    the request Telegram made, so there is no URL to configure.
-2. The page (`src/web/tzPage.ts`) reads the device's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`)
+2. The page (`src/web/tzPage.ts`, markup in `src/web/tzPage.html`) reads the device's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`)
    and shows it with the local time there and a **Yes, use this time zone** button, or a searchable list of every
    zone (`Intl.supportedValuesOf('timeZone')`) to pick a different one. It's in the user's language, right-to-left
    for Persian and Arabic.

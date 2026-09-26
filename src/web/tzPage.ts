@@ -1,5 +1,6 @@
 import type { MessageId } from "../interactiveMessages/messages";
 import { translateStatic } from "../translation/translate";
+import TZ_PAGE_HTML from "./tzPage.html";
 
 const RTL_LANGUAGES = new Set(["fa", "ar"]);
 
@@ -10,6 +11,12 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// Fills {{name}} placeholders in one pass, so inserted text is never scanned
+// for placeholders itself.
+function fillTemplate(template: string, values: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => values[name] ?? "");
 }
 
 const LINE_SEPARATOR = String.fromCharCode(0x2028);
@@ -189,39 +196,15 @@ export function renderTzPage({ lang, saveToken, nonce }: TzPageInput): string {
   };
   const dir = RTL_LANGUAGES.has(lang) ? "rtl" : "ltr";
 
-  return `<!doctype html>
-<html lang="${escapeHtml(lang)}" dir="${dir}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<meta name="color-scheme" content="light dark">
-<title>${escapeHtml(t("PAGE_TITLE"))}</title>
-<style nonce="${nonce}">${STYLE}</style>
-</head>
-<body>
-<main>
-<h1 id="title"></h1>
-<p id="status" role="status"></p>
-<section id="detected" hidden>
-<p id="detected-label"></p>
-<p class="zone" id="detected-zone"></p>
-<p id="detected-time"></p>
-<button type="button" id="confirm"></button>
-<button type="button" id="choose" class="secondary"></button>
-</section>
-<section id="chooser" hidden>
-<input id="search" type="search" autocomplete="off">
-<ul id="results"></ul>
-<p class="zone" id="picked-zone"></p>
-<p id="picked-time"></p>
-<button type="button" id="save" hidden></button>
-</section>
-</main>
-<script type="application/json" id="cfg">${jsonForScript(config)}</script>
-<script nonce="${nonce}">${SCRIPT}</script>
-</body>
-</html>`;
+  return fillTemplate(TZ_PAGE_HTML.trimEnd(), {
+    lang: escapeHtml(lang),
+    dir,
+    title: escapeHtml(t("PAGE_TITLE")),
+    nonce,
+    style: STYLE,
+    config: jsonForScript(config),
+    script: SCRIPT,
+  });
 }
 
 export function renderMessagePage(lang: string, message: string, nonce: string): string {
