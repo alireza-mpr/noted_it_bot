@@ -120,8 +120,10 @@ rows in the dev `gemini_usage` table. To run only the offline tests:
   - `build` installs deps, typechecks, and runs the test suite (real Gemini API,
     real dev KV and D1 via remote bindings; needs `GEMINI_API_KEY`,
     `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`).
-  - `deploy-dev` needs `build`, so it runs only when the tests pass, and only for
-    pushes to `main`. On success, it pushes a git tag matching exactly what `/ver`
+  - `deploy-dev` needs `build`, so it runs only when the tests pass, and only on
+    `main`. To deploy despite failing tests (say, the dev Gemini quota is used up),
+    run the CI workflow by hand from the Actions tab on `main` and tick
+    **Deploy to dev even if the tests fail**. On success, it pushes a git tag matching exactly what `/ver`
     reports for that deploy (e.g. `v0.2.42-beta-abc1234`), so a specific dev
     deployment can be found later with `git tag`. A failed deploy leaves no tag.
     Because the tests share the dev quota, a run that fails on quota blocks the
