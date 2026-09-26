@@ -128,6 +128,19 @@ function calendarId(name: string): string {
 // library doesn't know, no stated year, a day that doesn't exist, or a
 // monthly/yearly repeat, whose months differ between the calendars.
 function toGregorian(event: ExtractedEvent): ExtractedEvent | null {
+  if (event.calendar === null) {
+    // No calendar means no date was written, so a weekday pattern has nothing to convert. A
+    // date with no calendar can't be trusted, and guessing Gregorian would silently misplace
+    // a Solar Hijri one.
+    const recurrence = event.recurrence ?? null;
+    const writesDate =
+      event.month !== null ||
+      event.day !== null ||
+      recurrence?.until_month != null ||
+      recurrence?.until_day != null;
+    return writesDate ? null : event;
+  }
+
   const id = calendarId(event.calendar);
   if (id === "gregorian") {
     return event;

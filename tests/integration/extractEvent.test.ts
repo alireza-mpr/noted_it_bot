@@ -18,6 +18,18 @@ type Expected = Omit<Partial<ExtractedEvent>, "recurrence"> & {
 // aren't checked. These hit the real Gemini API; add your own cases below.
 const cases: [message: string, expected: Expected][] = [
   [
+    // A relative date writes no calendar at all; being Persian text doesn't make it Solar Hijri.
+    "فردا ساعت ۸ شب: صرف نهار منزل مادرزن",
+    {
+      calendar: null,
+      date_kind: "relative",
+      year: null,
+      month: null,
+      day: null,
+      start_time: "20:00",
+    },
+  ],
+  [
     "Let's catch up 19 Sep, 8pm at the usual cafe",
     {
       calendar: "gregorian",
@@ -34,6 +46,7 @@ const cases: [message: string, expected: Expected][] = [
     // no calendar event gets built).
     "Thanks for coming to my party last night!",
     {
+      calendar: null,
       year: null,
       month: null,
       day: null,
@@ -87,6 +100,7 @@ const cases: [message: string, expected: Expected][] = [
     // No start date: a pattern only, and never ends.
     "Yoga every Tuesday at 6pm",
     {
+      calendar: null,
       date_kind: "weekday",
       year: null,
       month: null,
@@ -186,7 +200,7 @@ describe("extractEvent", () => {
       const normalized = {
         ...parsed,
         // The calendar is a free string; the code lowercases it, so does the test.
-        calendar: parsed.calendar.toLowerCase(),
+        calendar: parsed.calendar?.toLowerCase() ?? null,
         start_time: normalizeTime(parsed.start_time),
         end_time: normalizeTime(parsed.end_time),
       };

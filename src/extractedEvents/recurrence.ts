@@ -251,7 +251,7 @@ export function recurrenceProblem(
   event: ExtractedEvent,
   now: Date = new Date(),
 ): string | null {
-  if (!event.recurrence || event.calendar !== "gregorian") {
+  if (!event.recurrence || (event.calendar !== null && event.calendar !== "gregorian")) {
     return null;
   }
   if (event.date_kind !== "absolute" && event.date_kind !== "weekday") {

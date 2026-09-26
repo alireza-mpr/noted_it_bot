@@ -13,7 +13,7 @@ describe("toJsonSchema", () => {
 
   it("lowercases types and turns nullable into a null type", () => {
     expect(schema.type).toBe("object");
-    expect(schema.properties.calendar.type).toBe("string");
+    expect(schema.properties.calendar.type).toEqual(["string", "null"]);
     expect(schema.properties.year.type).toEqual(["integer", "null"]);
     expect(schema.properties.recurrence.type).toEqual(["object", "null"]);
     expect(schema.properties.recurrence.properties.weekdays.type).toEqual([

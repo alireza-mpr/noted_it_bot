@@ -17,7 +17,8 @@ export interface Recurrence {
 
 export interface ExtractedEvent {
   title: string | null;
-  calendar: string; // the calendar the date is written in, as the model names it
+  // The calendar an explicit date is written in, as the model names it; null when the message writes no date.
+  calendar: string | null;
   // "weekday" with year/month/day null is the normal shape for a recurring
   // event with no stated start date ("every Sunday at 5pm").
   date_kind: "absolute" | "relative" | "weekday" | "none";

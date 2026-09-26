@@ -5,7 +5,7 @@ export const EVENT_SCHEMA = {
   properties: {
     title:         { type: "STRING",  nullable: true },
 
-    calendar:      { type: "STRING" },
+    calendar:      { type: "STRING",  nullable: true },
     date_kind:     { type: "STRING",  enum: ["absolute", "relative", "weekday", "none"] },
 
     year:          { type: "INTEGER", nullable: true },
