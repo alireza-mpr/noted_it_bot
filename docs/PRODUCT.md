@@ -54,11 +54,14 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
   `/lang auto` returns to Telegram's setting; `/lang` shows the current one
   (shown by its own name, e.g. "فارسی").
 - Dates and times in the summary follow the reply language, always Gregorian.
+- `/tz <city, country or zone name>` — set your time zone ("Melbourne", "Iran",
+  "Asia/Tehran"). An exact zone name is used as is; anything else is resolved by a
+  model and checked against the platform's zone list before it's stored.
 - The bot's own name ("Noted") is never translated.
 
 ### Access control
 - Invite-only: a whitelist keyed by **numeric user id**
-  (case-insensitive), managed manually in Cloudflare KV.
+  managed manually in the `whitelist` table of the D1 database.
 - Non-whitelisted users get a friendly rejection that shows their numeric ID so
   it can be relayed to get them added.
 - `/lang` is open to everyone, so even a rejected user gets the message in
@@ -69,6 +72,7 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
 |----------|----------------------------------------------------------------|
 | `/start` | Intro and what the bot does                                    |
 | `/lang`  | Show or change reply language                                  |
+| `/tz`    | Set your time zone from a city, country or zone name           |
 | `/ver`   | Show the running version                                       |
 | `/diag`  | Gemini connectivity check (hidden — not in the `/` menu)       |
 
@@ -123,7 +127,8 @@ appear in the `/` autocomplete menu.
       reference date (message timestamp) and clear handling of ambiguity.
 - [ ] Jalali/Persian calendar dates (schema already classifies them; calendar
       generation currently declines).
-- [ ] Per-user timezone instead of the fixed Australian default.
+- [ ] Use the per-user timezone (stored by `/tz`) when building events, instead of the fixed
+      Australian default; today it is saved but not read.
 - [ ] Multiple events in one message.
 - [ ] Recurring events written with Jalali/Persian calendar dates (recurrence itself is done).
 

@@ -22,6 +22,7 @@ import {
   isLangCommand,
   langCommandHandler,
 } from "../commands/langCommandHandler";
+import { isTzCommand, tzCommandHandler } from "../commands/tzCommandHandler";
 import { startCommandHandler } from "../commands/startCommandHandler";
 import { versionCommandHandler } from "../commands/versionCommandHandler";
 import { eventMessageHandler } from "./eventMessageHandler";
@@ -89,7 +90,7 @@ async function handleMessage(
       return;
     }
 
-    if (flags.enforceUserDailyQuota) {
+    if (flags.enforceUserDailyQuota && !isTzCommand(message.text)) {
       const quota = await consumeUserQuota(
         message,
         replier,
@@ -108,7 +109,10 @@ async function handleMessage(
   // /diag is deliberately not registered via setMyCommands, so it stays hidden from the menu.
   if (message.text === "/diag") return diagCommandHandler(router, replier);
   if (isLangCommand(message.text)) {
-    return langCommandHandler(env, router, message, replier);
+    return langCommandHandler(env, router, message, replier, flags.defaultTimezone);
+  }
+  if (isTzCommand(message.text)) {
+    return tzCommandHandler(env, router, message, replier);
   }
 
   return eventMessageHandler(

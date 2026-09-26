@@ -1,9 +1,9 @@
 import type { UserPreferenceRow } from "../db/schema/userPreferenceRow";
 import { userPreferenceTableStatement } from "../db/schema/userPreferenceTable";
 import {
-  CLEAR_USER_LANG,
   SELECT_USER_PREFERENCE,
   SET_USER_LANG,
+  SET_USER_TIMEZONE,
 } from "../db/sql/userPreference";
 
 export class UserPreferenceRepository {
@@ -20,12 +20,22 @@ export class UserPreferenceRepository {
     return (await this.find(userId))?.lang ?? null;
   }
 
-  async setLang(userId: number, lang: string): Promise<void> {
-    await this.run([this.db.prepare(SET_USER_LANG).bind(userId, lang)]);
+  async getTimezone(userId: number, defaultTimezone: string): Promise<string> {
+    return (await this.find(userId))?.timezone ?? defaultTimezone;
   }
 
-  async clearLang(userId: number): Promise<void> {
-    await this.run([this.db.prepare(CLEAR_USER_LANG).bind(userId)]);
+  async setLang(
+    userId: number,
+    lang: string | null,
+    defaultTimezone: string,
+  ): Promise<void> {
+    await this.run([
+      this.db.prepare(SET_USER_LANG).bind(userId, lang, defaultTimezone),
+    ]);
+  }
+
+  async setTimezone(userId: number, timezone: string): Promise<void> {
+    await this.run([this.db.prepare(SET_USER_TIMEZONE).bind(userId, timezone)]);
   }
 
   private async run<T = unknown>(

@@ -9,10 +9,7 @@ import {
   getLanguageDisplayName,
   resolveLanguageCode,
 } from "../../translation/language";
-import {
-  clearUserLanguageOverride,
-  setUserLanguageOverride,
-} from "../../translation/userLanguage";
+import { setUserLanguageOverride } from "../../translation/userLanguage";
 import type { Env } from "../../env";
 import { Logger } from "../../logging/logger";
 import type { Router } from "../../router/router";
@@ -32,6 +29,7 @@ export async function langCommandHandler(
   router: Router,
   message: TelegramMessage,
   replier: Replier,
+  defaultTimezone: string,
 ): Promise<void> {
   const arg = (message.text ?? "").slice(PREFIX.length).trim();
   const userId = message.from.id;
@@ -42,7 +40,7 @@ export async function langCommandHandler(
   }
 
   if (arg.toLowerCase() === "auto") {
-    await clearUserLanguageOverride(env, userId);
+    await setUserLanguageOverride(env, userId, null, defaultTimezone);
     logger.info("language override cleared");
     await replier
       .withLang(message.from.language_code ?? DEFAULT_LANGUAGE)
@@ -56,7 +54,7 @@ export async function langCommandHandler(
     return;
   }
 
-  await setUserLanguageOverride(env, userId, resolved);
+  await setUserLanguageOverride(env, userId, resolved, defaultTimezone);
   logger.info("language override set", { language: resolved });
   await replier
     .withLang(resolved)

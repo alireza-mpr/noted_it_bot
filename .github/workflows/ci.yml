@@ -104,6 +104,7 @@ jobs:
             -d '{"commands":[
               {"command":"start","description":"What this bot does"},
               {"command":"lang","description":"Set or check your reply language"},
+              {"command":"tz","description":"Set your time zone, e.g. /tz Melbourne"},
               {"command":"ver","description":"Show the running version"}
             ]}'
         env:

@@ -10,13 +10,12 @@ export const START_MESSAGE = `Heya! I am {0} bot 👋.
 
 🕙 For now I read explicit dates only
 ("19 Sep - 8pm"), not "tomorrow".
-Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne). I'll support that in future.
+I work out the time zone from the message. If it doesn't say, set yours with the /tz command.
+Example: /tz Melbourne.
 
 🔁 Repeating events work too ("every Thursday, 7:30pm"). The link adds today's session everywhere; open it on a computer to get the whole series, or set the repeat yourself on a phone using the pattern I send.
 
-🌎  I reply in your Telegram language by default. To change the language, simply send /lang command.
-
-Example: /lang fa - to receive my messages in Farsi.
+🌎 I reply in your Telegram language by default. To change it, send the /lang command, e.g. /lang fa to get my replies in Farsi.
 
 🤓 Beta.`;
 
@@ -64,11 +63,20 @@ export const LANG_RESET_CONFIRMATION =
 export const LANG_NOT_UNDERSTOOD =
   'I couldn\'t figure out what language "{0}" refers to. Try a language name (e.g. "Persian") or a code (e.g. "fa").';
 
+export const TZ_USAGE =
+  "Which time zone? Send /tz followed by a city or country, e.g. /tz Melbourne or /tz Iran. You can also send an exact time zone name, e.g. /tz Asia/Tehran.";
+
+export const TZ_SET_CONFIRMATION =
+  "Got it — I'll use the {0} time zone for you from now on.";
+
+export const TZ_NOT_UNDERSTOOD =
+  'I couldn\'t figure out a time zone for "{0}". Try a city (e.g. "Melbourne"), a country (e.g. "Iran"), or a time zone name (e.g. "Asia/Tehran").';
+
 export const USER_DAILY_QUOTA_EXCEEDED =
-  "🙅🏻‍♂️ Not enough daily quota remaining for you for today. Try again in {0}.";
+  "🙅🏻‍♂️ You don't have enough daily quota left for today. Try again in {0}.";
 
 export const USER_DAILY_QUOTA_REMAINING =
-  " 🔢 You have {0} remaining request(s) for today.";
+  "🔢 You have {0} remaining request(s) for today.";
 
 // {0} is the user's numeric Telegram id, enough to whitelist them.
 export const NOT_WHITELISTED =

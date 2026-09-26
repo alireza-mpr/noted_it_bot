@@ -17,6 +17,7 @@ an `.ics` file for Apple Calendar/Outlook/anywhere else.
 |---------------|------------------------------------------------------------------------|
 | `/start`      | Intro message                                                        |
 | `/lang`       | Set the reply language (`/lang fa`, `/lang Persian`) or `/lang auto` to go back to auto-detect; a bare `/lang` replies with how to use it |
+| `/tz`         | Set your time zone from a city, country or exact zone name (`/tz Melbourne`, `/tz Iran`, `/tz Asia/Tehran`); a bare `/tz` replies with how to use it. Doesn't use up daily quota |
 | `/ver`        | Show the running version                                             |
 | `/diag`       | Gemini connectivity check — functional but intentionally not listed in Telegram's `/` autocomplete menu |
 
@@ -201,8 +202,16 @@ Users can override the auto-detected language with `/lang <language>` (e.g.
 reset to auto-detection with `/lang auto`. The override is stored per user in the
 `user_preference` table of the `USAGE_DB` D1 database (`src/db/sql/userPreference.ts`,
 `src/repositories/userPreferenceRepository.ts`): `userId` (primary key), `lang` (`NULL` means
-auto-detect) and `timezone` (defaults to `UTC`; nothing reads it yet). The table is created on
-first use like the others.
+auto-detect; `/lang auto` calls `setLang(userId, null, …)`) and `timezone` (set by `/tz` through
+`setTimezone`; when a user's row is first created by `/lang` it gets `featureFlags.defaultTimezone`,
+`UTC`, from [featureFlags.ts](src/featureFlags/featureFlags.ts)). The bot stores the time zone but
+nothing reads it yet. The table is created on first use like the others.
+
+`/tz <hint>` takes a city, a country or an exact zone name. An exact name (`Asia/Tehran`, any
+case) is used as is; anything else is put to a model through the router, and its answer is only
+stored if the platform's `Intl` recognises it as a real zone, so an invented one is never saved
+(`src/time/timezoneHint.ts`). Unlike the other commands `/tz` doesn't use up daily quota; it
+is still subject to the whitelist.
 
 **One-time setup**: create the `I18N` KV namespace per environment and put its
 ID in [wrangler.toml](wrangler.toml) (it ships with a placeholder ID):
@@ -220,11 +229,11 @@ language code are skipped). Find the namespace id with `npx wrangler kv namespac
 ```bash
 NS=<USER_LANG_NAMESPACE_ID>
 {
-  echo "CREATE TABLE IF NOT EXISTS user_preference (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT NOT NULL DEFAULT 'UTC');"
+  echo "CREATE TABLE IF NOT EXISTS user_preference (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT NOT NULL);"
   npx wrangler kv key list --namespace-id "$NS" --remote | jq -r '.[].name | select(test("^chat:[0-9]+$"))' | while read -r key; do
     lang=$(npx wrangler kv key get --namespace-id "$NS" --remote "$key")
     if [[ "$lang" =~ ^[a-z]{2,3}(-[A-Z]{2})?$ ]]; then
-      echo "INSERT INTO user_preference (userId, lang) VALUES (${key#chat:}, '$lang') ON CONFLICT(userId) DO UPDATE SET lang = excluded.lang;"
+      echo "INSERT INTO user_preference (userId, lang, timezone) VALUES (${key#chat:}, '$lang', 'UTC') ON CONFLICT(userId) DO UPDATE SET lang = excluded.lang;"
     fi
   done
 } > user_preference.sql
