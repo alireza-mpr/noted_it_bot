@@ -113,20 +113,30 @@ function foldIcsLine(line: string): string {
   return parts.join("\r\n ");
 }
 
-// The model copies a date as written and names its calendar (an Intl calendar
-// id such as "persian"); the conversion to Gregorian is left to the library.
+// The names the model may use for the Persian (Solar Hijri) calendar.
+const PERSIAN_CALENDAR_NAMES = ["persian", "jalali", "solar hijri"];
+
+// Any other name only gets its casing fixed, to match the library's ids.
+function calendarId(name: string): string {
+  const id = name.trim().toLowerCase();
+  return PERSIAN_CALENDAR_NAMES.includes(id) ? "persian" : id;
+}
+
+// The model copies a date as written and names its calendar; the conversion to
+// Gregorian is left to the library.
 // Returns null when the date can't be converted reliably: a calendar the
 // library doesn't know, no stated year, a day that doesn't exist, or a
 // monthly/yearly repeat, whose months differ between the calendars.
 function toGregorian(event: ExtractedEvent): ExtractedEvent | null {
-  if (event.calendar === "gregorian") {
+  const id = calendarId(event.calendar);
+  if (id === "gregorian") {
     return event;
   }
 
   // createCalendar falls back to Gregorian for a name it doesn't know, so check
   // it gave back the calendar that was asked for.
-  const calendar = createCalendar(event.calendar as CalendarIdentifier);
-  if (calendar.identifier !== event.calendar) {
+  const calendar = createCalendar(id as CalendarIdentifier);
+  if (calendar.identifier !== id) {
     return null;
   }
 

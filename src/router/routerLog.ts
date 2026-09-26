@@ -1,7 +1,7 @@
-import type { ProviderConfig } from "../lib/providers/ProviderConfig";
-import type { QuotaLimitScope } from "../lib/quotaLimit/quotaLimitScope";
-import type { ProviderFailure } from "../lib/providers/providerClient";
-import { dateTimeAest } from "../lib/time/dateTimeAest";
+import type { ProviderConfig } from "../providers/ProviderConfig";
+import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
+import type { ProviderFailure } from "../providers/providerClient";
+import { dateTimeAest } from "../time/dateTimeAest";
 
 const LOGGER = "routerLog";
 

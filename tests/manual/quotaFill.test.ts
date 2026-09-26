@@ -1,12 +1,12 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { GeminiClient } from "../../src/lib/providers/gemini/geminiClient";
-import type { ProviderConfig } from "../../src/lib/providers/ProviderConfig";
+import { GeminiClient } from "../../src/providers/gemini/geminiClient";
+import type { ProviderConfig } from "../../src/providers/ProviderConfig";
 import type {
   ProviderClient,
   ProviderRequest,
   ProviderResult,
-} from "../../src/lib/providers/providerClient";
+} from "../../src/providers/providerClient";
 import { GeminiUsageRepository } from "../../src/repositories/geminiUsageRepository";
 import { Router, type RouterEnv } from "../../src/router/router";
 import { RouterLog } from "../../src/router/routerLog";

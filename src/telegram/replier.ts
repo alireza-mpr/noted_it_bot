@@ -1,7 +1,7 @@
-import { GENERIC_ERROR_MESSAGE } from "../lib/interactiveMessages/messages";
-import { fillPlaceholder } from "../lib/translation/placeholders";
-import { translateText } from "../lib/translation/translate";
-import type { TranslateEnv } from "../lib/translation/translate";
+import { GENERIC_ERROR_MESSAGE } from "../interactiveMessages/messages";
+import { fillPlaceholder } from "../translation/placeholders";
+import { translateText } from "../translation/translate";
+import type { TranslateEnv } from "../translation/translate";
 import type { TelegramClient } from "./telegramClient";
 
 export class Replier {
@@ -34,7 +34,13 @@ export class Replier {
     content: string,
     caption: string,
   ): Promise<void> {
-    await this.telegram.sendDocument(this.chatId, filename, content, caption, "HTML");
+    await this.telegram.sendDocument(
+      this.chatId,
+      filename,
+      content,
+      caption,
+      "HTML",
+    );
   }
 
   async reportError(): Promise<void> {

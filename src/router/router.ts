@@ -1,12 +1,12 @@
-import type { QuotaLimitScope } from "../lib/quotaLimit/quotaLimitScope";
-import { GeminiClient } from "../lib/providers/gemini/geminiClient";
-import type { ProviderConfig } from "../lib/providers/ProviderConfig";
+import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
+import { GeminiClient } from "../providers/gemini/geminiClient";
+import type { ProviderConfig } from "../providers/ProviderConfig";
 import type {
   ProviderFailure,
   ProviderRequest,
   ProviderResult,
   ProviderClient,
-} from "../lib/providers/providerClient";
+} from "../providers/providerClient";
 import { GeminiUsageRepository } from "../repositories/geminiUsageRepository";
 import { RouterLog } from "./routerLog";
 

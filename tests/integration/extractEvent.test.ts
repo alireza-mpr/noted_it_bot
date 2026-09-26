@@ -1,11 +1,11 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { extractEvent } from "../../src/lib/extractedEvents/extractEvent";
+import { extractEvent } from "../../src/extractedEvents/extractEvent";
 import { createRouter, type RouterEnv } from "../../src/router/router";
 import type {
   ExtractedEvent,
   Recurrence,
-} from "../../src/lib/extractedEvents/extractedEvent";
+} from "../../src/extractedEvents/extractedEvent";
 
 // Partial is shallow, so allow a partial recurrence object too.
 type Expected = Omit<Partial<ExtractedEvent>, "recurrence"> & {
@@ -185,6 +185,8 @@ describe("extractEvent", () => {
       const parsed = JSON.parse(downstream.message) as ExtractedEvent;
       const normalized = {
         ...parsed,
+        // The calendar is a free string; the code lowercases it, so does the test.
+        calendar: parsed.calendar.toLowerCase(),
         start_time: normalizeTime(parsed.start_time),
         end_time: normalizeTime(parsed.end_time),
       };

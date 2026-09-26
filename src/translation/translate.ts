@@ -1,5 +1,5 @@
-import translateSystemPrompt from "../../../prompts/translate_system.txt";
-import translateUserPrompt from "../../../prompts/translate_user.txt";
+import translateSystemPrompt from "../prompts/translate_system.txt";
+import translateUserPrompt from "../prompts/translate_user.txt";
 
 export interface TranslateEnv {
   I18N: KVNamespace;

@@ -1,4 +1,4 @@
-import diagPingPrompt from "../../../prompts/diag_ping.txt";
+import diagPingPrompt from "../../prompts/diag_ping.txt";
 import type { Router } from "../../router/router";
 import type { Replier } from "../replier";
 

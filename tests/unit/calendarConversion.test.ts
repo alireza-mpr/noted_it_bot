@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/lib/extractedEvents/calendarEvent";
-import type { ExtractedEvent } from "../../src/lib/extractedEvents/extractedEvent";
+import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
+import type { ExtractedEvent } from "../../src/extractedEvents/extractedEvent";
 
 const NOW = new Date("2026-09-21T02:00:00Z");
 
@@ -43,6 +43,22 @@ describe("dates in another calendar are converted by the library", () => {
     ["gregorian", 2026, 9, 23, "20260923"],
   ])("%s %i-%i-%i is %s", (calendar, year, month, day, expected) => {
     expect(startOf(eventOn(calendar, year, month, day))).toBe(expected);
+  });
+
+  it.each([
+    ["Gregorian", 2026, 9, 23],
+    [" PERSIAN ", 1405, 7, 1],
+    ["Jalali", 1405, 7, 1],
+    ["Solar Hijri", 1405, 7, 1],
+    ["Hebrew", 5786, 1, 1],
+  ])("accepts the name %j whatever its casing", (calendar, year, month, day) => {
+    expect(startOf(eventOn(calendar, year, month, day))).toBe(
+      calendar === "Hebrew" ? "20250923" : "20260923",
+    );
+  });
+
+  it("declines a name it doesn't recognise, such as plain Hijri", () => {
+    expect(startOf(eventOn("Hijri", 1447, 1, 1))).toBeNull();
   });
 
   it("declines a day that doesn't exist (1404 is a common year)", () => {

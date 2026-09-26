@@ -15,6 +15,7 @@ Times are assumed to be Australian Eastern Standard Time (Sydney/Melbourne). I'l
 🔁 Repeating events work too ("every Thursday, 7:30pm"). The link adds today's session everywhere; open it on a computer to get the whole series, or set the repeat yourself on a phone using the pattern I send.
 
 🌎  I reply in your Telegram language by default. To change the language, simply send /lang command.
+
 Example: /lang fa - to receive my messages in Farsi.
 
 🤓 Beta.`;

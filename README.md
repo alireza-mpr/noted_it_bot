@@ -26,8 +26,8 @@ Any other message is treated as event content and sent to Gemini for extraction.
 
 Explicit repetition ("every Thursday 7:30pm", "every 2 weeks until 29 Nov",
 "first Friday of the month") is extracted as a `recurrence` object (see
-`src/lib/extractedEvents/event_schema.ts`) and turned into an `RRULE` in the `.ics` file
-by `src/lib/extractedEvents/recurrence.ts` — the model only describes the pattern; all date
+`src/extractedEvents/event_schema.ts`) and turned into an `RRULE` in the `.ics` file
+by `src/extractedEvents/recurrence.ts` — the model only describes the pattern; all date
 arithmetic (first occurrence, end date, validation) is done in code, using
 today's date in the event's timezone when no start date is stated.
 
@@ -69,7 +69,7 @@ code sits next to it in `src/telegram/`:
   pieces.
 
 `Env` is in `src/env.ts`; `extractEvent` is in
-`src/lib/extractedEvents/extractEvent.ts`.
+`src/extractedEvents/extractEvent.ts`.
 
 ## Local dev
 
@@ -184,7 +184,7 @@ for both environments, so those live once as plain **repository** secrets
 ### Multilingual replies
 
 The bot's own reply text (not extracted event content) is translated on demand
-based on Telegram's `message.from.language_code`, via `src/lib/translation/translate.ts`.
+based on Telegram's `message.from.language_code`, via `src/translation/translate.ts`.
 Translations are cached in a Workers KV namespace (`I18N` binding) keyed by a
 hash of the English text + language, so each fixed string is only translated
 once per language, ever. Falls back to English on any translation failure.
@@ -269,7 +269,7 @@ hard-coded Gemini model directly.
 
 - **Daily window = Pacific time.** Google's rate-limits page states: "Requests
   per day (RPD) quotas reset at midnight Pacific time." The day key is the
-  `America/Los_Angeles` calendar date (`src/lib/quotaLimit/quotaWindows.ts`), so daylight
+  `America/Los_Angeles` calendar date (`src/quotaLimit/quotaWindows.ts`), so daylight
   saving is handled by the named zone. Do not switch this to UTC or local time.
 - **Per project, not per key.** Google applies limits per project, so extra keys
   in the same project add no capacity. Quotas are per model, so each model is
@@ -295,7 +295,7 @@ hard-coded Gemini model directly.
   `src/router/router.ts`) and passes it into `updateHandler`, which hands it to
   `extractEvent(router, text)` and `/diag`. The router is built from a logger and
   a list of **metered providers**, each a pair: a **provider client**
-  (`GeminiClient`, `src/lib/providers/gemini/geminiClient.ts`) that makes one call
+  (`GeminiClient`, `src/providers/gemini/geminiClient.ts`) that makes one call
   to one model (endpoint, request body, response parsing), and a **usage
   repository** (`src/repositories/geminiUsageRepository.ts`, D1 binding
   `GEMINI_USAGE_DB`) that says which of its models are still available and stores
@@ -322,7 +322,7 @@ hard-coded Gemini model directly.
   `unavailable` (503), `badRequest` (other 4xx), `unauthorized` (401/403),
   `serverError` (other 5xx), `emptyResponse` (200 with no text, e.g. a safety
   block) or `internal`. When the models run out it is the kind of the last
-  attempt. The Gemini parser (`src/lib/providers/gemini/geminiResponse.ts`) produces this
+  attempt. The Gemini parser (`src/providers/gemini/geminiResponse.ts`) produces this
   same type directly. `extractEvent` passes the failure on in its result and
   logs it; `/diag` shows it (`Gemini: Broken (unauthorized)`).
 - **Flow: pick, call, record.** `router.pickAvailableModels()` lists the models under
@@ -338,7 +338,7 @@ hard-coded Gemini model directly.
   failure (other 5xx, 4xx, empty 200) stops the loop and fails the request. Only
   a 429 touches the row. Nothing is reserved up front, so two simultaneous requests can both take
   the last free slot; the 429 corrects that. Gemini responses are parsed by
-  `src/lib/providers/gemini/geminiResponse.ts`.
+  `src/providers/gemini/geminiResponse.ts`.
 - **Logging.** Two places, nothing that grows:
   - **Workers Logs.** `RouterLog` (`src/router/routerLog.ts`) writes every routing
     step (available models, attempting, succeeded, rate limited, unavailable,
@@ -352,7 +352,7 @@ hard-coded Gemini model directly.
     that model's `gemini_usage` row (`lastError`, `lastErrorAest`), e.g.
     `unavailable (HTTP 503): UNAVAILABLE: This model is currently experiencing high demand…`.
     Only the latest failure is kept, and it isn't cleared by a success: a later `lastSuccessAest` means the model has recovered: `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage"`.
-- **Caps** live in `src/lib/providers/registry.ts` (`limits`), copied from the
+- **Caps** live in `src/providers/registry.ts` (`limits`), copied from the
   AI Studio free-tier usage table. Try order is registry order.
 - **Verification:** `tests/integration/extractEvent.test.ts` runs a table of
   messages through the real router and Gemini: a failed model (429, 503, 404…)

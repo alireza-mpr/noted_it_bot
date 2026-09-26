@@ -6,16 +6,16 @@ import {
   NO_TEXT_MESSAGE,
   RECURRENCE_DECLINED_MESSAGE,
   RECURRING_NOTE,
-} from "../../lib/interactiveMessages/messages";
+} from "../../interactiveMessages/messages";
 import {
   buildCalendarEvent,
   type BuiltCalendarEvent,
-} from "../../lib/extractedEvents/calendarEvent";
-import { computeEventUid } from "../../lib/extractedEvents/eventUid";
-import { extractEvent } from "../../lib/extractedEvents/extractEvent";
-import type { ExtractedEvent } from "../../lib/extractedEvents/extractedEvent";
-import { recurrenceProblem } from "../../lib/extractedEvents/recurrence";
-import { fillPlaceholder } from "../../lib/translation/placeholders";
+} from "../../extractedEvents/calendarEvent";
+import { computeEventUid } from "../../extractedEvents/eventUid";
+import { extractEvent } from "../../extractedEvents/extractEvent";
+import type { ExtractedEvent } from "../../extractedEvents/extractedEvent";
+import { recurrenceProblem } from "../../extractedEvents/recurrence";
+import { fillPlaceholder } from "../../translation/placeholders";
 import { messageLogger } from "../../logging/messageLogger";
 import type { Router } from "../../router/router";
 import { escapeHtmlAttribute } from "../telegramHtml";

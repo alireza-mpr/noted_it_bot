@@ -1,7 +1,7 @@
 import type { Env } from "../../env";
-import { NOT_WHITELISTED } from "../../lib/interactiveMessages/messages";
-import { DEFAULT_LANGUAGE } from "../../lib/translation/language";
-import { getUserLanguageOverride } from "../../lib/translation/userLanguage";
+import { NOT_WHITELISTED } from "../../interactiveMessages/messages";
+import { DEFAULT_LANGUAGE } from "../../translation/language";
+import { getUserLanguageOverride } from "../../translation/userLanguage";
 import { whitelistPolicy } from "../../policy/whitelistPolicy";
 import type { Router } from "../../router/router";
 import { diagCommandHandler } from "../commands/diagCommandHandler";

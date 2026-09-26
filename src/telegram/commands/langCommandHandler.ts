@@ -3,16 +3,16 @@ import {
   LANG_RESET_CONFIRMATION,
   LANG_SET_CONFIRMATION,
   LANG_USAGE,
-} from "../../lib/interactiveMessages/messages";
+} from "../../interactiveMessages/messages";
 import {
   DEFAULT_LANGUAGE,
   getLanguageDisplayName,
   resolveLanguageCode,
-} from "../../lib/translation/language";
+} from "../../translation/language";
 import {
   clearUserLanguageOverride,
   setUserLanguageOverride,
-} from "../../lib/translation/userLanguage";
+} from "../../translation/userLanguage";
 import type { Env } from "../../env";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";

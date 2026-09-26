@@ -7,11 +7,11 @@ import {
   RECORD_GEMINI_USAGE,
   SELECT_GEMINI_EFFECTIVE_USAGE,
 } from "../db/sql/geminiUsage";
-import type { ProviderConfig } from "../lib/providers/ProviderConfig";
-import type { QuotaLimitScope } from "../lib/quotaLimit/quotaLimitScope";
-import { GEMINI_MODELS } from "../lib/providers/registry";
-import { dateTimeAest } from "../lib/time/dateTimeAest";
-import { currentDay, currentMinute } from "../lib/quotaLimit/quotaWindows";
+import type { ProviderConfig } from "../providers/ProviderConfig";
+import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
+import { GEMINI_MODELS } from "../providers/registry";
+import { dateTimeAest } from "../time/dateTimeAest";
+import { currentDay, currentMinute } from "../quotaLimit/quotaWindows";
 import type { UsageRepository } from "../router/router";
 
 type EffectiveUsage = Pick<GeminiUsageRow, "model" | "rpm" | "tpm" | "rpd">;
@@ -51,14 +51,7 @@ export class GeminiUsageRepository implements UsageRepository {
     await this.run(
       this.db
         .prepare(RECORD_GEMINI_USAGE)
-        .bind(
-          model.model,
-          currentDay(now),
-          currentMinute(now),
-          at,
-          tokens,
-          at,
-        ),
+        .bind(model.model, currentDay(now), currentMinute(now), at, tokens, at),
     );
   }
 

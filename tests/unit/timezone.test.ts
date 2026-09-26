@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/lib/extractedEvents/calendarEvent";
-import type { ExtractedEvent } from "../../src/lib/extractedEvents/extractedEvent";
-import { resolveTimezone } from "../../src/lib/time/timezone";
+import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
+import type { ExtractedEvent } from "../../src/extractedEvents/extractedEvent";
+import { resolveTimezone } from "../../src/time/timezone";
 
 describe("resolveTimezone", () => {
   it("canonicalises an alias or a differently cased name", () => {

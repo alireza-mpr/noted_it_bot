@@ -1,7 +1,7 @@
-import eventExtractPrompt from "../../../prompts/event_extract.txt";
+import eventExtractPrompt from "../prompts/event_extract.txt";
 import { NO_AVAILABLE_MODEL_MESSAGE } from "../interactiveMessages/messages";
 import type { ProviderFailure } from "../providers/providerClient";
-import type { Router } from "../../router/router";
+import type { Router } from "../router/router";
 import { EVENT_SCHEMA } from "./event_schema";
 import type { ExtractedEvent } from "./extractedEvent";
 

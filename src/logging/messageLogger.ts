@@ -1,4 +1,4 @@
-import { dateTimeAest } from "../lib/time/dateTimeAest";
+import { dateTimeAest } from "../time/dateTimeAest";
 
 const LOGGER = "messageLogger";
 const TTL_SECONDS = 14 * 24 * 60 * 60; // 14 days, per the /start disclosure ("I may keep your messages to fix bugs")

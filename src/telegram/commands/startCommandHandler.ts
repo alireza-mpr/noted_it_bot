@@ -1,4 +1,4 @@
-import { START_MESSAGE } from "../../lib/interactiveMessages/messages";
+import { START_MESSAGE } from "../../interactiveMessages/messages";
 import type { Replier } from "../replier";
 
 export async function startCommandHandler(replier: Replier): Promise<void> {
