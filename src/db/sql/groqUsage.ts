@@ -1,6 +1,3 @@
-// One row per Groq model. remainingRequests and limitRequests (the daily count
-// and its limit, as of the last response) are only for reading; routing uses
-// retryAfterUntil, in epoch milliseconds so it compares the same in any timezone.
 export const CREATE_GROQ_USAGE_TABLE = `
 CREATE TABLE IF NOT EXISTS groq_usage (
   model    TEXT NOT NULL PRIMARY KEY,

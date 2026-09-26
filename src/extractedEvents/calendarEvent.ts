@@ -14,12 +14,7 @@ export interface BuiltCalendarEvent {
   icsContent: string;
   googleCalendarUrl: string;
   allDay: boolean;
-  // 📌/🗓️+⏰/📍 lines summarizing the event — emoji-only, no text labels, so
-  // it never needs translation. Ready to join with "\n" and prepend to the
-  // caption.
   summaryLines: string[];
-  // Present for a repeating event: the pattern as a sentence in the reply
-  // language ("Repeats every 2 weeks on Monday, until 5 Jan 2027").
   recurrence: string | null;
 }
 
