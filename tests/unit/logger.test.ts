@@ -114,6 +114,32 @@ describe("runLogSession", () => {
     expect(new Set(sent.map((s) => s.events[0].correlation_id))).toEqual(new Set([idA, idB]));
   });
 
+  it("numbers events with an increasing seq, even when they share the same _time", async () => {
+    const sent = stubIngest();
+    const ctx = fakeCtx();
+    const logger = new Logger("t");
+    const frozen = new Date("2026-09-26T09:00:00.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(frozen);
+
+    try {
+      await runLogSession(ENV, ctx, async () => {
+        for (const name of ["a", "b", "c", "d"]) logger.info(name);
+      });
+      await runLogSession(ENV, ctx, async () => logger.info("other request"));
+    } finally {
+      vi.useRealTimers();
+    }
+    await ctx.settled();
+
+    const [first, second] = sent.map((batch) => batch.events);
+    expect(new Set(first.map((e) => e._time)).size).toBe(1);
+    expect(first.map((e) => e.seq)).toEqual([1, 2, 3, 4]);
+    expect(first.map((e) => e.message)).toEqual(["a", "b", "c", "d"]);
+    expect(second.map((e) => e.seq)).toEqual([1]);
+    expect(consoleLines.map((l) => JSON.parse(l.line).seq)).toEqual([1, 2, 3, 4, 1]);
+  });
+
   it("adds fields set with setLogField to events logged after it", async () => {
     const sent = stubIngest();
     const ctx = fakeCtx();

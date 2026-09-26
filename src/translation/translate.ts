@@ -44,6 +44,7 @@ export async function translateText(
   const key = await cacheKey(text, lang);
   const cached = await env.I18N.get(key);
   if (cached !== null) {
+    logger.debug("translation cache hit", { lang });
     return cached;
   }
 
@@ -65,6 +66,7 @@ export async function translateText(
     }
 
     await env.I18N.put(key, translated);
+    logger.info("translation generated", { lang, model: answer.model });
     return translated;
   } catch (err) {
     logger.error("threw", describeError(err));

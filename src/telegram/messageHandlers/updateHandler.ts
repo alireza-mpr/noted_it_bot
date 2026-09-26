@@ -44,7 +44,10 @@ async function consumeUserQuota(
       USER_DAILY_QUOTA_EXCEEDED,
       formatWait(result.retryAt, Date.now()),
     );
+    return result;
   }
+
+  logger.info("quota consumed", { remainingQuota: result.remainingQuota });
   return result;
 }
 
@@ -55,6 +58,7 @@ async function rejectUnlessWhitelisted(
 ): Promise<boolean> {
   const userId = message.from.id;
   if (await whitelistPolicy.isWhiteListed(userId)) {
+    logger.info("whitelist check passed");
     return false;
   }
 
@@ -137,6 +141,7 @@ export async function updateHandler(
   router: Router,
   telegramClient: TelegramClient,
 ): Promise<void> {
+  const startedAt = Date.now();
   const update = await request.json<TelegramUpdate>().catch((err) => {
     logger.error("unhandled error processing update", describeError(err));
     return undefined;
@@ -151,13 +156,24 @@ export async function updateHandler(
   setLogField("chatId", message.chat.id);
 
   const lang = await readUserLanguage(env, message);
+  const text = message.text ?? message.caption;
+  logger.info("update received", {
+    command: text?.startsWith("/") ? text.split(/[\s@]/)[0] : null,
+    lang,
+  });
   const replier = new Replier(env, router, telegramClient, message.chat.id, lang);
 
   const consumed: ConsumedQuota = { show: false, remaining: 0 };
+  let outcome: "ok" | "error" = "ok";
   try {
     await handleMessage(message, env, router, replier, featureFlags, consumed);
   } catch (err) {
+    outcome = "error";
     logger.error("unhandled error processing update", describeError(err));
     await replier.reportError(consumed.remaining, consumed.show);
   }
+  logger.info("update processed", {
+    outcome,
+    durationMs: Date.now() - startedAt,
+  });
 }

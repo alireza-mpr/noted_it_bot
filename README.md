@@ -243,7 +243,7 @@ the same event for Axiom.
 - Every other call site uses a module-level `new Logger("<name>")`; the name becomes the event's
   `source`. Pass extra structured fields as the second argument (`logger.error("threw", describeError(err))`,
   `logger.info("extracted", { model, tokens })`) rather than gluing them into the message.
-  Don't use `message`, `source`, `level`, `correlation_id`, `service`, `version` or `_time` as field names;
+  Don't use `message`, `source`, `level`, `seq`, `correlation_id`, `service`, `version` or `_time` as field names;
   they're the event's own keys.
 - **A message is a fixed sentence; the data goes in fields.** `"rejected non-whitelisted user"` with
   `userId` and `chatId` fields, never `"rejected non-whitelisted user id 42, chat 7"`. That keeps a
@@ -256,16 +256,43 @@ that request carries it, plus `userId`, `username` (`null` when the user has non
 request's whole story with APL:
 
 ```
-['app-logs'] | where correlation_id == "<id>" | sort by _time asc
+['app-logs'] | where correlation_id == "<id>" | sort by _time asc, seq asc
 ```
+
+`_time` is set by the logger when the line is logged (Axiom uses it as the event time; it only
+falls back to its own ingest time when an event has none). Workers freeze the clock until the next
+I/O, so several lines can share the same `_time`. `seq` is a per-request counter (1, 2, 3, …) that
+breaks those ties, so always sort by both.
 
 Events are buffered during the request and sent as one batch after the response
 (`ctx.waitUntil`), so logging adds one subrequest per request and no latency. Each event has
-`_time`, `level`, `source`, `message`, `correlation_id`, `service`, `version` plus any fields
+`_time`, `seq`, `level`, `source`, `message`, `correlation_id`, `service`, `version` plus any fields
 passed to the logger (`model`, `tokens`, `userId`, `username`, …). Strings longer than 10,000 characters
 are truncated. Without an `AXIOM_TOKEN` (local runs, tests) nothing is sent; an Axiom
 failure is only printed to the console and never affects the reply. Message text
 (what users send and what the models return) is included in these logs.
+
+**What gets logged for a request** (all `info` unless noted; success as well as failure):
+
+| `message` | fields | when |
+|---|---|---|
+| `update received` | `command`, `lang` | start of every update |
+| `whitelist check passed` | | sender is whitelisted |
+| `rejected non-whitelisted user` (warn) | `userId`, `chatId` | sender is not |
+| `quota consumed` | `remainingQuota` | daily quota decremented |
+| `daily quota exhausted` (warn) | `userId` | quota used up |
+| `available models` / `attempting model` / `model succeeded` | `models`, `model`, `tokens` | router steps (warn/error for rate limited, unavailable, failed) |
+| `extracted` | `sourceText`, `event` | event extraction result |
+| `message received` | `userId`, `receivedMessage`, `providerRequest`, `providerResponse`, `model` | message log entry |
+| `calendar event created` | `recurring`, `allDay` | a calendar file is about to be sent |
+| `translation generated` / `translation cache hit` (debug) | `lang`, `model` | reply translation |
+| `language override set` / `language override cleared` | `language` | `/lang` |
+| `diag check completed` | `check`, `healthy` | `/diag` |
+| `reply sent` | `type` (`text`/`document`), `lang`, `filename` | after Telegram accepted the reply |
+| `update processed` | `outcome` (`ok`/`error`), `durationMs` | end of every update |
+
+A normal request is roughly 5 to 12 events. Each is also printed to the console, so it counts
+towards the Workers Logs limit as well (200,000 lines a day on the free plan, then 1% sampling).
 
 ### Viewing and searching logs
 

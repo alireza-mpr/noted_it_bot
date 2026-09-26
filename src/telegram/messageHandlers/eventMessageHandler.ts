@@ -141,6 +141,10 @@ export async function eventMessageHandler(
     return;
   }
 
+  logger.info("calendar event created", {
+    recurring: Boolean(calendarEvent.recurrence),
+    allDay: calendarEvent.allDay,
+  });
   await replier.sendDocument(
     calendarEvent.icsFilename,
     calendarEvent.icsContent,

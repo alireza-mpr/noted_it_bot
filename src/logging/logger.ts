@@ -9,6 +9,7 @@ interface LogEvent extends LogFields {
   level: LogLevel;
   source: string;
   message: string;
+  seq: number;
   correlation_id: string;
   service: string;
   version: string | undefined;
@@ -16,6 +17,7 @@ interface LogEvent extends LogFields {
 
 interface LogSession {
   correlationId: string;
+  seq: number;
   version: string | undefined;
   token: string | undefined;
   fields: LogFields;
@@ -67,12 +69,14 @@ function emit(
 ): void {
   const text = truncate(message);
   const session = sessions.getStore();
+  const seq = session ? ++session.seq : undefined;
 
   console[level](
     safeStringify({
       level,
       source,
       message: text,
+      seq,
       correlation_id: session?.correlationId,
       ...(fields && truncateFields(fields)),
     }),
@@ -88,6 +92,7 @@ function emit(
     level,
     source,
     message: text,
+    seq: session.seq,
     correlation_id: session.correlationId,
     service: SERVICE_NAME,
     version: session.version,
@@ -161,6 +166,7 @@ export async function runLogSession<T>(
 ): Promise<T> {
   const session: LogSession = {
     correlationId: crypto.randomUUID(),
+    seq: 0,
     version: env.APP_VERSION,
     token: env.AXIOM_TOKEN,
     fields: {},

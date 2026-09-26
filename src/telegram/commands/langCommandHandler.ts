@@ -14,11 +14,14 @@ import {
   setUserLanguageOverride,
 } from "../../translation/userLanguage";
 import type { Env } from "../../env";
+import { Logger } from "../../logging/logger";
 import type { Router } from "../../router/router";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
 
 const PREFIX = "/lang";
+
+const logger = new Logger("langCommandHandler");
 
 export function isLangCommand(text: string | undefined): boolean {
   return text?.startsWith(PREFIX) ?? false;
@@ -40,6 +43,7 @@ export async function langCommandHandler(
 
   if (arg.toLowerCase() === "auto") {
     await clearUserLanguageOverride(env, chatId);
+    logger.info("language override cleared");
     await replier
       .withLang(message.from.language_code ?? DEFAULT_LANGUAGE)
       .say(LANG_RESET_CONFIRMATION);
@@ -53,6 +57,7 @@ export async function langCommandHandler(
   }
 
   await setUserLanguageOverride(env, chatId, resolved);
+  logger.info("language override set", { language: resolved });
   await replier
     .withLang(resolved)
     .say(LANG_SET_CONFIRMATION, getLanguageDisplayName(resolved));

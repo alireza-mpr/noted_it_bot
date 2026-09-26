@@ -52,6 +52,7 @@ export class Replier {
 
   async sendPlain(text: string): Promise<void> {
     await this.telegram.sendMessage(this.chatId, text);
+    logger.info("reply sent", { type: "text", lang: this.lang });
   }
 
   async sendDocument(
@@ -66,6 +67,7 @@ export class Replier {
       caption,
       "HTML",
     );
+    logger.info("reply sent", { type: "document", lang: this.lang, filename });
   }
 
   async reportError(remainingQuota: number, showQuota: boolean): Promise<void> {

@@ -36,6 +36,10 @@ async function runDiagnostics(router: Router): Promise<string> {
         });
         return "threw";
       });
+      logger.info("diag check completed", {
+        check: check.name,
+        healthy: problem === null,
+      });
       return `${check.name}: ${problem === null ? "OK" : `Broken (${problem})`}`;
     }),
   );
