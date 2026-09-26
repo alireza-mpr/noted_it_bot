@@ -5,7 +5,7 @@ export interface FeatureFlags {
 }
 
 export const featureFlags: FeatureFlags = {
-  enforceUserWhitelisting: true,
+  enforceUserWhitelisting: false,
   enforceUserDailyQuota: true,
   dailyQuota: 3,
 };
