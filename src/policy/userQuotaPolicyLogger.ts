@@ -6,6 +6,6 @@ export class UserQuotaPolicyLogger {
   ) {}
 
   async exhausted(userId: number): Promise<void> {
-    this.logger.warn(`daily quota exhausted for user id ${userId}`, { userId });
+    this.logger.warn("daily quota exhausted", { userId });
   }
 }

@@ -147,6 +147,7 @@ export async function updateHandler(
   }
 
   setLogField("userId", message.from.id);
+  setLogField("username", message.from.username ?? null);
   setLogField("chatId", message.chat.id);
 
   const lang = await readUserLanguage(env, message);

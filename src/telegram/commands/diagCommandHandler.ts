@@ -30,7 +30,10 @@ async function runDiagnostics(router: Router): Promise<string> {
   const lines = await Promise.all(
     DIAG_CHECKS.map(async (check) => {
       const problem = await check.run(router).catch((err) => {
-        logger.error(`diag check "${check.name}" threw`, describeError(err));
+        logger.error("diag check threw", {
+          check: check.name,
+          ...describeError(err),
+        });
         return "threw";
       });
       return `${check.name}: ${problem === null ? "OK" : `Broken (${problem})`}`;

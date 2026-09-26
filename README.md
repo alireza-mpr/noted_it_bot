@@ -245,11 +245,14 @@ the same event for Axiom.
   `logger.info("extracted", { model, tokens })`) rather than gluing them into the message.
   Don't use `message`, `source`, `level`, `correlation_id`, `service`, `version` or `_time` as field names;
   they're the event's own keys.
+- **A message is a fixed sentence; the data goes in fields.** `"rejected non-whitelisted user"` with
+  `userId` and `chatId` fields, never `"rejected non-whitelisted user id 42, chat 7"`. That keeps a
+  message groupable and lets you filter on the fields (`where userId == 42`).
 
 **One request = one `correlation_id`.** `runLogSession` (called from the webhook's `fetch`)
 generates a UUID per incoming update and keeps it in `AsyncLocalStorage` (the `nodejs_als`
 flag in [wrangler.toml](wrangler.toml)), so concurrent requests can't mix ids. Every event of
-that request carries it, plus `userId` and `chatId` once the update is parsed. Filter one
+that request carries it, plus `userId`, `username` (`null` when the user has none) and `chatId` once the update is parsed. Filter one
 request's whole story with APL:
 
 ```
@@ -259,7 +262,7 @@ request's whole story with APL:
 Events are buffered during the request and sent as one batch after the response
 (`ctx.waitUntil`), so logging adds one subrequest per request and no latency. Each event has
 `_time`, `level`, `source`, `message`, `correlation_id`, `service`, `version` plus any fields
-passed to the logger (`model`, `tokens`, `userId`, …). Strings longer than 10,000 characters
+passed to the logger (`model`, `tokens`, `userId`, `username`, …). Strings longer than 10,000 characters
 are truncated. Without an `AXIOM_TOKEN` (local runs, tests) nothing is sent; an Axiom
 failure is only printed to the console and never affects the reply. Message text
 (what users send and what the models return) is included in these logs.
@@ -385,7 +388,7 @@ extraction, `/diag`, reply translation and `/lang` resolution.
   - **Workers Logs.** `RouterLog` (`src/router/routerLog.ts`) writes every routing
     step (available models, attempting, succeeded, rate limited, unavailable,
     failed, no model succeeded) as one JSON line via `console`, e.g.
-    `{"level":"info","source":"routerLog","message":"gemini-3.1-flash-lite succeeded, 812 tokens","correlation_id":"…","model":"gemini-3.1-flash-lite","tokens":812}`
+    `{"level":"info","source":"routerLog","message":"model succeeded","correlation_id":"…","model":"gemini-3.1-flash-lite","tokens":812}`
     (`warn` for rate limited/unavailable, `error` for failures). Observability is
     on in [wrangler.toml](wrangler.toml); search them in the dashboard under the
     Worker's Logs. Retention is short on the free plan, and test runs log to your
