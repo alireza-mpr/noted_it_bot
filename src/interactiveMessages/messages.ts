@@ -48,7 +48,7 @@ export const NO_TEXT_MESSAGE =
   "⚠️ Sorry! I couldn't find any text in your message.";
 
 export const NO_AVAILABLE_MODEL_MESSAGE =
-  "Sorry! All the downstream providers are busy right now. Please try later.";
+  "Sorry! All the AI downstream providers are busy right now. Please try in 1 minute.";
 
 export const GENERIC_ERROR_MESSAGE =
   "⚠️ Something went wrong on my end — I've logged it to fix later.";
