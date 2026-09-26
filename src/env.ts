@@ -7,5 +7,5 @@ export interface Env {
   USER_LANG: KVNamespace;
   MESSAGE_LOG: KVNamespace;
   WHITELIST: KVNamespace;
-  GEMINI_USAGE_DB: D1Database;
+  USAGE_DB: D1Database;
 }

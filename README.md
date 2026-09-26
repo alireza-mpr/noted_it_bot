@@ -300,7 +300,7 @@ hard-coded Gemini model directly.
   (`GeminiClient`, `src/providers/gemini/geminiClient.ts`) that makes one call
   to one model (endpoint, request body, response parsing), and a **usage
   repository** (`src/repositories/geminiUsageRepository.ts`, D1 binding
-  `GEMINI_USAGE_DB`) that says which of its models are still available and stores
+  `USAGE_DB`) that says which of its models are still available and stores
   usage and errors. The router owns the loop: it tries a provider's available
   models in order, then moves on to the next provider (today there is one, Gemini;
   adding another means adding one more `{providerClient, usageRepository}` pair in

@@ -85,11 +85,11 @@ describe("quota fill (manual)", () => {
     "moves on to the next model as models fill up, and only gives up once none is left",
     { timeout: 10 * 60_000 },
     async () => {
-      const { GEMINI_API_KEY, GEMINI_USAGE_DB, QUOTA_FILL_CALLS } =
+      const { GEMINI_API_KEY, USAGE_DB, QUOTA_FILL_CALLS } =
         env as unknown as RouterEnv & { QUOTA_FILL_CALLS: string };
       const calls = Number(QUOTA_FILL_CALLS);
       const geminiClient = new GeminiClient(GEMINI_API_KEY);
-      const usageRepository = new GeminiUsageRepository(GEMINI_USAGE_DB);
+      const usageRepository = new GeminiUsageRepository(USAGE_DB);
       const attempts: Attempt[] = [];
 
       // Start the calls one after another with a short random gap, without

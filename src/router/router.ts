@@ -118,7 +118,7 @@ export class Router {
 
 export interface RouterEnv {
   GEMINI_API_KEY: string;
-  GEMINI_USAGE_DB: D1Database;
+  USAGE_DB: D1Database;
   // new provider-specific configs will be added here
 }
 
@@ -126,7 +126,7 @@ export function createRouter(env: RouterEnv): Router {
   return new Router(new RouterLog(), [
     {
       providerClient: new GeminiClient(env.GEMINI_API_KEY),
-      usageRepository: new GeminiUsageRepository(env.GEMINI_USAGE_DB),
+      usageRepository: new GeminiUsageRepository(env.USAGE_DB),
     },
   ]);
 }
