@@ -6,7 +6,7 @@ export interface FeatureFlags {
 }
 
 export const featureFlags: FeatureFlags = {
-  enforceUserWhitelisting: false,
+  enforceUserWhitelisting: true,
   enforceUserDailyQuota: true,
   dailyQuota: 3,
   defaultTimezone: "UTC",
