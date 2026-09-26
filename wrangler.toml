@@ -20,13 +20,13 @@ database_id = "79df708c-b243-45ba-b308-f2d25f03db4a"
 remote = true
 
 [env.prod]
-name = "noted-it-bot"
+name = "prod"
 [env.prod.vars]
 APP_VERSION = "0.2.0-dev-local"
 [[env.prod.kv_namespaces]]
 binding = "MESSAGE_LOG"
-id = "0995f983386447d89941d1a4de8ac90b"
+id = "9cd065d23b074b1ab4fb4508aafd86b6"
 [[env.prod.d1_databases]]
 binding = "USAGE_DB"
 database_name = "noted-it-prod-usage"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "893a4cd0-93a9-4599-bcf5-70a259a812d2"
