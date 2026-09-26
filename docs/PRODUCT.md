@@ -56,9 +56,10 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
   `/lang auto` returns to Telegram's setting; `/lang` shows the current one
   (shown by its own name, e.g. "فارسی").
 - Dates and times in the summary follow the reply language, always Gregorian.
-- `/tz <city, country or zone name>` — set your time zone ("Melbourne", "Iran",
-  "Asia/Tehran"). An exact zone name is used as is; anything else is resolved by a
-  model and checked against the platform's zone list before it's stored.
+- `/tz` — set your time zone on a web page the bot links to. The page detects the
+  device's zone and asks for a one-tap confirmation, or lets the user search the full
+  list. The link works for one minute. No model is involved, so it can't be abused to
+  run up the LLM quota. An exact zone name typed after `/tz` is applied directly.
 - The bot's own name ("Noted") is never translated.
 
 ### Access control
@@ -74,7 +75,7 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
 |----------|----------------------------------------------------------------|
 | `/start` | Intro and what the bot does                                    |
 | `/lang`  | Show or change reply language                                  |
-| `/tz`    | Set your time zone from a city, country or zone name           |
+| `/tz`    | Set your time zone on a web page (or an exact zone name)       |
 | `/ver`   | Show the running version                                       |
 | `/diag`  | Gemini connectivity check (hidden — not in the `/` menu)       |
 

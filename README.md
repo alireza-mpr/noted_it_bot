@@ -17,7 +17,7 @@ an `.ics` file for Apple Calendar/Outlook/anywhere else.
 |---------------|------------------------------------------------------------------------|
 | `/start`      | Intro message                                                        |
 | `/lang`       | Set the reply language (`/lang fa`, `/lang Persian`) or `/lang auto` to go back to auto-detect; a bare `/lang` replies with how to use it |
-| `/tz`         | Set your time zone from a city, country or exact zone name (`/tz Melbourne`, `/tz Iran`, `/tz Asia/Tehran`); a bare `/tz` replies with how to use it. Doesn't use up daily quota |
+| `/tz`         | Set your time zone on a web page the bot links to (a button that works for 1 minute); an exact zone name typed after it (`/tz Asia/Tehran`) is applied directly. Doesn't use up daily quota |
 | `/ver`        | Show the running version                                             |
 | `/diag`       | Gemini connectivity check — functional but intentionally not listed in Telegram's `/` autocomplete menu |
 
@@ -223,11 +223,35 @@ auto-detect; `/lang auto` calls `setLang(userId, null, …)`) and `timezone` (se
 `UTC`, from [featureFlags.ts](src/featureFlags/featureFlags.ts)). The bot stores the time zone but
 nothing reads it yet. The table is created on first use like the others.
 
-`/tz <hint>` takes a city, a country or an exact zone name. An exact name (`Asia/Tehran`, any
-case) is used as is; anything else is put to a model through the router, and its answer is only
-stored if the platform's `Intl` recognises it as a real zone, so an invented one is never saved
-(`src/time/timezoneHint.ts`). Unlike the other commands `/tz` doesn't use up daily quota; it
-is still subject to the whitelist.
+### Setting the time zone (`/tz`)
+
+Guessing a zone from a typed place name was unreliable (a country can span several zones), so `/tz`
+uses a small web page instead, served by the Worker itself, with no model involved:
+
+1. `/tz` replies with a button linking to `https://<worker>/tz?token=…`. The link's origin is taken from
+   the request Telegram made, so there is no URL to configure.
+2. The page (`src/web/tzPage.ts`) reads the device's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`)
+   and shows it with the local time there and a **Yes, use this time zone** button, or a searchable list of every
+   zone (`Intl.supportedValuesOf('timeZone')`) to pick a different one. It's in the user's language, right-to-left
+   for Persian and Arabic.
+3. Saving `POST`s to `/tz/save`, which validates the zone with `Intl`, stores it in `user_preference.timezone`, and
+   sends the confirmation to the chat.
+
+An exact zone name typed after the command (`/tz asia/tehran`) is applied directly without the page; any other text
+just gets the link. `/tz` doesn't use up daily quota (there's no model call), but it is behind the whitelist.
+
+**Who is asking.** The page and endpoint learn the user from a signed token, never from anything the browser
+sends (`src/web/tzToken.ts`): `base64url(payload).base64url(HMAC-SHA256)`, keyed by `WEBHOOK_SECRET` with a domain
+prefix, so no new secret is needed. The payload is `{uid, lang, purpose, exp}`. There are two tokens: the **link**
+(`purpose: "open"`) is valid for **1 minute**; opening it returns the page with a separate **save** token
+(`purpose: "save"`, **10 minutes**), so a leaked link is useless after a minute, but someone searching the list isn't cut
+off. Neither can be used for the other's job, tampering is detected, and a token must be spelled exactly as it was
+signed. Requests with a missing, forged, expired or wrong-purpose token get a `403` and touch neither D1 nor Telegram.
+The page is served with a per-response CSP nonce, `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and no
+framing. A save token can be reused until it expires, which lets a whitelisted user change only their own row.
+
+**Testing it.** `tests/unit/tzToken.test.ts`, `tzRoutes.test.ts` and `tzCommand.test.ts` cover the tokens, both routes
+and the command. To see the real page, run `npx wrangler dev`, send `/tz` to the bot and open the link.
 
 **One-time setup**: create the `I18N` KV namespace per environment (it only caches the generated recurrence
 sentences) and put its ID in [wrangler.toml](wrangler.toml) (it ships with a placeholder ID):

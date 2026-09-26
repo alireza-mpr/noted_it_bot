@@ -1,12 +1,8 @@
-import {
-  TZ_NOT_UNDERSTOOD,
-  TZ_SET_CONFIRMATION,
-  TZ_USAGE,
-} from "../../interactiveMessages/messages";
+import { TZ_BUTTON_LABEL, TZ_LINK_MESSAGE, TZ_SET_CONFIRMATION } from "../../interactiveMessages/messages";
 import { Logger } from "../../logging/logger";
-import type { Router } from "../../router/router";
-import { resolveTimezoneFromHint } from "../../time/timezoneHint";
+import { canonicalTimezone } from "../../time/canonicalTimezone";
 import { setUserTimezone, type UserTimezoneEnv } from "../../time/userTimezone";
+import { OPEN_TOKEN_TTL_MS, signTzToken } from "../../web/tzToken";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
 
@@ -16,27 +12,33 @@ export function isTzCommand(text: string | undefined): boolean {
   return /^\/tz(@\w+)?(\s|$)/.test(text ?? "");
 }
 
+export interface TzCommandEnv extends UserTimezoneEnv {
+  WEBHOOK_SECRET: string;
+}
+
 export async function tzCommandHandler(
-  env: UserTimezoneEnv,
-  router: Router,
+  env: TzCommandEnv,
   message: TelegramMessage,
   replier: Replier,
+  origin: string,
+  nowMs: number = Date.now(),
 ): Promise<void> {
   const arg = (message.text ?? "").replace(/^\/tz(@\w+)?/, "").trim();
 
-  if (!arg) {
-    await replier.say(TZ_USAGE);
+  const exact = arg ? canonicalTimezone(arg) : null;
+  if (exact) {
+    await setUserTimezone(env, message.from.id, exact);
+    logger.info("timezone set", { timezone: exact, via: "command" });
+    await replier.say(TZ_SET_CONFIRMATION, exact);
     return;
   }
 
-  const timezone = await resolveTimezoneFromHint(router, arg);
-  if (!timezone) {
-    logger.info("time zone not understood");
-    await replier.say(TZ_NOT_UNDERSTOOD, arg);
-    return;
-  }
-
-  await setUserTimezone(env, message.from.id, timezone);
-  logger.info("timezone set", { timezone });
-  await replier.say(TZ_SET_CONFIRMATION, timezone);
+  const token = await signTzToken(env.WEBHOOK_SECRET, {
+    uid: message.from.id,
+    lang: replier.lang,
+    purpose: "open",
+    exp: nowMs + OPEN_TOKEN_TTL_MS,
+  });
+  logger.info("time zone link sent");
+  await replier.sayWithLink(TZ_LINK_MESSAGE, TZ_BUTTON_LABEL, `${origin}/tz?token=${token}`);
 }

@@ -25,6 +25,13 @@ async function cacheKey(text: string, lang: string): Promise<string> {
   return `i18n:${hex}`;
 }
 
+// The committed translation of a fixed message, or the English text when there is none
+// (English, an unsupported language, or a string that isn't in the catalog). Never calls anything.
+export function translateStatic(text: string, lang: string | undefined): string {
+  const supported = toSupportedLanguage(lang);
+  return !supported || supported === "en" ? text : (TRANSLATIONS[supported][text] ?? text);
+}
+
 // Translates a reply string into `lang`. Every fixed message is looked up in
 // the committed translation files (src/translation/translations), which never
 // calls a model. Only a string that isn't in them, such as the generated

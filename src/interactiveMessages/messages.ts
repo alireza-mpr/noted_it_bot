@@ -62,9 +62,6 @@ export const LANG_RESET_CONFIRMATION =
 export const LANG_NOT_SUPPORTED =
   "I can't reply in that language yet. I can reply in: {0}.";
 
-export const TZ_USAGE =
-  "Which time zone? Send /tz followed by a city or country, e.g. /tz Melbourne or /tz Iran. You can also send an exact time zone name, e.g. /tz Asia/Tehran.";
-
 export const TZ_LINK_MESSAGE =
   "Tap the button below to set your time zone. The link works for 1 minute.";
 
@@ -72,9 +69,6 @@ export const TZ_BUTTON_LABEL = "Set my time zone";
 
 export const TZ_SET_CONFIRMATION =
   "Got it — I'll use the {0} time zone for you from now on.";
-
-export const TZ_NOT_UNDERSTOOD =
-  'I couldn\'t figure out a time zone for "{0}". Try a city (e.g. "Melbourne"), a country (e.g. "Iran"), or a time zone name (e.g. "Asia/Tehran").';
 
 export const USER_DAILY_QUOTA_EXCEEDED =
   "🙅🏻‍♂️ You don't have enough daily quota left for today. Try again in {0}.";

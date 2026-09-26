@@ -80,6 +80,7 @@ async function handleMessage(
   replier: Replier,
   flags: FeatureFlags,
   consumed: ConsumedQuota,
+  origin: string,
 ): Promise<void> {
   // /lang is exempt, so even a rejected user can pick the language of the rejection.
   if (!isLangCommand(message.text)) {
@@ -112,7 +113,7 @@ async function handleMessage(
     return langCommandHandler(env, message, replier, flags.defaultTimezone);
   }
   if (isTzCommand(message.text)) {
-    return tzCommandHandler(env, router, message, replier);
+    return tzCommandHandler(env, message, replier, origin);
   }
 
   return eventMessageHandler(
@@ -174,7 +175,15 @@ export async function updateHandler(
   const consumed: ConsumedQuota = { show: false, remaining: 0 };
   let outcome: "ok" | "error" = "ok";
   try {
-    await handleMessage(message, env, router, replier, featureFlags, consumed);
+    await handleMessage(
+      message,
+      env,
+      router,
+      replier,
+      featureFlags,
+      consumed,
+      new URL(request.url).origin,
+    );
   } catch (err) {
     outcome = "error";
     logger.error("unhandled error processing update", describeError(err));

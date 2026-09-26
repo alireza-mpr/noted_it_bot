@@ -50,6 +50,12 @@ export class Replier {
     return this.translate(USER_DAILY_QUOTA_REMAINING, String(remainingQuota));
   }
 
+  async sayWithLink(template: string, buttonTemplate: string, url: string): Promise<void> {
+    const [text, label] = await Promise.all([this.translate(template), this.translate(buttonTemplate)]);
+    await this.telegram.sendMessage(this.chatId, text, { text: label, url });
+    logger.info("reply sent", { type: "link", lang: this.lang });
+  }
+
   async sendPlain(text: string): Promise<void> {
     await this.telegram.sendMessage(this.chatId, text);
     logger.info("reply sent", { type: "text", lang: this.lang });

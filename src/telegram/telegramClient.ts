@@ -1,11 +1,15 @@
 export class TelegramClient {
   constructor(private readonly botToken: string) {}
 
-  async sendMessage(chatId: number, text: string): Promise<void> {
+  async sendMessage(chatId: number, text: string, linkButton?: { text: string; url: string }): Promise<void> {
     await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        ...(linkButton && { reply_markup: { inline_keyboard: [[linkButton]] } }),
+      }),
     });
   }
 
