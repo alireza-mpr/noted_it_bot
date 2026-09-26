@@ -365,7 +365,7 @@ extraction, `/diag`, reply translation and `/lang` resolution.
 
 ### Access control (whitelist)
 
-The bot is invite-only: `whitelistPolicy.isWhiteListed` in `src/policy/whitelistPolicy.ts` (its D1 and KV bindings are set once per request by `whitelistPolicy.init`) checks the sender's numeric Telegram user id against the `WHITELIST` table in the `USAGE_DB` D1 database before processing anything (including `/start`) —
+The bot is invite-only: `whitelistPolicy.isWhiteListed` in `src/policy/whitelistPolicy.ts` (its D1 and KV bindings are set once per request by `whitelistPolicy.init`) checks the sender's numeric Telegram user id against the `whitelist` table in the `USAGE_DB` D1 database before processing anything (including `/start`) —
 a non-whitelisted user gets a polite rejection message instead. **The one
 exception is `/lang`**, which works for everyone regardless of whitelist
 status, so even a rejected user can set their preferred language and get
@@ -379,11 +379,11 @@ message includes the user's id, so it can be relayed to you.
 # Add one user (creating the table first if the bot hasn't run yet).
 # --remote is required — d1 commands default to a LOCAL simulated database,
 # which silently does nothing to the real deployed bot.
-npx wrangler d1 execute noted-it-dev-usage --remote --command "CREATE TABLE IF NOT EXISTS WHITELIST (userId INTEGER NOT NULL PRIMARY KEY); INSERT OR IGNORE INTO WHITELIST (userId) VALUES (123456789)"
+npx wrangler d1 execute noted-it-dev-usage --remote --command "CREATE TABLE IF NOT EXISTS whitelist (userId INTEGER NOT NULL PRIMARY KEY); INSERT OR IGNORE INTO whitelist (userId) VALUES (123456789)"
 
 # Remove one user, or list everyone:
-npx wrangler d1 execute noted-it-dev-usage --remote --command "DELETE FROM WHITELIST WHERE userId = 123456789"
-npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT userId FROM WHITELIST"
+npx wrangler d1 execute noted-it-dev-usage --remote --command "DELETE FROM whitelist WHERE userId = 123456789"
+npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT userId FROM whitelist"
 ```
 
 The whitelist used to live in a `WHITELIST` KV namespace (plain numeric-id keys), and
@@ -393,7 +393,7 @@ instead of a numeric id are skipped, since they can't be matched any more):
 
 ```bash
 npx wrangler kv key list --namespace-id <WHITELIST_NAMESPACE_ID> --remote \
-  | jq -r '"CREATE TABLE IF NOT EXISTS WHITELIST (userId INTEGER NOT NULL PRIMARY KEY);", (.[].name | select(test("^[0-9]+$")) | "INSERT OR IGNORE INTO WHITELIST (userId) VALUES (\(.));")' > whitelist.sql
+  | jq -r '"CREATE TABLE IF NOT EXISTS whitelist (userId INTEGER NOT NULL PRIMARY KEY);", (.[].name | select(test("^[0-9]+$")) | "INSERT OR IGNORE INTO whitelist (userId) VALUES (\(.));")' > whitelist.sql
 npx wrangler d1 execute noted-it-dev-usage --remote --file whitelist.sql   # and noted-it-prod-usage for prod
 ```
 
