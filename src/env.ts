@@ -7,6 +7,5 @@ export interface Env {
   I18N: KVNamespace;
   USER_LANG: KVNamespace;
   MESSAGE_LOG: KVNamespace;
-  WHITELIST: KVNamespace;
   USAGE_DB: D1Database;
 }

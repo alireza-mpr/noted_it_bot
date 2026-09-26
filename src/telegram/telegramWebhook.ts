@@ -18,7 +18,7 @@ export default {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    whitelistPolicy.init(env.WHITELIST, env.MESSAGE_LOG);
+    whitelistPolicy.init(env.USAGE_DB, env.MESSAGE_LOG);
     userQuotaPolicy.init(env.USAGE_DB);
     messageLogger.init(env.MESSAGE_LOG);
 

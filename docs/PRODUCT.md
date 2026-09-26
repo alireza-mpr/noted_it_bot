@@ -130,7 +130,7 @@ appear in the `/` autocomplete menu.
 ### Platform & ops
 - [ ] Migrate event extraction off the legacy Gemini `generateContent` endpoint
       to the Interactions API once structured output is verified there.
-- [ ] Admin tooling for the whitelist (today it's manual `wrangler kv` commands).
+- [ ] Admin tooling for the whitelist (today it's manual `wrangler d1` commands).
 - [ ] Automate `package.json` version bumps alongside prod tags (currently manual).
 - [ ] Prod approval gate proper — needs a paid GitHub plan on a private repo;
       manual dispatch is the interim guard.

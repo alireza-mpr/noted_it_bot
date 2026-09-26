@@ -365,25 +365,36 @@ extraction, `/diag`, reply translation and `/lang` resolution.
 
 ### Access control (whitelist)
 
-The bot is invite-only: `whitelistPolicy.isWhiteListed` in `src/policy/whitelistPolicy.ts` (its KV bindings are set once per request by `whitelistPolicy.init`) checks the sender against a
-`WHITELIST` KV namespace before processing anything (including `/start`) —
+The bot is invite-only: `whitelistPolicy.isWhiteListed` in `src/policy/whitelistPolicy.ts` (its D1 and KV bindings are set once per request by `whitelistPolicy.init`) checks the sender's numeric Telegram user id against the `whitelist` table in the `USAGE_DB` D1 database before processing anything (including `/start`) —
 a non-whitelisted user gets a polite rejection message instead. **The one
 exception is `/lang`**, which works for everyone regardless of whitelist
 status, so even a rejected user can set their preferred language and get
 the rejection message itself back in it. There's no admin command for
-whitelisting; entries are added manually, and a user passes if
-of these is whitelisted:
-
-- **By numeric Telegram user id**, as a plain unprefixed key. The bot's own
-  rejection message includes the user's id, so it can be relayed to you for this.
+whitelisting; entries are added manually. The table has one column, `userId`
+(`INTEGER PRIMARY KEY`), and is created on first use like the other tables
+(`src/db/sql/whitelist.ts`, `src/repositories/whitelistRepository.ts`). The bot's own rejection
+message includes the user's id, so it can be relayed to you.
 
 ```bash
-npx wrangler kv namespace create WHITELIST --env dev
-npx wrangler kv namespace create WHITELIST --env prod
+# Add one user (creating the table first if the bot hasn't run yet).
+# --remote is required — d1 commands default to a LOCAL simulated database,
+# which silently does nothing to the real deployed bot.
+npx wrangler d1 execute noted-it-dev-usage --remote --command "CREATE TABLE IF NOT EXISTS whitelist (userId INTEGER NOT NULL PRIMARY KEY); INSERT OR IGNORE INTO whitelist (userId) VALUES (123456789)"
 
-# --remote is required for any kv key command — they default to a LOCAL simulated
-# store otherwise, which silently does nothing to the real deployed bot.
+# Remove one user, or list everyone:
+npx wrangler d1 execute noted-it-dev-usage --remote --command "DELETE FROM whitelist WHERE userId = 123456789"
+npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT userId FROM whitelist"
+```
 
+The whitelist used to live in a `WHITELIST` KV namespace (plain numeric-id keys), and
+that binding has been removed. To copy the old entries over, find the namespace id
+with `npx wrangler kv namespace list`, then (needs `jq`; entries keyed by a username
+instead of a numeric id are skipped, since they can't be matched any more):
+
+```bash
+npx wrangler kv key list --namespace-id <WHITELIST_NAMESPACE_ID> --remote \
+  | jq -r '"CREATE TABLE IF NOT EXISTS whitelist (userId INTEGER NOT NULL PRIMARY KEY);", (.[].name | select(test("^[0-9]+$")) | "INSERT OR IGNORE INTO whitelist (userId) VALUES (\(.));")' > whitelist.sql
+npx wrangler d1 execute noted-it-dev-usage --remote --file whitelist.sql   # and noted-it-prod-usage for prod
 ```
 
 Rejections are logged by `whitelistPolicy.logger`

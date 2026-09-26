@@ -1,22 +1,21 @@
+import { WhitelistRepository } from "../repositories/whitelistRepository";
 import { WhitelistPolicyLogger } from "./whitelistPolicyLogger";
 
 export class WhitelistPolicy {
   readonly logger = new WhitelistPolicyLogger();
-  private inited = false;
-  private whitelist!: KVNamespace;
+  private repository: WhitelistRepository | undefined;
 
-  init(whitelist: KVNamespace, logStore: KVNamespace): void {
-    this.whitelist = whitelist;
+  init(usageDb: D1Database, logStore: KVNamespace): void {
+    this.repository = new WhitelistRepository(usageDb);
     this.logger.init(logStore);
-    this.inited = true;
   }
 
   async isWhiteListed(userId: number): Promise<boolean> {
-    if (!this.inited) {
+    if (!this.repository) {
       throw new Error("whitelistPolicy: call init first");
     }
 
-    return (await this.whitelist.get(String(userId))) !== null;
+    return this.repository.isWhitelisted(userId);
   }
 }
 

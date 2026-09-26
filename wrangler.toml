@@ -20,10 +20,6 @@ remote = true
 binding = "MESSAGE_LOG"
 id = "f1a94b61a6ea499ba534adab79d3b3fc"
 remote = true
-[[env.dev.kv_namespaces]]
-binding = "WHITELIST"
-id = "6b921bb296ca46bf95c7340852fabc67"
-remote = true
 [[env.dev.d1_databases]]
 binding = "USAGE_DB"
 database_name = "noted-it-dev-usage"
@@ -43,9 +39,6 @@ id = "82f0418d9bc74193b895070de1eb2028"
 [[env.prod.kv_namespaces]]
 binding = "MESSAGE_LOG"
 id = "0995f983386447d89941d1a4de8ac90b"
-[[env.prod.kv_namespaces]]
-binding = "WHITELIST"
-id = "7bc58ed05e544baa88fb25ca11d7bd2c"
 [[env.prod.d1_databases]]
 binding = "USAGE_DB"
 database_name = "noted-it-prod-usage"
