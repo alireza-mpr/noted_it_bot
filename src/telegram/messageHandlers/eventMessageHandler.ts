@@ -81,7 +81,9 @@ export async function eventMessageHandler(
 ): Promise<void> {
   const content = message.text ?? message.caption;
   if (!content) {
-    logger.error("message had no text or caption", { telegramMessage: message });
+    logger.error("message had no text or caption", {
+      telegramMessage: message,
+    });
     await replier.sayWithQuota(NO_TEXT_MESSAGE, remainingQuota, showQuota);
     return;
   }
@@ -92,7 +94,7 @@ export async function eventMessageHandler(
   }
 
   const downstream = await extractEvent(router, content);
-  await messageLogger.log({
+  await messageLogger.log("provider response received", {
     userId: message.from.id,
     receivedMessage: content,
     providerRequest: content,
@@ -148,11 +150,6 @@ export async function eventMessageHandler(
   await replier.sendDocument(
     calendarEvent.icsFilename,
     calendarEvent.icsContent,
-    await buildCaption(
-      calendarEvent,
-      replier,
-      remainingQuota,
-      showQuota,
-    ),
+    await buildCaption(calendarEvent, replier, remainingQuota, showQuota),
   );
 }

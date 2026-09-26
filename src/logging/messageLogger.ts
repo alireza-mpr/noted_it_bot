@@ -25,8 +25,8 @@ export class MessageLogger {
   }
 
   // Best-effort: a logging failure must never affect the actual reply.
-  async log(entry: MessageLogEntry): Promise<void> {
-    this.logger.info("message received", { ...entry });
+  async log(message: string, entry: MessageLogEntry): Promise<void> {
+    this.logger.info(message, { ...entry });
 
     try {
       if (!this.inited) {
