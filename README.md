@@ -113,7 +113,8 @@ export CLOUDFLARE_ACCOUNT_ID=...
 npm ci && npm run typecheck && npm test
 ```
 
-`vitest.config.ts` fails fast if `GEMINI_API_KEY` is missing. Runs are slower
+`vitest.config.ts` takes `GEMINI_API_KEY` and `GROQ_API_KEY` from the environment, or else from your local
+`secrets/dev.json` (so you don't have to export them), and fails fast if `GEMINI_API_KEY` is missing. Runs are slower
 than a simulated setup (every KV/D1 call is a network round trip) and leave usage
 rows in the dev `gemini_usage` table. To run only the offline tests:
 `npx vitest run tests/unit`.
