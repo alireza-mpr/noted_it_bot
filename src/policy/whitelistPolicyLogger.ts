@@ -1,3 +1,4 @@
+import { describeError, Logger } from "../logging/logger";
 import { dateTimeAest } from "../time/dateTimeAest";
 
 const LOGGER = "whitelistPolicyLogger";
@@ -7,6 +8,8 @@ export class WhitelistPolicyLogger {
   private inited = false;
   private logStore!: KVNamespace;
 
+  constructor(private readonly logger: Logger = new Logger(LOGGER)) {}
+
   init(kv: KVNamespace): void {
     this.logStore = kv;
     this.inited = true;
@@ -14,7 +17,7 @@ export class WhitelistPolicyLogger {
 
   async rejected(userId: number, chatId: number): Promise<void> {
     const message = `rejected non-whitelisted user id ${userId}, chat ${chatId}`;
-    console.warn("WhitelistPolicyLogger:", message);
+    this.logger.warn(message, { userId, chatId });
 
     try {
       if (!this.inited) {
@@ -29,7 +32,7 @@ export class WhitelistPolicyLogger {
       });
       await this.logStore.put(key, value, { expirationTtl: TTL_SECONDS });
     } catch (err) {
-      console.error("WhitelistPolicyLogger: threw", err);
+      this.logger.error("threw", describeError(err));
     }
   }
 }

@@ -22,6 +22,9 @@ import type { Router } from "../../router/router";
 import { escapeHtmlAttribute } from "../telegramHtml";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
+import { Logger } from "../../logging/logger";
+
+const logger = new Logger("eventMessageHandler");
 
 async function buildCaption(
   calendarEvent: BuiltCalendarEvent,
@@ -78,7 +81,7 @@ export async function eventMessageHandler(
 ): Promise<void> {
   const content = message.text ?? message.caption;
   if (!content) {
-    console.error("Message had no text or caption", JSON.stringify(message));
+    logger.error("message had no text or caption", { telegramMessage: message });
     await replier.sayWithQuota(NO_TEXT_MESSAGE, remainingQuota, showQuota);
     return;
   }
@@ -98,11 +101,10 @@ export async function eventMessageHandler(
   });
 
   if (downstream.result === "failed") {
-    console.error(
-      "Downstream call failed",
-      downstream.message,
-      JSON.stringify(downstream.failure),
-    );
+    logger.error("downstream call failed", {
+      detail: downstream.message,
+      failure: downstream.failure,
+    });
     await replier.say(downstream.message);
     return;
   }
@@ -110,7 +112,10 @@ export async function eventMessageHandler(
   const event: ExtractedEvent = JSON.parse(downstream.message);
   const problem = recurrenceProblem(event);
   if (problem) {
-    console.error("Declined recurring event", problem, downstream.message);
+    logger.error("declined recurring event", {
+      problem,
+      response: downstream.message,
+    });
     await replier.sayWithQuota(
       RECURRENCE_DECLINED_MESSAGE,
       remainingQuota,
@@ -125,10 +130,9 @@ export async function eventMessageHandler(
     replier.lang,
   );
   if (!calendarEvent) {
-    console.error(
-      "Could not build a calendar event from extraction",
-      downstream.message,
-    );
+    logger.error("could not build a calendar event from extraction", {
+      response: downstream.message,
+    });
     await replier.sayWithQuota(
       NO_CALENDAR_EVENT_MESSAGE,
       remainingQuota,

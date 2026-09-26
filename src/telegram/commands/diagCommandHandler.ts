@@ -1,6 +1,9 @@
 import diagPingPrompt from "../../prompts/diag_ping.txt";
 import type { Router } from "../../router/router";
 import type { Replier } from "../replier";
+import { describeError, Logger } from "../../logging/logger";
+
+const logger = new Logger("diagCommandHandler");
 
 interface DiagCheck {
   name: string;
@@ -27,7 +30,7 @@ async function runDiagnostics(router: Router): Promise<string> {
   const lines = await Promise.all(
     DIAG_CHECKS.map(async (check) => {
       const problem = await check.run(router).catch((err) => {
-        console.error(`Diag check "${check.name}" threw`, err);
+        logger.error(`diag check "${check.name}" threw`, describeError(err));
         return "threw";
       });
       return `${check.name}: ${problem === null ? "OK" : `Broken (${problem})`}`;

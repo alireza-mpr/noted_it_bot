@@ -1,4 +1,7 @@
 import type { Router } from "../router/router";
+import { describeError, Logger } from "../logging/logger";
+
+const logger = new Logger("resolveLanguageCode");
 
 export const DEFAULT_LANGUAGE = "en";
 const BCP47_LIKE = /^[a-z]{2,3}(-[A-Z]{2})?$/;
@@ -25,7 +28,7 @@ export async function resolveLanguageCode(router: Router, input: string): Promis
       temperature: 0,
     });
     if (answer.result === "failed") {
-      console.error("resolveLanguageCode: no model answered", JSON.stringify(answer.failure));
+      logger.error("no model answered", { failure: answer.failure });
       return null;
     }
 
@@ -35,7 +38,7 @@ export async function resolveLanguageCode(router: Router, input: string): Promis
     }
     return code;
   } catch (err) {
-    console.error("resolveLanguageCode: threw", err);
+    logger.error("threw", describeError(err));
     return null;
   }
 }

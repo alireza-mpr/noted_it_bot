@@ -1,6 +1,9 @@
 import translateSystemPrompt from "../prompts/translate_system.txt";
 import translateUserPrompt from "../prompts/translate_user.txt";
 import type { Router } from "../router/router";
+import { describeError, Logger } from "../logging/logger";
+
+const logger = new Logger("translateText");
 
 export interface TranslateEnv {
   I18N: KVNamespace;
@@ -51,20 +54,20 @@ export async function translateText(
       temperature: 0,
     });
     if (answer.result === "failed") {
-      console.error("translateText: no model translated", JSON.stringify(answer.failure));
+      logger.error("no model translated", { failure: answer.failure });
       return text;
     }
 
     const translated = answer.text.trim();
     if (!translated) {
-      console.error("translateText: empty translation", answer.model);
+      logger.error("empty translation", { model: answer.model });
       return text;
     }
 
     await env.I18N.put(key, translated);
     return translated;
   } catch (err) {
-    console.error("translateText: threw", err);
+    logger.error("threw", describeError(err));
     return text;
   }
 }

@@ -79,6 +79,7 @@ npx wrangler secret put BOT_TOKEN --env dev      # paste noted_it_dev_bot_token 
 npx wrangler secret put WEBHOOK_SECRET --env dev # any random string
 npx wrangler secret put GEMINI_API_KEY --env dev # your Gemini API key
 npx wrangler secret put GROQ_API_KEY --env dev   # your Groq API key
+npx wrangler secret put AXIOM_TOKEN --env dev    # optional locally: without it, logs stay in the console
 npx wrangler dev --env dev
 ```
 
@@ -175,6 +176,7 @@ that older tag from the dropdown.
 | `WORKER_URL`       | `https://<worker-name>.<your-subdomain>.workers.dev` (visible after first deploy) |
 | `GEMINI_API_KEY`   | your Gemini API key                                                          |
 | `GROQ_API_KEY`     | your Groq API key                                                            |
+| `AXIOM_TOKEN`      | an Axiom API token allowed to ingest into the `app-logs` dataset            |
 
 Using GitHub *Environments* (not plain repo secrets) means `dev` and `prod` never
 share a `BOT_TOKEN` by accident. (Required-reviewers approval gates on
@@ -227,10 +229,46 @@ npx wrangler kv namespace create MESSAGE_LOG --env dev
 npx wrangler kv namespace create MESSAGE_LOG --env prod
 ```
 
+### Axiom logging
+
+Every log line is sent to the **`app-logs`** dataset in [Axiom](https://axiom.co)
+by the generic `Logger` in `src/logging/logger.ts` (dataset, ingest region and service
+name: `src/logging/axiomConfig.ts`; the region there is `us-east-1`, change it if your Axiom
+org is in another one). There are no direct `console.*` calls in `src/`: everything logs through
+a `Logger`, which prints one JSON line to the console (so Workers Logs still has it) and queues
+the same event for Axiom.
+
+- The existing loggers — `RouterLog`, `MessageLogger`, `WhitelistPolicyLogger` and
+  `UserQuotaPolicyLogger` — each take a `Logger` (default `new Logger("<name>")`).
+- Every other call site uses a module-level `new Logger("<name>")`; the name becomes the event's
+  `source`. Pass extra structured fields as the second argument (`logger.error("threw", describeError(err))`,
+  `logger.info("extracted", { model, tokens })`) rather than gluing them into the message.
+  Don't use `message`, `source`, `level`, `correlationId`, `service`, `version` or `_time` as field names;
+  they're the event's own keys.
+
+**One request = one `correlationId`.** `runLogSession` (called from the webhook's `fetch`)
+generates a UUID per incoming update and keeps it in `AsyncLocalStorage` (the `nodejs_als`
+flag in [wrangler.toml](wrangler.toml)), so concurrent requests can't mix ids. Every event of
+that request carries it, plus `userId` and `chatId` once the update is parsed. Filter one
+request's whole story with APL:
+
+```
+['app-logs'] | where correlationId == "<id>" | sort by _time asc
+```
+
+Events are buffered during the request and sent as one batch after the response
+(`ctx.waitUntil`), so logging adds one subrequest per request and no latency. Each event has
+`_time`, `level`, `source`, `message`, `correlationId`, `service`, `version` plus any fields
+passed to the logger (`model`, `tokens`, `userId`, …). Strings longer than 10,000 characters
+are truncated. Without an `AXIOM_TOKEN` (local runs, tests) nothing is sent; an Axiom
+failure is only printed to the console and never affects the reply. Message text
+(what users send and what the models return) is included in these logs.
+
 ### Viewing and searching logs
 
-Logs are in four places, depending on what they are (dashboard menu names are
-from memory):
+Every log line also goes to **Axiom** (see [Axiom logging](#axiom-logging)); the
+places below are where each kind lived before that and still do. Logs are in four
+places, depending on what they are (dashboard menu names are from memory):
 
 | Log | Where | See it |
 |---|---|---|
@@ -347,7 +385,7 @@ extraction, `/diag`, reply translation and `/lang` resolution.
   - **Workers Logs.** `RouterLog` (`src/router/routerLog.ts`) writes every routing
     step (available models, attempting, succeeded, rate limited, unavailable,
     failed, no model succeeded) as one JSON line via `console`, e.g.
-    `{"logger":"routerLog","time":{"date_time_aest":"2026-09-25 14:45:38"},"message":"gemini-3.1-flash-lite succeeded, 812 tokens"}`
+    `{"level":"info","source":"routerLog","message":"gemini-3.1-flash-lite succeeded, 812 tokens","correlationId":"…","model":"gemini-3.1-flash-lite","tokens":812}`
     (`warn` for rate limited/unavailable, `error` for failures). Observability is
     on in [wrangler.toml](wrangler.toml); search them in the dashboard under the
     Worker's Logs. Retention is short on the free plan, and test runs log to your

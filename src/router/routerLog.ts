@@ -1,26 +1,29 @@
 import type { ProviderConfig } from "../providers/ProviderConfig";
 import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
 import type { ProviderFailure } from "../providers/providerClient";
-import { dateTimeAest } from "../time/dateTimeAest";
+import { Logger } from "../logging/logger";
 
 const LOGGER = "routerLog";
 
-type Level = "log" | "warn" | "error";
-
 export class RouterLog {
+  constructor(private readonly logger: Logger = new Logger(LOGGER)) {}
+
   listed(models: ProviderConfig[]): void {
-    this.write(
-      "log",
-      `available models: ${models.map((model) => model.id).join(", ") || "none"}`,
-    );
+    const ids = models.map((model) => model.id);
+    this.logger.info(`available models: ${ids.join(", ") || "none"}`, {
+      models: ids,
+    });
   }
 
   attempted(model: ProviderConfig): void {
-    this.write("log", `attempting ${model.id}`);
+    this.logger.info(`attempting ${model.id}`, { model: model.id });
   }
 
   succeeded(model: ProviderConfig, tokens: number): void {
-    this.write("log", `${model.id} succeeded, ${tokens} tokens`);
+    this.logger.info(`${model.id} succeeded, ${tokens} tokens`, {
+      model: model.id,
+      tokens,
+    });
   }
 
   rateLimited(model: ProviderConfig, quotaLimitScope: QuotaLimitScope): string {
@@ -48,25 +51,15 @@ export class RouterLog {
   }
 
   noModelSucceeded(): void {
-    this.write("error", "no model succeeded");
+    this.logger.error("no model succeeded");
   }
 
   private modelEvent(
-    level: Level,
+    level: "warn" | "error",
     model: ProviderConfig,
     event: string,
   ): string {
-    this.write(level, `${model.id} ${event}`);
+    this.logger[level](`${model.id} ${event}`, { model: model.id });
     return event;
-  }
-
-  private write(level: Level, message: string): void {
-    console[level](
-      JSON.stringify({
-        logger: LOGGER,
-        time: { date_time_aest: dateTimeAest(new Date()) },
-        message,
-      }),
-    );
   }
 }

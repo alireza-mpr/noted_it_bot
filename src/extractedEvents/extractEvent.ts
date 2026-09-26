@@ -4,6 +4,9 @@ import type { ProviderFailure } from "../providers/providerClient";
 import type { Router } from "../router/router";
 import { EVENT_SCHEMA } from "./event_schema";
 import type { ExtractedEvent } from "./extractedEvent";
+import { describeError, Logger } from "../logging/logger";
+
+const logger = new Logger("extractEvent");
 
 export interface DownstreamResult {
   result: "ok" | "failed";
@@ -33,17 +36,14 @@ export async function extractEvent(
     }
 
     const event: ExtractedEvent = JSON.parse(answer.text);
-    console.log(
-      "extractEvent: extracted",
-      JSON.stringify({ source: telegramMessageText, event }),
-    );
+    logger.info("extracted", { sourceText: telegramMessageText, event });
     return {
       result: "ok",
       message: JSON.stringify(event),
       model: answer.model,
     };
   } catch (err) {
-    console.error("extractEvent: threw", err);
+    logger.error("threw", describeError(err));
     return {
       ...NO_AVAILABLE_MODEL,
       failure: { kind: "internal", detail: String(err) },

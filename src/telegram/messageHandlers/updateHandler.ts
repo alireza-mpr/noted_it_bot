@@ -7,6 +7,7 @@ import {
   featureFlags,
   type FeatureFlags,
 } from "../../featureFlags/featureFlags";
+import { describeError, Logger, setLogField } from "../../logging/logger";
 import { formatWait } from "../../time/formatWait";
 import { DEFAULT_LANGUAGE } from "../../translation/language";
 import { getUserLanguageOverride } from "../../translation/userLanguage";
@@ -27,6 +28,8 @@ import { eventMessageHandler } from "./eventMessageHandler";
 import { Replier } from "../replier";
 import type { TelegramClient } from "../telegramClient";
 import type { TelegramMessage, TelegramUpdate } from "../telegramTypes";
+
+const logger = new Logger("updateHandler");
 
 async function consumeUserQuota(
   message: TelegramMessage,
@@ -122,7 +125,7 @@ async function readUserLanguage(
     const langOverride = await getUserLanguageOverride(env, message.chat.id);
     return langOverride ?? message.from.language_code ?? DEFAULT_LANGUAGE;
   } catch (err) {
-    console.error("Could not read the user's language, using English", err);
+    logger.error("could not read the user's language, using English", describeError(err));
     return DEFAULT_LANGUAGE;
   }
 }
@@ -135,13 +138,16 @@ export async function updateHandler(
   telegramClient: TelegramClient,
 ): Promise<void> {
   const update = await request.json<TelegramUpdate>().catch((err) => {
-    console.error("Unhandled error processing update", err);
+    logger.error("unhandled error processing update", describeError(err));
     return undefined;
   });
   const message = update?.message;
   if (!message) {
     return;
   }
+
+  setLogField("userId", message.from.id);
+  setLogField("chatId", message.chat.id);
 
   const lang = await readUserLanguage(env, message);
   const replier = new Replier(env, router, telegramClient, message.chat.id, lang);
@@ -150,7 +156,7 @@ export async function updateHandler(
   try {
     await handleMessage(message, env, router, replier, featureFlags, consumed);
   } catch (err) {
-    console.error("Unhandled error processing update", err);
+    logger.error("unhandled error processing update", describeError(err));
     await replier.reportError(consumed.remaining, consumed.show);
   }
 }

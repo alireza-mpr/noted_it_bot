@@ -12,6 +12,9 @@ import type {
 import { GeminiUsageRepository } from "../repositories/geminiUsageRepository";
 import { GroqUsageRepository } from "../repositories/groqUsageRepository";
 import { RouterLog } from "./routerLog";
+import { describeError, Logger } from "../logging/logger";
+
+const logger = new Logger("router");
 
 export interface UsageRepository {
   selectAvailableModels(now: Date): Promise<ProviderConfig[]>;
@@ -118,7 +121,7 @@ export class Router {
       log.noModelSucceeded();
       return { result: "failed", failure: lastFailure };
     } catch (err) {
-      console.error("Router: threw", err);
+      logger.error("threw", describeError(err));
       return {
         result: "failed",
         failure: { kind: "internal", detail: String(err) },

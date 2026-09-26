@@ -7,6 +7,9 @@ import { translateText } from "../translation/translate";
 import type { TranslateEnv } from "../translation/translate";
 import type { Router } from "../router/router";
 import type { TelegramClient } from "./telegramClient";
+import { describeError, Logger } from "../logging/logger";
+
+const logger = new Logger("replier");
 
 export class Replier {
   constructor(
@@ -76,7 +79,7 @@ export class Replier {
       : "";
     const text = quotaText ? `${errorText}\n\n${quotaText}` : errorText;
     await this.sendPlain(text).catch((err) =>
-      console.error("Failed to report error back to chat", err),
+      logger.error("failed to report error back to chat", describeError(err)),
     );
   }
 }
