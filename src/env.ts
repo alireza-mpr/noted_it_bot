@@ -3,6 +3,7 @@ export interface Env {
   WEBHOOK_SECRET: string;
   APP_VERSION: string;
   GEMINI_API_KEY: string;
+  GROQ_API_KEY: string;
   I18N: KVNamespace;
   USER_LANG: KVNamespace;
   MESSAGE_LOG: KVNamespace;

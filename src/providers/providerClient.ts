@@ -17,6 +17,7 @@ export type ProviderFailure =
   | (FailureDetails & {
       kind: "rateLimited";
       quotaLimitScope?: QuotaLimitScope;
+      retryAfterSeconds?: number;
     })
   | (FailureDetails & {
       kind:
@@ -34,5 +35,8 @@ export type ProviderResult =
 
 // What the router depends on: one call to one specific model.
 export interface ProviderClient {
-  call(model: ProviderConfig, request: ProviderRequest): Promise<ProviderResult>;
+  call(
+    model: ProviderConfig,
+    request: ProviderRequest,
+  ): Promise<ProviderResult>;
 }

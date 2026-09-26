@@ -78,6 +78,7 @@ npm install
 npx wrangler secret put BOT_TOKEN --env dev      # paste noted_it_dev_bot_token from secrets/dev.json
 npx wrangler secret put WEBHOOK_SECRET --env dev # any random string
 npx wrangler secret put GEMINI_API_KEY --env dev # your Gemini API key
+npx wrangler secret put GROQ_API_KEY --env dev   # your Groq API key
 npx wrangler dev --env dev
 ```
 
@@ -104,6 +105,7 @@ variables, the same three CI sets:
 
 ```bash
 export GEMINI_API_KEY=...          # from the dev environment's secrets
+export GROQ_API_KEY=...            # optional: lets the router reach Groq in the tests
 export CLOUDFLARE_API_TOKEN=...    # needs Workers KV Storage: Edit and D1: Edit
 export CLOUDFLARE_ACCOUNT_ID=...
 npm ci && npm run typecheck && npm test
@@ -118,7 +120,7 @@ rows in the dev `gemini_usage` table. To run only the offline tests:
 
 - `.github/workflows/ci.yml` — two jobs, on every push (the PR run stops after `build`):
   - `build` installs deps, typechecks, and runs the test suite (real Gemini API,
-    real dev KV and D1 via remote bindings; needs `GEMINI_API_KEY`,
+    real dev KV and D1 via remote bindings; needs `GEMINI_API_KEY`, `GROQ_API_KEY`,
     `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`).
   - `deploy-dev` needs `build`, so it runs only when the tests pass, and only on
     `main`. To deploy despite failing tests (say, the dev Gemini quota is used up),
@@ -172,6 +174,7 @@ that older tag from the dropdown.
 | `WEBHOOK_SECRET`   | a random string you generate once per env (e.g. `openssl rand -hex 32`)     |
 | `WORKER_URL`       | `https://<worker-name>.<your-subdomain>.workers.dev` (visible after first deploy) |
 | `GEMINI_API_KEY`   | your Gemini API key                                                          |
+| `GROQ_API_KEY`     | your Groq API key                                                            |
 
 Using GitHub *Environments* (not plain repo secrets) means `dev` and `prod` never
 share a `BOT_TOKEN` by accident. (Required-reviewers approval gates on
@@ -302,9 +305,11 @@ hard-coded Gemini model directly.
   repository** (`src/repositories/geminiUsageRepository.ts`, D1 binding
   `USAGE_DB`) that says which of its models are still available and stores
   usage and errors. The router owns the loop: it tries a provider's available
-  models in order, then moves on to the next provider (today there is one, Gemini;
-  adding another means adding one more `{providerClient, usageRepository}` pair in
-  `createRouter`). A failure only skips the model that failed and is saved on its
+  models in order, then moves on to the next provider (today two, Gemini then
+  Groq, in `createRouter`; adding another means adding one more
+  `{providerClient, usageRepository}` pair there). Groq's repository
+  (`src/repositories/groqUsageRepository.ts`, table `groq_usage`) tracks only
+  when to try again: a 429's `retry-after` marks that model unavailable until then. A failure only skips the model that failed and is saved on its
   row, so one retired or broken model can't block the rest; the exception is a 401/403, where the key is
   bad for every model, so the router abandons that provider and moves on to the
   next one.

@@ -1,5 +1,6 @@
 import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
 import { GeminiClient } from "../providers/gemini/geminiClient";
+import { GroqClient } from "../providers/groq/groqClient";
 import type { ProviderConfig } from "../providers/ProviderConfig";
 import type {
   ProviderFailure,
@@ -8,6 +9,7 @@ import type {
   ProviderClient,
 } from "../providers/providerClient";
 import { GeminiUsageRepository } from "../repositories/geminiUsageRepository";
+import { GroqUsageRepository } from "../repositories/groqUsageRepository";
 import { RouterLog } from "./routerLog";
 
 export interface UsageRepository {
@@ -19,6 +21,7 @@ export interface UsageRepository {
     model: ProviderConfig,
     quotaLimitScope: QuotaLimitScope,
     now: Date,
+    retryAfterSeconds?: number,
   ): Promise<void>;
 
   recordError(model: ProviderConfig, message: string, now: Date): Promise<void>;
@@ -72,6 +75,7 @@ export class Router {
               model,
               quotaLimitScope,
               new Date(),
+              failure.retryAfterSeconds,
             );
             await usageRepository.recordError(
               model,
@@ -118,6 +122,7 @@ export class Router {
 
 export interface RouterEnv {
   GEMINI_API_KEY: string;
+  GROQ_API_KEY: string;
   USAGE_DB: D1Database;
   // new provider-specific configs will be added here
 }
@@ -127,6 +132,10 @@ export function createRouter(env: RouterEnv): Router {
     {
       providerClient: new GeminiClient(env.GEMINI_API_KEY),
       usageRepository: new GeminiUsageRepository(env.USAGE_DB),
+    },
+    {
+      providerClient: new GroqClient(env.GROQ_API_KEY),
+      usageRepository: new GroqUsageRepository(env.USAGE_DB),
     },
   ]);
 }

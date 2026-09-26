@@ -22,6 +22,7 @@ export default defineConfig({
       miniflare: {
         bindings: {
           GEMINI_API_KEY: geminiApiKey,
+          ...(process.env.GROQ_API_KEY && { GROQ_API_KEY: process.env.GROQ_API_KEY }),
           // How many calls tests/manual/quotaFill.test.ts fires at once.
           ...(quotaFillCalls && { QUOTA_FILL_CALLS: quotaFillCalls }),
         },
