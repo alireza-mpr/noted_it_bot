@@ -112,24 +112,25 @@ npm ci && npm run typecheck && npm test
 `vitest.config.ts` fails fast if `GEMINI_API_KEY` is missing. Runs are slower
 than a simulated setup (every KV/D1 call is a network round trip) and leave usage
 rows in the dev `gemini_usage` table. To run only the offline tests:
-`npx vitest run --exclude "tests/integration/**"`.
+`npx vitest run tests/unit`.
 
 ## CI/CD
 
-- `.github/workflows/ci.yml` — installs deps, typechecks, and runs the test
-  suite (real Gemini API, real dev KV and D1 via remote bindings; needs
-  `GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`) on every
-  push/PR.
-- `.github/workflows/deploy.yml` — two jobs:
-  - `deploy-dev` runs automatically on every push to `main`. On success, it
-    pushes a git tag matching exactly what `/ver` reports for that deploy
-    (e.g. `v0.1.42-beta-abc1234`), so a specific dev deployment can be found
-    later with `git tag`. A failed deploy leaves no tag.
-  - `deploy-prod` **never runs automatically** — it's `workflow_dispatch`-only
-    (manually triggered), gated to only run against a `v*.*.*` tag. See
-    [Promoting a commit to prod](#promoting-a-commit-to-prod).
-  - Each deploys via `wrangler` to its own Worker and re-points that environment's
-    Telegram webhook + command list at it.
+- `.github/workflows/ci.yml` — two jobs, on every push (the PR run stops after `build`):
+  - `build` installs deps, typechecks, and runs the test suite (real Gemini API,
+    real dev KV and D1 via remote bindings; needs `GEMINI_API_KEY`,
+    `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`).
+  - `deploy-dev` needs `build`, so it runs only when the tests pass, and only for
+    pushes to `main`. On success, it pushes a git tag matching exactly what `/ver`
+    reports for that deploy (e.g. `v0.2.42-beta-abc1234`), so a specific dev
+    deployment can be found later with `git tag`. A failed deploy leaves no tag.
+    Because the tests share the dev quota, a run that fails on quota blocks the
+    dev deploy too.
+- `.github/workflows/deploy.yml` — `deploy-prod` **never runs automatically** — it's
+  `workflow_dispatch`-only (manually triggered), gated to only run against a
+  `v*.*.*` tag. See [Promoting a commit to prod](#promoting-a-commit-to-prod).
+- Each deploy goes via `wrangler` to its own Worker and re-points that
+  environment's Telegram webhook + command list at it.
 
 ### Promoting a commit to prod
 
@@ -143,12 +144,12 @@ click, even though the tag itself doesn't auto-deploy.
 2. Tag the commit and push the tag (stay in `0.x.y` while the bot is Beta —
    semver reserves `1.0.0`+ for a stable release):
    ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag v0.2.0
+   git push origin v0.2.0
    ```
    This does **not** deploy anything by itself — it just marks the commit.
 3. Go to the repo's **Actions** tab → **Deploy** workflow → **Run workflow**.
-4. In the ref dropdown, pick the tag you just pushed (e.g. `v0.1.0`) instead of `main`.
+4. In the ref dropdown, pick the tag you just pushed (e.g. `v0.2.0`) instead of `main`.
 5. Click **Run workflow**. This runs `deploy-prod` (and only `deploy-prod` —
    `deploy-dev` won't run for a `workflow_dispatch` event) against exactly
    that tagged commit.
@@ -354,8 +355,8 @@ hard-coded Gemini model directly.
   AI Studio free-tier usage table. Try order is registry order.
 - **Verification:** `tests/integration/extractEvent.test.ts` runs a table of
   messages through the real router and Gemini: a failed model (429, 503, 404…)
-  moves on to the next one, and the test fails only if no model answers. `tests/geminiResponse.test.ts` checks the
-  parser against a real captured 503 (`tests/fixtures/gemini503Unavailable.ts`).
+  moves on to the next one, and the test fails only if no model answers. `tests/unit/geminiResponse.test.ts` checks the
+  parser against a real captured 503 (`tests/unit/fixtures/gemini503Unavailable.ts`).
 
 ### Access control (whitelist)
 

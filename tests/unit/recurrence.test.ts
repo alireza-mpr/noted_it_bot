@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../src/lib/extractedEvents/calendarEvent";
+import { buildCalendarEvent } from "../../src/lib/extractedEvents/calendarEvent";
 import {
   describeRecurrence,
   recurrenceProblem,
-} from "../src/lib/extractedEvents/recurrence";
+} from "../../src/lib/extractedEvents/recurrence";
 import type {
   ExtractedEvent,
   Recurrence,
-} from "../src/lib/extractedEvents/extractedEvent";
+} from "../../src/lib/extractedEvents/extractedEvent";
 
 // Fixed "now": Monday 21 Sep 2026, 12:00 Melbourne (AEST, UTC+10).
 const MON_NOON = new Date("2026-09-21T02:00:00Z");

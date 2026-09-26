@@ -28,3 +28,72 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # Ships to dev only when the CI job above passed; PRs and other branches never deploy.
+  deploy-dev:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: write # needed to push the per-deploy tag below
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compute version
+        id: version
+        run: echo "version=0.2.${{ github.run_number }}-beta-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Cloudflare Workers (dev)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env dev --var APP_VERSION:${{ steps.version.outputs.version }}
+          environment: dev
+          secrets: |
+            BOT_TOKEN
+            WEBHOOK_SECRET
+            GEMINI_API_KEY
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Point the Telegram webhook at the Worker
+        run: |
+          curl -sf "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+            -d "url=${WORKER_URL}" \
+            -d "secret_token=${WEBHOOK_SECRET}"
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+
+      - name: Register bot commands for Telegram's autocomplete menu
+        run: |
+          curl -sf -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
+            -H "Content-Type: application/json" \
+            -d '{"commands":[
+              {"command":"start","description":"What this bot does"},
+              {"command":"lang","description":"Set or check your reply language"},
+              {"command":"ver","description":"Show the running version"}
+            ]}'
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+      # Tags this exact dev deploy with the same string /ver reports, so a
+      # specific dev deployment can be found later via `git tag`. Only runs
+      # after a successful deploy — a failed deploy leaves no tag.
+      - name: Tag this dev deploy
+        run: |
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
