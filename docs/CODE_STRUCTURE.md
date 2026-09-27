@@ -104,7 +104,7 @@ src/
     models/    Gemini, Groq, the router, model limits
     logging/   the logger and Axiom
     web/       web pages the Worker serves: the /tz page and its routes
-  config/      appConfig and Env
+  config/      APP_CONFIG and Env
   todo/        temporary: values whose place is not decided yet (each file
                says why in a TODO)
 ```
@@ -223,7 +223,7 @@ code, together with that area.
 | `providers/*`, `router/*`, `quotaLimit/*`, `prompts/diag_ping.txt` | `adapters/models/` | ⏳ |
 | `logging/*` | `adapters/logging/` | ⏳ |
 | `web/*` | `adapters/web/` | ⏳ |
-| `appConfig/appConfig.ts`, `env.ts` | `config/` | ⏳ |
+| `appConfig/appConfig.ts`, `env.ts` | `config/app-config.ts` (`appConfig` → `APP_CONFIG`, `defaultTimezone` → `floatingTimeZoneName`), `config/env.ts` | ✅ |
 | `buildCalendarEvent` (used only by tests) | a helper in `tests/` | ⏳ |
 | `text-modules.d.ts`, `node-modules.d.ts` | stay in `src/` | ✅ |
 
@@ -246,7 +246,12 @@ after each commit.
 | 3c-3 | i18n: the message texts, the translations, and the lookup | ✅ |
 | 3c-4 | Output: the repeat sentence in the reply language, with stored templates (a bug fix: no English inside a non-English reply) | ✅ |
 | 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ✅ |
-| 4 | Adapters: Telegram, the database, the models, logging, the web pages | ⏳ |
+| 4a | Config: `APP_CONFIG` and `Env` | ✅ |
+| 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ⏳ |
+| 4c | Adapters: the database (tables, SQL, repositories) | ⏳ |
+| 4d | Adapters: the models (Gemini, Groq, model limits, the router) | ⏳ |
+| 4e | Adapters: Telegram (the client, update types, the webhook, replies) | ⏳ |
+| 4f | Adapters: the web pages (the /tz page and its routes) | ⏳ |
 | 5 | App: one use case per file (create an event, set a language, set a time zone, …) | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
 
