@@ -1,8 +1,9 @@
 import { Logger, type LogFields } from "./logger";
 
-// What a user did, as one "user activity" event with an `activity` field, so
-// Axiom can list a user's history (where userId == …) or count one action
-// (where activity == "tz_set"). userId and username come from the log session.
+// Logs a user action as one "user activity" event, with an `activity` field.
+// In Axiom you can then list a user's history (where userId == …) or count one
+// action (where activity == "tz_set"). userId, username and firstName come
+// from the log session.
 export type Activity =
   | "start"
   | "ver"

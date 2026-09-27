@@ -12,7 +12,7 @@ export interface DownstreamResult {
   result: "ok" | "failed";
   message: string;
   failure?: ProviderFailure;
-  // The model that produced a successful answer.
+  // The model that gave a successful answer.
   model?: string;
 }
 

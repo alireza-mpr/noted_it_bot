@@ -26,10 +26,11 @@ ON CONFLICT(userId) DO UPDATE SET
   lastUsedAt     = excluded.lastUsedAt
 WHERE ${EFFECTIVE_REMAINING} > 0`;
 
-// Undoes one CONSUME_USER_QUOTA made at ?2. If no other consume has touched the
-// row since, it goes back exactly to how it was, lastUsedAt included, so an
-// unanswered message doesn't push the reset time out. Otherwise one unit is
-// given back.
+// Undoes one CONSUME_USER_QUOTA made at time ?2.
+// - If no other consume changed the row since then: the row goes back exactly
+//   to how it was, lastUsedAt too. So an unanswered message does not move the
+//   reset time.
+// - Otherwise: one unit is given back.
 export const REFUND_USER_QUOTA = `
 UPDATE user_usage SET
   remainingQuota = CASE WHEN lastUsedAt = ?2 THEN ?3 ELSE MIN(remainingQuota + 1, ?5) END,

@@ -16,7 +16,8 @@ import zh from "./zh.json";
 import type { MessageId } from "../../interactiveMessages/messages";
 import type { SupportedLanguage } from "../language";
 
-// Keyed by message id; tests/unit/translations.test.ts checks every id is present.
+// Keyed by message id. tests/unit/translations.test.ts checks that every id is
+// there.
 export const TRANSLATIONS: Record<Exclude<SupportedLanguage, "en">, Partial<Record<MessageId, string>>> = {
   ar,
   de,

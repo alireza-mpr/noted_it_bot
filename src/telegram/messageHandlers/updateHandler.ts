@@ -54,8 +54,8 @@ async function consumeUserQuota(
   return result;
 }
 
-// Gives back a unit taken for a message no model answered. A failure here is
-// logged, not raised: the user already has their reply.
+// Gives back the unit taken for a message that no model answered. If this
+// fails, we only log it: the user already has their reply.
 async function refundUserQuota(reservation: QuotaReservation): Promise<void> {
   try {
     await userQuotaPolicy.refund(reservation);
@@ -90,7 +90,8 @@ async function handleMessage(
     logActivity("ver");
     return versionCommandHandler(env, replier);
   }
-  // /diag is deliberately not registered via setMyCommands, so it stays hidden from the menu.
+  // /diag is not registered with setMyCommands on purpose, so it does not show
+  // in the menu.
   if (message.text === "/diag") {
     logActivity("diag");
     return diagCommandHandler(router, replier);
@@ -112,13 +113,13 @@ async function handleMessage(
     return;
   }
 
-  // An unknown /command: nothing to extract, and not worth a reply.
+  // An unknown /command: nothing to extract, and no reply needed.
   if (content.startsWith("/")) {
     return;
   }
 
-  // Quota is only taken for a message that goes to a model, and is given back
-  // if no model answers it.
+  // Quota is only taken for messages that go to a model. It is given back if
+  // no model answers.
   let reservation: QuotaReservation | undefined;
   if (config.enforceUserDailyQuota) {
     const quota = await consumeUserQuota(message, replier, config.dailyQuota);
@@ -144,8 +145,8 @@ async function handleMessage(
 }
 
 // Telegram sends my_chat_member when a user blocks the bot ("Stop and block
-// bot": kicked) or unblocks or restarts it (member). Deleting the chat without
-// blocking sends nothing, so it can't be seen.
+// bot": status kicked), or unblocks or restarts it (status member). Deleting
+// the chat without blocking sends nothing, so we cannot see it.
 function handleMembershipChange(change: TelegramChatMemberUpdate): void {
   setLogField("userId", change.from.id);
   setLogField("username", change.from.username ?? null);
@@ -164,12 +165,12 @@ function handleMembershipChange(change: TelegramChatMemberUpdate): void {
 
 interface UserSettings {
   lang: string;
-  // null when the user hasn't picked one with /tz.
+  // null when the user has not set one with /tz.
   timezone: string | null;
 }
 
 // Reads the user's language and time zone in one D1 read. The language falls
-// back to Telegram's, then English; if the preferences can't be read, English
+// back to the Telegram language, then to English. If the read fails: English,
 // and no time zone.
 async function readUserSettings(
   env: Env,
@@ -193,7 +194,7 @@ async function readUserSettings(
   }
 }
 
-// The first functions that's called right after the bot calls the backend (Webhook).
+// The first function called for each Telegram message (from the webhook).
 export async function updateHandler(
   request: Request,
   env: Env,

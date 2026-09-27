@@ -25,7 +25,8 @@ function groq(model: string, limits: ProviderLimits): ProviderConfig {
   };
 }
 
-// Try order within each provider; the router goes through Gemini's list, then Groq's.
+// The try order within each provider. The router tries Gemini's list first,
+// then Groq's.
 export const GEMINI_MODELS: ProviderConfig[] = [
   gemini("gemini-3.1-flash-lite", { rpm: 15, tpm: 250_000, rpd: 500 }),
   gemini("gemini-3.5-flash-lite", { rpm: 15, tpm: 250_000, rpd: 500 }),

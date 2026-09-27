@@ -4,9 +4,8 @@ export interface UserLanguageEnv {
   USAGE_DB: D1Database;
 }
 
-// An explicit /lang choice overrides Telegram's auto-detected
-// message.from.language_code for all of that user's future replies.
-// A null language means "auto-detect".
+// A /lang choice replaces Telegram's language (message.from.language_code) for
+// all of that user's future replies. A null language means "use Telegram's".
 export async function setUserLanguageOverride(
   env: UserLanguageEnv,
   userId: number,

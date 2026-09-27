@@ -49,7 +49,7 @@ export function parseGroqResponse(
   const detail = () => describeError(data, body);
 
   if (httpStatus === 429) {
-    // retry-after is in whole seconds and is sent only on a 429.
+    // retry-after is in whole seconds. Groq sends it only with a 429.
     const retryAfter = headerNumber(headers, "retry-after");
     return fail({
       kind: "rateLimited",

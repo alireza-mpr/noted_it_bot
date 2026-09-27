@@ -15,8 +15,8 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#39;");
 }
 
-// Fills {{name}} placeholders in one pass, so inserted text is never scanned
-// for placeholders itself.
+// Fills {{name}} placeholders in one pass. So the inserted text is never
+// searched for placeholders again.
 function fillTemplate(
   template: string,
   values: Record<string, string>,

@@ -69,8 +69,8 @@ async function buildCaption(
   return `${caption}\n\n${escapeHtmlAttribute(quotaLine)}`;
 }
 
-// Says which zone was assumed when the message gave none, and how to change it.
-// An all-day event has no time, so its zone doesn't matter.
+// Tells the user which zone was used when the message had none, and how to
+// change it. All-day events have no time, so their zone does not matter.
 function timezoneNote(
   source: "message" | "user" | "floating",
   calendarEvent: BuiltCalendarEvent,
@@ -85,7 +85,8 @@ function timezoneNote(
   return replier.translate("TZ_FLOATING_NOTE");
 }
 
-// Tells the user extraction has started. A failed send must not stop the extraction.
+// Tells the user that extraction has started. If sending fails, extraction
+// still continues.
 async function sayExtracting(replier: Replier): Promise<void> {
   try {
     await replier.say("EXTRACTING_EVENT_MESSAGE");
@@ -94,8 +95,8 @@ async function sayExtracting(replier: Replier): Promise<void> {
   }
 }
 
-// Returns whether a model answered, so the caller knows whether the quota
-// taken for this message should be given back.
+// Returns whether a model answered. The caller uses it to decide whether to
+// give back the quota for this message.
 export async function eventMessageHandler(
   content: string,
   router: Router,
@@ -124,9 +125,9 @@ export async function eventMessageHandler(
   }
 
   const event: ExtractedEvent = JSON.parse(downstream.message);
-  // A zone the message states or implies wins; otherwise the user's /tz choice;
-  // otherwise none, and the times stay "floating" (as written, in the
-  // calendar's own zone). The last two are pointed out in the caption.
+  // The zone in the message wins. Otherwise the user's /tz zone. Otherwise no
+  // zone: the times stay "floating" (as written, in the calendar's own zone).
+  // The caption mentions the last two cases.
   const timezoneSource = event.timezone_hint ? "message" : userTimezone ? "user" : "floating";
   event.timezone_hint ??= userTimezone;
   const problem = recurrenceProblem(event);

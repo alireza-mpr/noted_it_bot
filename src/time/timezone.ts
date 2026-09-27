@@ -1,9 +1,9 @@
 import { appConfig } from "../appConfig/appConfig";
 
-// Converts a wall-clock date/time in `timeZone` to the equivalent UTC Date,
-// without any external library. Standard trick: format the same instant in
-// both the target zone and UTC, and use the difference as the zone's offset
-// at that instant (correctly handles DST, since it's computed per-instant).
+// Converts a local date and time in `timeZone` to a UTC Date, with no
+// external library. The trick: format the same moment in the target zone and
+// in UTC. The difference is the zone's offset at that moment. This handles
+// daylight saving, because the offset is found for that exact moment.
 export function zonedTimeToUtc(
   year: number,
   month: number,
@@ -21,9 +21,10 @@ export function zonedTimeToUtc(
   return new Date(asUtc.getTime() + offsetMs);
 }
 
-// The event's timezone hint as a canonical IANA name ("Iran" becomes
-// "Asia/Tehran"), appConfig.defaultTimezone when there is none, or null when Intl doesn't
-// recognise it ("Iran Standard Time"), so the caller can decline the event.
+// Returns the event's zone hint as a standard IANA name ("Iran" becomes
+// "Asia/Tehran"). With no hint: appConfig.defaultTimezone. If Intl does not
+// know the name ("Iran Standard Time"): null, so the caller can decline the
+// event.
 export function resolveTimezone(timezoneHint: string | null): string | null {
   if (!timezoneHint) {
     return appConfig.defaultTimezone;
@@ -39,13 +40,13 @@ export function resolveTimezone(timezoneHint: string | null): string | null {
 
 const WEEKDAY_BY_INDEX = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
 
-// Today's calendar date in the given timezone, as a local-midnight Date.
+// Today's date in the given timezone, as a Date at local midnight.
 export function todayIn(timeZone: string, now: Date): Date {
   const nowInZone = new Date(now.toLocaleString("en-US", { timeZone }));
   return new Date(nowInZone.getFullYear(), nowInZone.getMonth(), nowInZone.getDate());
 }
 
-// The weekday ("MO".."SU") a date falls on, or null if the date doesn't exist
+// The weekday ("MO".."SU") of a date, or null if the date does not exist
 // (29 Feb in a common year).
 export function weekdayOf(year: number, month: number, day: number): string | null {
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -58,14 +59,17 @@ export interface CalendarDay {
   day: number;
 }
 
-// Picks the year for a date written without one, in any calendar. currentYear
-// is today's year in the message's calendar, and toGregorian maps a candidate
-// year to that date in Gregorian (null if it doesn't exist that year). When
-// the message states the weekday ("Saturday 26 Sep"), use the year that puts
-// the date on it: this year or next year, or last year only when that date is
-// within the last two months ("Saturday 26 Dec" forwarded in early January).
-// Otherwise, with no weekday or none that fits, the current year, even if the
-// date has passed; the caption then says so.
+// Picks the year for a date written without one, in any calendar.
+// - currentYear: today's year in the message's calendar.
+// - toGregorian: converts a candidate year's date to Gregorian (null if that
+//   date does not exist in that year).
+// The rule:
+// 1. If the message states the weekday ("Saturday 26 Sep"): use the year
+//    where the date falls on that weekday. Try this year, then next year, then
+//    last year (only if that date was in the last two months, for example
+//    "Saturday 26 Dec" forwarded in early January).
+// 2. Otherwise (no weekday, or no year fits): the current year, even if the
+//    date has passed. The caption then says so.
 export function pickYear(
   currentYear: number,
   toGregorian: (year: number) => CalendarDay | null,
@@ -90,7 +94,7 @@ export function pickYear(
   return currentYear;
 }
 
-// Whether a calendar date is before today in the given timezone.
+// Whether a date is before today in the given timezone.
 export function isBeforeToday(
   year: number,
   month: number,

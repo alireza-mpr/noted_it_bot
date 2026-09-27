@@ -36,8 +36,8 @@ export interface UsageRepository {
   recordError(model: ProviderConfig, message: string, now: Date): Promise<void>;
 }
 
-// A provider whose usage is metered: the client calls its models, the
-// usage repository says which are still available and records what was used.
+// A provider whose usage we count: the client calls its models, and the usage
+// repository says which models are still available and records usage.
 export interface MeteredProvider {
   providerClient: ProviderClient;
   usageRepository: UsageRepository;
@@ -49,8 +49,9 @@ export class Router {
     private readonly meteredProviders: MeteredProvider[],
   ) {}
 
-  // onModelFound runs once, right before the first model is tried, so the caller
-  // can tell the user work has started. It isn't called when no model is available.
+  // onModelFound runs once, just before the first model is tried, so the
+  // caller can tell the user that work has started. It is not called when no
+  // model is available.
   async generate(
     request: ProviderRequest,
     onModelFound?: () => Promise<void>,
@@ -107,8 +108,8 @@ export class Router {
           }
 
           if (failure.kind === "unauthorized") {
-            // A bad API key breaks every model of this provider, so give up on
-            // it and try the next provider.
+            // A bad API key breaks every model of this provider. So skip the
+            // provider and try the next one.
             await usageRepository.recordError(
               model,
               log.failed(model, failure),
@@ -117,8 +118,9 @@ export class Router {
             break;
           }
 
-          // Anything else says nothing about this provider's other models (a
-          // retired model, a 503, an empty answer), so skip just this one.
+          // Any other error says nothing about this provider's other models (for
+          // example a removed model, a 503, or an empty answer). So skip only
+          // this model.
           await usageRepository.recordError(
             model,
             failure.kind === "unavailable"
@@ -145,7 +147,7 @@ export interface RouterEnv {
   GEMINI_API_KEY: string;
   GROQ_API_KEY: string;
   USAGE_DB: D1Database;
-  // new provider-specific configs will be added here
+  // add new provider-specific settings here
 }
 
 export function createRouter(env: RouterEnv): Router {

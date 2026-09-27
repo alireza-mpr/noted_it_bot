@@ -1,7 +1,7 @@
-// All English text the bot ever sends to a user, in one place, keyed by the
-// message id that the translation files in src/translation/translations use.
-// Anything with dynamic content (a name, a time, a link) uses {0}-style
-// placeholders that callers fill in after translation.
+// All English text that the bot sends to users, in one place. Each text has a
+// message id. The translation files (src/translation/translations) use the
+// same ids. Dynamic parts (a name, a time, a link) use {0}-style placeholders.
+// The caller fills them in after translation.
 
 export const MESSAGES = {
   START_MESSAGE: `Heya! I am {0} bot 👋.
@@ -16,16 +16,17 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
 🌎 I reply in your Telegram language by default. To change it, send the /lang command, e.g. /lang fa to get my replies in Farsi.`,
 
-  // Appended to START_MESSAGE when the daily quota is on; {0} is appConfig.dailyQuota.
+  // Added after START_MESSAGE when the daily quota is on. {0} is
+  // appConfig.dailyQuota.
   START_QUOTA_NOTE: `🎁 On the free plan, you can send up to {0} requests a day.`,
 
-  // {0} gets wrapped in literal { } after substitution (the surrounding braces
-  // here are intentional, not a typo) — that's how the clickable link itself
-  // gets visually set apart, per explicit choice after comparing live options.
-  // The leading 🔔 is prepended at send time, not baked in here (see
-  // eventMessage.ts) — kept separate from the translated template like the link
-  // itself. A directional emoji (👉/👈 flipped per text direction) was tried
-  // first but still looked off amid RTL bidi text, so 🔔 replaced it.
+  // After substitution, {0} is wrapped in literal { }. These braces are on
+  // purpose, not a typo: they make the link stand out. We chose this after
+  // trying other options in the real app.
+  // The 🔔 at the start is added when the message is sent, not here (see
+  // eventMessageHandler.ts). We first tried a direction emoji (👉/👈, flipped
+  // for right-to-left text), but it looked wrong in right-to-left text, so we
+  // use 🔔.
   CALENDAR_CAPTION_TEMPLATE:
     "<b>Click {{0}} to add to Google Calendar.</b>\n📎 For Apple Calendar, Outlook, or anything else — tap the attached file.",
 
@@ -34,21 +35,21 @@ I work out the time zone from the message. If it doesn't say, set yours with the
   ALL_DAY_NOTE:
     "<i>🤔 By the way, no specific time was mentioned, so this was added as an all-day event.</i>",
 
-  // Added to an event's caption when the message gave no time zone. With a /tz
-  // choice, the event uses it ({0}); without one, the times are "floating".
+  // Added to the caption when the message has no time zone. If the user set
+  // one with /tz, the event uses it ({0}). If not, the times are "floating".
   TZ_USER_NOTE:
     "<i>🌎 The message didn't mention a time zone, so I used yours, {0}. To change it, send /tz.</i>",
 
   TZ_FLOATING_NOTE:
     "<i>🌎 The message didn't mention a time zone, so the time is as written, in your calendar's own time zone. To set yours, send /tz.</i>",
 
-  // Added to an event's caption when its date is already before today, so a
-  // wrongly guessed year is easy to spot.
+  // Added to the caption when the event's date is already in the past. So a
+  // wrong year guess is easy to see.
   PAST_EVENT_NOTE:
     "<i>💡 Heads up: this date has already passed. If the message meant a future date, send it again with the year.</i>",
 
-  // Added when the weekday a message states doesn't match its date:
-  // {0} the stated weekday, {1} the date, {2} the weekday it really falls on.
+  // Added when the weekday in the message does not match the date:
+  // {0} the stated weekday, {1} the date, {2} the real weekday of that date.
   WEEKDAY_MISMATCH_NOTE:
     "<i>🤔 The message says {0}, but {1} is a {2}. Check the date.</i>",
 

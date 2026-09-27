@@ -31,8 +31,8 @@ const ALIASES: Record<string, SupportedLanguage> = {
 
 const SUPPORTED = new Set<string>(SUPPORTED_LANGUAGES);
 
-// A Telegram or stored language tag ("pt-BR", "zh_Hans", "de-DE") reduced to
-// one of the supported languages, or null when it isn't one of them.
+// Reduces a Telegram or stored language tag ("pt-BR", "zh_Hans", "de-DE") to
+// one of the supported languages. Returns null if it is not supported.
 export function toSupportedLanguage(code: string | null | undefined): SupportedLanguage | null {
   const primary = code?.trim().toLowerCase().split(/[-_]/)[0];
   return primary && SUPPORTED.has(primary) ? (primary as SupportedLanguage) : null;
@@ -76,9 +76,9 @@ function knownNames(): Map<string, SupportedLanguage> {
   return namesToLanguage;
 }
 
-// What the user typed after /lang: a code ("fa", "pt-BR"), the language's
-// English name ("Persian") or its own name ("فارسی", "Deutsch"). Only the
-// supported languages are recognised, and nothing here calls a model.
+// Reads what the user typed after /lang: a code ("fa", "pt-BR"), the English
+// name ("Persian"), or the language's own name ("فارسی", "Deutsch"). Only
+// supported languages are recognised. No model is called.
 export function resolveLanguage(input: string): SupportedLanguage | null {
   const trimmed = input.trim();
   if (/^[A-Za-z]{2,3}([-_][A-Za-z]{2,4})?$/.test(trimmed)) {
@@ -90,9 +90,9 @@ export function resolveLanguage(input: string): SupportedLanguage | null {
   return knownNames().get(normalizeName(trimmed)) ?? null;
 }
 
-// The language's name in that language ("fa" becomes "فارسی", "de" becomes "Deutsch"),
-// via the platform's built-in Intl.DisplayNames: deterministic, free and instant.
-// Falls back to the raw code if it's not a recognized BCP47 tag.
+// The language's name in its own language ("fa" becomes "فارسی", "de" becomes
+// "Deutsch"). Uses the built-in Intl.DisplayNames: always the same, free and
+// fast. Returns the code itself if it is not a valid BCP47 tag.
 export function getLanguageDisplayName(code: string): string {
   try {
     return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;

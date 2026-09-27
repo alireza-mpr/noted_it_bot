@@ -7,13 +7,14 @@ export interface BuiltCalendarEvent {
   icsFilename: string;
   icsContent: string;
   googleCalendarUrl: string;
-  // The canonical IANA zone the event's times are in, or null for "floating"
-  // times (no zone known): the times as written, in the calendar's own zone.
+  // The IANA zone of the event's times. null means "floating" times: no zone
+  // is known, so every calendar shows the times as written, in its own zone.
   timeZone: string | null;
-  // A one-off event whose date is before today in its zone.
+  // true for a one-off event whose date is before today (in its zone).
   inPast: boolean;
-  // A one-off event whose stated weekday doesn't match its date ("Monday 20
-  // Jan" in a year where that's a Tuesday), in the reply language, for the caption.
+  // Set when the stated weekday does not match the date (for example "Monday
+  // 20 Jan" in a year where 20 Jan is a Tuesday). The texts are in the reply
+  // language, for the caption. Always null for repeats.
   weekdayMismatch: { stated: string; date: string; actual: string } | null;
   allDay: boolean;
   summaryLines: string[];
@@ -50,8 +51,8 @@ function formatIcsDate(year: number, month: number, day: number): string {
   return `${year}${pad(month)}${pad(day)}`;
 }
 
-// All-day DTEND is exclusive per RFC 5545 §3.6.1 — a one-day event's DTEND is
-// the following day.
+// For all-day events, DTEND is exclusive (RFC 5545 §3.6.1). So a one-day
+// event ends on the next day.
 function nextDay(
   year: number,
   month: number,
@@ -65,8 +66,8 @@ function nextDay(
   };
 }
 
-// RFC 5545 §3.3.11: backslash, semicolon, comma and newline are significant
-// and must be escaped in TEXT values.
+// RFC 5545 §3.3.11: in TEXT values, backslash, semicolon, comma and newline
+// have a special meaning, so they must be escaped.
 function escapeIcsText(text: string): string {
   return text
     .replace(/\\/g, "\\\\")
@@ -75,14 +76,13 @@ function escapeIcsText(text: string): string {
     .replace(/\n/g, "\\n");
 }
 
-const FOLD_LIMIT = 75; // octets per physical line, per RFC 5545 §3.1
+const FOLD_LIMIT = 75; // octets per line (RFC 5545 §3.1)
 
-// RFC 5545 §3.1: a content line SHOULD NOT exceed 75 octets; longer lines
-// are folded across multiple physical lines via CRLF + a single leading
-// space. A strict/non-lenient parser can misbehave on an unfolded long
-// line (e.g. a long title in another script, which is multiple bytes per
-// character in UTF-8) — this folds by octet count without ever splitting a
-// multi-byte UTF-8 character across the boundary.
+// RFC 5545 §3.1: a line SHOULD NOT be longer than 75 octets. A longer line is
+// folded: split into several lines, each new line starting with CRLF and one
+// space. Strict parsers can fail on a long line that is not folded (for
+// example a long title in a non-Latin script, where each character is several
+// bytes in UTF-8). This folds by octet count, and never splits a character.
 function foldIcsLine(line: string): string {
   const bytes = new TextEncoder().encode(line);
   if (bytes.length <= FOLD_LIMIT) {
@@ -96,35 +96,26 @@ function foldIcsLine(line: string): string {
 
   while (start < bytes.length) {
     let end = Math.min(start + limit, bytes.length);
-    // Back off while `end` lands mid-character (a UTF-8 continuation byte
-    // has the high bits 10xxxxxx).
+    // Move `end` back while it is in the middle of a character. (A UTF-8
+    // continuation byte starts with the bits 10xxxxxx.)
     while (end > start && end < bytes.length && (bytes[end] & 0xc0) === 0x80) {
       end--;
     }
     parts.push(decoder.decode(bytes.slice(start, end)));
     start = end;
-    limit = FOLD_LIMIT - 1; // continuation lines reserve 1 octet for the leading space
+    limit = FOLD_LIMIT - 1; // each new line needs 1 octet for its leading space
   }
 
   return parts.join("\r\n ");
 }
 
-// Only events with a resolvable Gregorian date (or one in a calendar the library converts) become a calendar
-// event: an absolute date, or — for a repeating event with no stated start — a
-// weekday pattern whose first occurrence we work out from today. Other
-// relative dates stay unresolved (event_extract.txt) and other calendars
-// aren't supported, so this returns null for anything else.
-//
-// A date without a time (start_time null) becomes an all-day event rather
-// than guessing a time — a guessed time would look like a real, specific
-// appointment on the calendar when none was actually given.
-//
-// Monday 1 Jan 2024 onwards, so a weekday code maps to a date that has it.
+// Days of January 2024, starting on Monday 1 Jan. So each weekday code maps
+// to a date on that weekday.
 const WEEKDAY_REFERENCE_DAY: Record<string, number> = { MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6, SU: 7 };
 
-// The stated weekday, the date and its actual weekday in the reply language,
-// when the message's weekday doesn't match the date; otherwise null. Always
-// the Gregorian calendar, like the caption's date line.
+// When the stated weekday does not match the date: returns the stated
+// weekday, the date, and the real weekday, in the reply language. Otherwise
+// null. Always uses the Gregorian calendar, like the caption's date line.
 function describeWeekdayMismatch(
   stated: string | null,
   year: number,
@@ -151,7 +142,17 @@ function describeWeekdayMismatch(
   };
 }
 
-// `now` is injectable so date arithmetic is testable.
+// Builds the calendar event (the .ics file, the Google link and the caption
+// summary). Returns null when there is no usable date.
+//
+// A usable date is a full date, or (for a repeat with no start date) a weekday
+// pattern that starts from today. Relative dates like "tomorrow" are not
+// supported yet (see event_extract.txt).
+//
+// A date with no time becomes an all-day event. We never guess a time: a
+// guessed time would look like a real appointment.
+//
+// `now` can be set, so tests can control the date.
 export function buildCalendarEvent(
   extracted: ExtractedEvent,
   uid: string,
@@ -177,9 +178,9 @@ export function buildCalendarEvent(
   if (!timeZone) {
     return null;
   }
-  // No zone from the message or the user: write "floating" times, which every
-  // calendar shows as written in its own zone (18:00 stays 18:00). timeZone,
-  // the default then, only decides what "today" is.
+  // No zone from the message or the user: write "floating" times. Every
+  // calendar shows them as written, in its own zone (18:00 stays 18:00). In
+  // this case, timeZone (the default zone) is only used to decide "today".
   const floating = !event.timezone_hint;
 
   let year: number;
@@ -195,7 +196,7 @@ export function buildCalendarEvent(
     ({ year, month, day } = plan.first);
     until = plan.until;
   } else {
-    // toGregorianEvent gave every written date a year.
+    // toGregorianEvent has given every written date a year.
     year = event.year!;
     month = event.month!;
     day = event.day!;
@@ -242,7 +243,7 @@ export function buildCalendarEvent(
     if (floating) {
       dtStartLine = `DTSTART:${startLocal}`;
       dtEndLine = `DTEND:${endLocal}`;
-      // Local times without a Z or ctz: Google uses the calendar's own zone.
+      // Local times with no Z and no ctz: Google uses the calendar's own zone.
       googleDates = `${startLocal}/${endLocal}`;
     } else {
       dtStartLine = `DTSTART;TZID=${timeZone}:${startLocal}`;
@@ -276,9 +277,10 @@ export function buildCalendarEvent(
 
   let rrule: string | null = null;
   if (recurrence) {
-    // Timed events end the series at the close of the last day in the event's
-    // own timezone, expressed in UTC as RFC 5545 requires (floating times: in
-    // local time, as it requires for them); all-day events use a plain date.
+    // The series ends at the end of its last day (23:59):
+    // - timed events: in the event's zone, written in UTC (RFC 5545 requires it);
+    // - floating times: in local time (RFC 5545 requires that too);
+    // - all-day events: a plain date.
     const untilValue = until
       ? allDay
         ? formatIcsDate(until.year, until.month, until.day)
@@ -296,8 +298,8 @@ export function buildCalendarEvent(
           )
       : null;
     rrule = buildRrule(recurrence, untilValue);
-    // Google's web editor honours this; its phone app ignores it (adds a
-    // single event), which is why recurring events point users at the file.
+    // Google's web calendar uses this. Its phone app ignores it and adds only
+    // one event. That is why the caption sends users to the file for repeats.
     googleParams.set("recur", `RRULE:${rrule}`);
   }
 
@@ -317,9 +319,9 @@ export function buildCalendarEvent(
     "END:VCALENDAR",
   ].map(foldIcsLine);
 
-  // Force the Gregorian calendar explicitly — some locales (e.g. "fa")
-  // otherwise default to a different calendar system (Jalali), which would
-  // show a date that doesn't match the actual Gregorian event being created.
+  // Always use the Gregorian calendar. Some locales (for example "fa") use
+  // another calendar by default (Jalali). That would show a date that does not
+  // match the Gregorian event we create.
   const dateLabel = new Intl.DateTimeFormat(lang || "en", {
     weekday: "short",
     day: "numeric",

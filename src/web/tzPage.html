@@ -42,10 +42,10 @@
             };
             const local = (zone) => S.localTime.replace("{0}", timeIn(zone));
             const pretty = (zone) => zone.replace(/_/g, " ");
-            // Lower case, no accents, "_" as a space: "São_Paulo" and "sao paulo" match.
+            // Lower case, no accents, "_" as a space. So "São_Paulo" and "sao paulo" match.
             const fold = (text) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[_\s]+/g, " ").trim();
-            // The zone's plain-language name in the user's language ("Eastern Time"),
-            // or "" where the browser can't say.
+            // The zone's plain name in the user's language ("Eastern Time"), or ""
+            // if the browser does not know it.
             const genericName = (zone) => {
                 for (const style of ["longGeneric", "long"]) {
                     try {
@@ -96,8 +96,8 @@
             const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone").slice() : [];
             if (!zones.includes("UTC")) zones.push("UTC");
 
-            // A city's zone as this browser names it (an older browser may still
-            // call Europe/Kyiv "Europe/Kiev"), or null if the browser doesn't have it.
+            // The name this browser uses for a city's zone, or null if the browser
+            // does not have it. (Older browsers may still call Europe/Kyiv "Europe/Kiev".)
             const inList = (zone) => {
                 if (zones.includes(zone)) return zone;
                 try {
@@ -106,7 +106,7 @@
                 } catch (e) { return null; }
             };
 
-            // Built on first search: each zone with its name, plain-language name and cities.
+            // Built on the first search: each zone with its name, plain name and cities.
             let index = null;
             function buildIndex() {
                 const citiesByZone = new Map();
@@ -124,12 +124,12 @@
                 }));
             }
 
-            // How well text matches the query: 0 exact, 1 starts with it, 2 contains it.
+            // How well a text matches the query: 0 exact, 1 starts with it, 2 contains it.
             const closeness = (text, q) => (text === q ? 0 : text.startsWith(q) ? 1 : text.includes(q) ? 2 : null);
 
             // Best matches first: an exact city or zone ("washington" before
-            // "washington state"), then ones starting with the query, then ones
-            // containing it, then plain-language names ("pacific time").
+            // "washington state"), then names that start with the query, then names
+            // that contain it, then plain names ("pacific time").
             function search(query) {
                 if (!index) buildIndex();
                 const q = fold(query);
@@ -145,7 +145,8 @@
                     if (best.rank === 9 && fold(entry.generic).includes(q)) best = { rank: 3, city: null };
                     if (best.rank < 9) found.push({ entry, city: best.city, rank: best.rank });
                 }
-                // Ties go to zones with more listed cities, the main ones people know.
+                // If two results tie, zones with more listed cities come first: they are
+                // the main zones people know.
                 return found.sort((a, b) => a.rank - b.rank || b.entry.cities.length - a.entry.cities.length);
             }
 

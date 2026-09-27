@@ -13,10 +13,11 @@ import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
 import { dateTimeAest } from "../time/dateTimeAest";
 import type { UsageRepository } from "../router/router";
 
-// Used when a 429 doesn't say how long to wait.
+// Used when a 429 does not say how long to wait.
 const DEFAULT_RETRY_AFTER_SECONDS = 60;
 
-// A model is available unless a 429 told us to wait and that time hasn't passed.
+// A model is available, unless a 429 told us to wait and that time has not
+// passed yet.
 export function isGroqModelAvailable(
   row: Pick<GroqUsageRow, "retryAfterUntil"> | undefined,
   nowMs: number,
@@ -58,7 +59,7 @@ export class GroqUsageRepository implements UsageRepository {
     );
   }
 
-  // Which limit was hit doesn't matter here, only when to try again.
+  // Which limit was hit does not matter here. Only the retry time matters.
   async markQuotaExhausted(
     model: ProviderConfig,
     _quotaLimitScope: QuotaLimitScope,

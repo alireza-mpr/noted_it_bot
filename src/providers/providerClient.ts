@@ -29,8 +29,8 @@ export type ProviderFailure =
         | "internal";
     });
 
-// What a provider reports about its daily request limit after a call. Only
-// shown in the usage table; routing doesn't use it.
+// What a provider reports about its daily request limit after a call. It is
+// only shown in the usage table. The router does not use it.
 export interface ProviderRateLimit {
   remainingRequests: number;
   limitRequests: number;
@@ -46,7 +46,7 @@ export type ProviderResult =
     }
   | { result: "failed"; failure: ProviderFailure };
 
-// What the router depends on: one call to one specific model.
+// What the router needs: one call to one specific model.
 export interface ProviderClient {
   call(
     model: ProviderConfig,

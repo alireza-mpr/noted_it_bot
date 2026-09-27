@@ -3,10 +3,10 @@ import { Logger } from "../logging/logger";
 
 const logger = new Logger("telegramClient");
 
-// Telegram answers a send to a user who blocked the bot with 403 "Forbidden:
-// bot was blocked by the user". That's logged as the block it is; any other
-// failure as a warning. Neither throws, so a reply that can't be delivered
-// never fails the update.
+// When a user has blocked the bot, Telegram answers a send with 403
+// "Forbidden: bot was blocked by the user". We log that as a block. Any other
+// failure is logged as a warning. Neither one throws, so a reply that cannot be
+// delivered never fails the update.
 async function checkSent(method: string, response: Response): Promise<void> {
   if (response.ok) {
     return;

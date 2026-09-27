@@ -1,7 +1,7 @@
 export interface TelegramUpdate {
   message?: {
     text?: string;
-    caption?: string; // media messages carry their text here, not in `text`
+    caption?: string; // photos and files have their text here, not in `text`
     chat: { id: number };
     from: {
       id: number;
@@ -13,8 +13,8 @@ export interface TelegramUpdate {
   my_chat_member?: TelegramChatMemberUpdate;
 }
 
-// Sent when the bot's own membership in a chat changes; in a private chat that
-// is the user blocking (kicked) or unblocking (member) the bot.
+// Sent when the bot's membership in a chat changes. In a private chat, this
+// means the user blocked the bot (kicked) or unblocked it (member).
 export interface TelegramChatMemberUpdate {
   chat: { id: number; type: string };
   from: { id: number; username?: string; first_name?: string };

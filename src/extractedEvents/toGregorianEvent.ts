@@ -9,15 +9,17 @@ import {
 import { pickYear, resolveTimezone, todayIn, type CalendarDay } from "../time/timezone";
 import type { ExtractedEvent } from "./extractedEvent";
 
-// Calendar files and links only take Gregorian dates, so every event is
-// converted into this one.
+// Calendar files and links only accept Gregorian dates. So every event is
+// converted to this calendar.
 const OUTPUT_CALENDAR = new GregorianCalendar();
 
-// The calendars a message may be written in: the date library's id, and the
-// names the model may give it (it names the calendar freely, "Solar Hijri").
-// Only calendars whose years are plain numbers are listed; Japanese, whose
-// years count within eras, is not. A bare "Hijri" is deliberately missing: it
-// means the solar calendar in Iran and the lunar one in Arab countries.
+// The calendars a message can use: the date library's id, and the names the
+// model may give it (the model names the calendar freely, for example
+// "Solar Hijri").
+// - Only calendars with plain-number years are listed. Japanese is not: its
+//   years count within eras.
+// - A plain "Hijri" is missing on purpose: in Iran it means the solar
+//   calendar, in Arab countries the lunar one.
 const CALENDAR_NAMES: Record<string, string[]> = {
   gregory: ["gregorian", "western", "christian"],
   persian: ["jalali", "solar hijri", "shamsi", "iranian"],
@@ -38,8 +40,9 @@ function calendarNamed(name: string): Calendar | null {
   return id ? createCalendar(id as CalendarIdentifier) : null;
 }
 
-// A date in `calendar` as a Gregorian day, or null when it doesn't exist (the
-// library would clamp 30 Esfand in a common year).
+// Converts a date in `calendar` to a Gregorian day. Returns null if the date
+// does not exist. (The library would silently change 30 Esfand in a common
+// year to another day.)
 function inGregorian(calendar: Calendar, year: number, month: number, day: number): CalendarDay | null {
   const date = new CalendarDate(calendar, year, month, day);
   if (date.year !== year || date.month !== month || date.day !== day) {
@@ -52,26 +55,31 @@ function inGregorian(calendar: Calendar, year: number, month: number, day: numbe
 const before = (a: { month: number; day: number }, b: { month: number; day: number }) =>
   a.month < b.month || (a.month === b.month && a.day < b.day);
 
-// The model copies a date as written and names its calendar. This is the one
-// place dates become Gregorian, with a year, whatever calendar they came in:
-// - a start date with no year gets one from pickYear, counted in its own
-//   calendar ("Thursday 9 Mehr": this Persian year, or the one it fits);
-// - a repeat's end date with no year takes the start's year (or today's, with
-//   no start), and the next one if it would fall before it.
-// "Today" is in the event's zone (the default zone when it gives none).
-// Returns null when the dates can't be converted reliably: a calendar not
-// listed above, a written date with no calendar named, a day that doesn't
-// exist, or a monthly/yearly repeat in another calendar, whose months don't
-// line up with Gregorian ones.
+// The model copies the date as written and names its calendar. This function
+// is the one place where dates become Gregorian, with a year, for every
+// calendar:
+// - A start date with no year gets one from pickYear, counted in its own
+//   calendar ("Thursday 9 Mehr": this Persian year, or the year it fits).
+// - A repeat's end date with no year gets the start's year (or today's year,
+//   if there is no start). If that puts it before the start, it gets the next
+//   year.
+// "Today" is in the event's zone (the default zone if it has none).
+//
+// Returns null when the dates cannot be converted safely:
+// - the calendar is not in the list above;
+// - a date is written, but no calendar is named;
+// - the day does not exist;
+// - a monthly or yearly repeat in another calendar (its months do not match
+//   Gregorian months).
 export function toGregorianEvent(event: ExtractedEvent, now: Date = new Date()): ExtractedEvent | null {
   const recurrence = event.recurrence ?? null;
   const writesStart = event.month !== null && event.day !== null;
   const writesUntil = recurrence?.until_month != null && recurrence.until_day != null;
 
   if (event.calendar === null) {
-    // No calendar means no date was written, so a weekday pattern has nothing to
-    // convert. A written date with no calendar can't be trusted, and guessing
-    // Gregorian would silently misplace a Solar Hijri one.
+    // No calendar means no date was written. So a weekday pattern has nothing
+    // to convert. A written date with no calendar cannot be trusted: guessing
+    // Gregorian would silently move a Solar Hijri date.
     const writesDate =
       event.month !== null || event.day !== null || recurrence?.until_month != null || recurrence?.until_day != null;
     return writesDate ? null : event;

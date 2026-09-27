@@ -1,6 +1,6 @@
-// The extraction schema is written for Gemini (uppercase types, `nullable`,
-// optional fields). Groq takes standard JSON Schema in strict mode: lowercase
-// types, null as a type, every property required, no extra properties.
+// The extraction schema is written for Gemini: uppercase types, `nullable`,
+// optional fields. Groq needs standard JSON Schema in strict mode: lowercase
+// types, null as a type, every property required, and no extra properties.
 interface SchemaNode {
   type: string;
   nullable?: boolean;

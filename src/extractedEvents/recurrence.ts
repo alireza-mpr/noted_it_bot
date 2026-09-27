@@ -2,8 +2,8 @@ import type { ExtractedEvent, Recurrence, Weekday } from "./extractedEvent";
 import { resolveTimezone } from "../time/timezone";
 import { toGregorianEvent } from "./toGregorianEvent";
 
-// Below this, a message that reads as recurring is declined rather than
-// guessed at — a wrong repeat rule silently fills someone's calendar.
+// Below this confidence, a message that looks like a repeat is declined, not
+// guessed. A wrong repeat rule would silently fill someone's calendar.
 export const RECURRENCE_MIN_CONFIDENCE = 0.7;
 
 export interface YMD {
@@ -69,7 +69,7 @@ function toMinutes(time: string): number {
   return hour * 60 + minute;
 }
 
-// Today's date and time-of-day in `timeZone` (not the server's UTC).
+// Today's date and time in `timeZone` (not the server's UTC time).
 function zonedNow(now: Date, timeZone: string): { ymd: YMD; minutes: number } {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -88,8 +88,8 @@ function zonedNow(now: Date, timeZone: string): { ymd: YMD; minutes: number } {
   };
 }
 
-// Does this calendar day fit the pattern's weekday / ordinal / day-of-month
-// constraints? (Interval and end conditions are the calendar app's job.)
+// Does this day match the pattern's weekdays, ordinal and day of the month?
+// (The interval and the end are handled by the calendar app.)
 function matches(d: YMD, r: Recurrence): boolean {
   const weekday = WEEKDAY_BY_INDEX[toDate(d).getUTCDay()];
   const hasWeekdays = !!r.weekdays?.length;
@@ -125,8 +125,8 @@ function findMatch(from: YMD, r: Recurrence): YMD | null {
   return null;
 }
 
-// Works out the first occurrence and the end date, or explains why the
-// pattern can't be turned into a calendar series. Date arithmetic lives here,
+// Finds the first date and the end date. Or returns the reason why the
+// pattern cannot become a calendar series. All date calculations happen here,
 // never in the model.
 export function planRecurrence(
   event: ExtractedEvent,
@@ -186,7 +186,7 @@ export function planRecurrence(
 
   const hasStartDate = event.month !== null && event.day !== null;
   if (!hasStartDate) {
-    // No stated start: the pattern itself must say which days.
+    // No start date: the pattern itself must say which days.
     const selfContained =
       r.frequency === "daily" ||
       (r.frequency === "weekly" && !!r.weekdays?.length) ||
@@ -208,14 +208,15 @@ export function planRecurrence(
 
   let from: YMD;
   if (hasStartDate) {
-    // Years come from toGregorianEvent; a start date without one wasn't converted.
+    // toGregorianEvent adds the years. A start date with no year was not
+    // converted.
     if (event.year === null) {
       return { ok: false, reason: "start date has no year" };
     }
     from = { year: event.year, month: event.month!, day: event.day! };
   } else {
     from = today;
-    // Today only counts if the event hasn't already started.
+    // Today counts only if the event has not started yet.
     if (event.start_time && minutes >= toMinutes(event.start_time)) {
       from = addDays(today, 1);
     }
@@ -243,14 +244,14 @@ export function planRecurrence(
   return { ok: true, first, until };
 }
 
-// null = fine (or not a recurring event). Otherwise a reason to decline: an
-// untrustworthy repeat rule is declined outright, since a wrong one silently
-// fills someone's calendar.
+// Returns null if the repeat is fine (or there is no repeat). Otherwise it
+// returns the reason to decline. A repeat rule we cannot trust is declined,
+// because a wrong one silently fills someone's calendar.
 export function recurrenceProblem(
   event: ExtractedEvent,
   now: Date = new Date(),
 ): string | null {
-  // Dates that can't be converted aren't a recurrence problem: building the
+  // Dates that cannot be converted are not a repeat problem. Building the
   // event declines them.
   const converted = toGregorianEvent(event, now);
   if (!converted?.recurrence) {
@@ -263,9 +264,9 @@ export function recurrenceProblem(
   return plan.ok ? null : plan.reason;
 }
 
-// The RRULE value (no "RRULE:" prefix). `untilValue` is pre-formatted by the
-// caller because its form depends on the event: a UTC timestamp for timed
-// events, a plain date for all-day ones.
+// The RRULE value (without the "RRULE:" prefix). The caller formats
+// `untilValue`, because its format depends on the event: a UTC time for timed
+// events, a local time for floating ones, a plain date for all-day ones.
 export function buildRrule(r: Recurrence, untilValue: string | null): string {
   const parts = [`FREQ=${r.frequency.toUpperCase()}`];
 
@@ -302,9 +303,9 @@ function ordinalSuffix(n: number): string {
   return { 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th";
 }
 
-// An English sentence describing the pattern ("Repeats every 2 weeks on Monday and
-// Wednesday, until 5 Jan 2027"). It's event content, not one of the bot's own
-// messages, so it isn't translated.
+// An English sentence that describes the pattern ("Repeats every 2 weeks on
+// Monday and Wednesday, until 5 Jan 2027"). It is part of the event, not one
+// of the bot's own messages, so it is not translated.
 export function describeRecurrence(r: Recurrence, untilLabel: string | null = null): string {
   const every = (unit: string, plural: string) =>
     r.interval === 1 ? `every ${unit}` : `every ${r.interval} ${plural}`;

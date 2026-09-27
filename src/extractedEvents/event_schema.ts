@@ -11,7 +11,7 @@ export const EVENT_SCHEMA = {
     year:          { type: "INTEGER", nullable: true },
     month:         { type: "INTEGER", nullable: true },
     day:           { type: "INTEGER", nullable: true },
-    // The day of the week the message states for that date ("Saturday 26 Sep").
+    // The day of the week the message states for the date ("Saturday 26 Sep").
     weekday:       { type: "STRING",  nullable: true, enum: WEEKDAYS },
 
     start_time:    { type: "STRING",  nullable: true },
@@ -20,7 +20,7 @@ export const EVENT_SCHEMA = {
     timezone_hint: { type: "STRING",  nullable: true },
     location:      { type: "STRING",  nullable: true },
 
-    // null for a one-off event. Only set for explicitly stated repetition.
+    // null for a one-off event. Set only when the message clearly says it repeats.
     recurrence: {
       type: "OBJECT",
       nullable: true,

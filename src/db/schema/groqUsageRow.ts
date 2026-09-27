@@ -1,7 +1,8 @@
 export interface GroqUsageRow {
   model: string;
   aestTime: string;
-  // Daily request count and limit from the last successful response; display only.
+  // The daily request count and limit from the last successful response. Only
+  // for display.
   remainingRequests: number | null;
   limitRequests: number | null;
   retryAfterUntil: number;

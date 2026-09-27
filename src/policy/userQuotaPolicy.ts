@@ -5,7 +5,7 @@ export interface UserQuotaConsumeResult {
   successful: boolean;
   remainingQuota: number;
   retryAt: number;
-  // Set when a unit was taken, so it can be given back if no model answers.
+  // Set when a unit was taken. So it can be given back if no model answers.
   reservation?: QuotaReservation;
 }
 

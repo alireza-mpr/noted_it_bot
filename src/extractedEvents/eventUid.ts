@@ -1,5 +1,5 @@
-// Same source message always produces the same UID, so re-forwarding the
-// same event updates a calendar's existing entry instead of duplicating it.
+// The same message always gives the same UID. So if a user forwards the same
+// event again, the calendar updates the existing entry. It does not add a copy.
 export async function computeEventUid(sourceText: string): Promise<string> {
   const data = new TextEncoder().encode(sourceText.trim());
   const digest = await crypto.subtle.digest("SHA-256", data);

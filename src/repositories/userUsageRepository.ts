@@ -28,7 +28,7 @@ export class UserUsageRepository {
     return results[1].results[0] ?? null;
   }
 
-  // Reads first, so a user who has run out costs one row read and no write.
+  // Reads first. So a user with no quota left costs one read and no write.
   async tryConsume(
     userId: number,
     now: Date,
@@ -50,7 +50,8 @@ export class UserUsageRepository {
       .bind(nowMs, userId, dailyQuota)
       .run();
     if (consumed.meta.changes === 0) {
-      // Another message from this user took the last unit between the read and the write.
+      // Another message from this user took the last unit between the read
+      // and the write.
       return {
         successful: false,
         remainingQuota: 0,

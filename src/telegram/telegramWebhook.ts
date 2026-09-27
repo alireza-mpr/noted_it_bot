@@ -6,7 +6,7 @@ import { updateHandler } from "./messageHandlers/updateHandler";
 import { handleTzPage, handleTzSave } from "../web/tzRoutes";
 import { TelegramClient } from "./telegramClient";
 
-// This is the Webhook that telegram calls when a message is sent to the bot.
+// The webhook: Telegram calls it for every message sent to the bot.
 export default {
   async fetch(
     request: Request,

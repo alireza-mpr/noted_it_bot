@@ -1,4 +1,5 @@
-// Escapes a URL for an HTML href (Telegram parse_mode HTML); calendar links contain "&".
+// Escapes a URL for an HTML href (Telegram parse_mode HTML). Calendar links
+// contain "&".
 export function escapeHtmlAttribute(url: string): string {
   return url
     .replace(/&/g, "&amp;")

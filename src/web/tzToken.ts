@@ -2,7 +2,7 @@ export type TzTokenPurpose = "open" | "save";
 
 export interface TzTokenPayload {
   uid: number;
-  // username and firstName are only for the logs; everything else goes by uid.
+  // username and firstName are only for the logs. Everything else uses uid.
   username?: string | null;
   firstName?: string | null;
   lang: string;
@@ -69,7 +69,7 @@ export async function signTzToken(
   return `${body}.${toBase64Url(new Uint8Array(signature))}`;
 }
 
-// Absent in links issued before the field existed, null when the user has none.
+// Missing in links made before the field existed. null when the user has none.
 function isOptionalName(value: unknown): boolean {
   return value === undefined || value === null || (typeof value === "string" && value.length <= 64);
 }
