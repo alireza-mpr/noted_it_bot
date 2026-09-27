@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { translate } from "../../../src/i18n/translation";
 import { captionOf } from "../../../src/output/caption";
-import { timeZoneNamed } from "../generic/date-time/time-zone-named";
+import { timeZoneNamed } from "../../../src/generic/date-time/time-zone";
 import { calendarEventWith } from "./calendar-event-with";
 
 const DAILY = { pattern: { frequency: "daily", interval: 1 }, end: { kind: "never" } } as const;

@@ -118,7 +118,8 @@ this list is called the "ubiquitous language".
 | Model | One model of a provider, e.g. `gemini-3.5-flash-lite`. | `Model`, `GEMINI_MODELS`, `GROQ_MODELS` |
 | Model limits | A model's free limits (per minute and per day). A model at its limit is "used up". | `ModelLimits`, `LimitWindow` |
 | Model failure | Why a model gave no answer, e.g. rate limited or unavailable. | `ModelFailure` |
-| Router | Tries the models in order: Gemini first, then Groq. | `adapters/models/` |
+| Model usage | How much a model was used: counts per minute and per day, or a retry time. It says which models are used up. | `ModelUsageStore`, `D1CountedModelUsageStore`, `D1RetryAfterModelUsageStore` |
+| Router | Tries the models in order: Gemini first, then Groq. | `Router`, `RoutedProvider` |
 | Extraction | Sends a message to a model, and turns the model answer into a draft. | — |
 
 ## Logging

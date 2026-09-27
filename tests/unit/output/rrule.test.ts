@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DateOnly } from "../../../src/generic/date-time/date-only";
 import type { Repeat } from "../../../src/domain/calendar-event/repeat";
 import { rruleOf } from "../../../src/output/rrule";
-import { timeZoneNamed } from "../generic/date-time/time-zone-named";
+import { timeZoneNamed } from "../../../src/generic/date-time/time-zone";
 import { calendarEventWith } from "./calendar-event-with";
 
 const MELBOURNE = { kind: "from-message", timeZone: timeZoneNamed("Australia/Melbourne") } as const;

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  dateTimeTextIn,
   parseTimeZoneName,
   localDateTimeIn,
+  timeZoneNamed,
   toUtcMoment,
 } from "../../../../src/generic/date-time/time-zone";
-import { timeZoneNamed } from "./time-zone-named";
 
 describe("parseTimeZoneName", () => {
   it("returns the standard name for another name or casing of the time zone", () => {
@@ -14,6 +15,29 @@ describe("parseTimeZoneName", () => {
 
   it("returns null for a name that is not a time zone", () => {
     expect(parseTimeZoneName("Iran Standard Time")).toBeNull();
+  });
+});
+
+describe("timeZoneNamed", () => {
+  it("returns the time zone for a name written in the code", () => {
+    expect(timeZoneNamed("Asia/Tehran")).toBe("Asia/Tehran");
+  });
+
+  it("throws for a name that is not a time zone", () => {
+    expect(() => timeZoneNamed("Mars/Olympus")).toThrow("not a time zone: Mars/Olympus");
+  });
+});
+
+describe("dateTimeTextIn", () => {
+  it("writes the date and time in the time zone, with seconds, on a 24-hour clock", () => {
+    // 04:05:09 UTC on 28 Sep 2026 is 14:05:09 in Melbourne (AEST, UTC+10).
+    expect(dateTimeTextIn(timeZoneNamed("Australia/Melbourne"), new Date("2026-09-28T04:05:09Z"))).toBe(
+      "2026-09-28 14:05:09",
+    );
+  });
+
+  it("writes midnight as 00, not 24", () => {
+    expect(dateTimeTextIn(timeZoneNamed("UTC"), new Date("2026-09-28T00:00:00Z"))).toBe("2026-09-28 00:00:00");
   });
 });
 

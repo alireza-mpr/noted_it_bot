@@ -42,16 +42,18 @@ describe("parseGeminiResponse", () => {
     });
   });
 
-  it("names the model on a successful answer", () => {
+  it("names the model and the tokens on a successful answer, with thinking as output", () => {
     const body = JSON.stringify({
       candidates: [{ content: { parts: [{ text: "Pong" }] } }],
-      usageMetadata: { totalTokenCount: 7 },
+      usageMetadata: { promptTokenCount: 3, candidatesTokenCount: 1, thoughtsTokenCount: 2, totalTokenCount: 7 },
     });
 
     expect(parseGeminiResponse(MODEL, 200, body)).toEqual({
       ok: true,
       model: MODEL,
       text: "Pong",
+      inputTokens: 3,
+      outputTokens: 3,
       totalTokens: 7,
       dailyRequests: null,
     });

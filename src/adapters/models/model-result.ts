@@ -25,6 +25,8 @@ export interface ModelAnswer {
   ok: true;
   model: Model;
   text: string;
+  inputTokens: number;
+  outputTokens: number;
   totalTokens: number;
   dailyRequests: DailyRequests | null;
 }
@@ -47,7 +49,7 @@ export type ModelFailure =
       kind: "rate-limited";
       limitWindow: LimitWindow | null;
       retryAfterSeconds: number | null;
-      httpStatus: number;
+      httpStatus: number | null;
       detail: string;
     }
   | {
@@ -65,6 +67,20 @@ export type ModelFailure =
 
 // Represents a model's answer, or why there is none.
 export type ModelResult = ModelAnswer | ModelFailure;
+
+// Returns a short text for a failure, e.g. "unavailable (HTTP 503): busy".
+// The usage tables store it as the model's last error.
+export function describeModelFailure(modelFailure: ModelFailure): string {
+  if (modelFailure.kind === "rate-limited") {
+    if (modelFailure.limitWindow !== null) {
+      return `rate limited (${modelFailure.limitWindow} limit)`;
+    }
+    return modelFailure.retryAfterSeconds !== null
+      ? `rate limited (retry after ${modelFailure.retryAfterSeconds}s)`
+      : "rate limited";
+  }
+  return `${modelFailure.kind} (HTTP ${modelFailure.httpStatus ?? "n/a"}): ${modelFailure.detail}`;
+}
 
 // Returns the failure kind of an HTTP error status that has no kind of its
 // own (i.e. not a 429 or a 503).

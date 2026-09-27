@@ -10,7 +10,7 @@ const groqError = (type: string, message: string) => JSON.stringify({ error: { t
 
 const PONG_BODY = JSON.stringify({
   choices: [{ message: { content: " Pong " }, finish_reason: "stop" }],
-  usage: { total_tokens: 97 },
+  usage: { prompt_tokens: 90, completion_tokens: 7, total_tokens: 97 },
 });
 
 describe("parseGroqResponse", () => {
@@ -19,6 +19,8 @@ describe("parseGroqResponse", () => {
       ok: true,
       model: MODEL,
       text: "Pong",
+      inputTokens: 90,
+      outputTokens: 7,
       totalTokens: 97,
       dailyRequests: null,
     });

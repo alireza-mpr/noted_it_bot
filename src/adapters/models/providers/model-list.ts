@@ -1,3 +1,4 @@
+import { timeZoneNamed } from "../../../generic/date-time/time-zone";
 import type { Model, ModelLimits } from "../model";
 
 const GEMINI_LITE_LIMITS: ModelLimits = {
@@ -16,16 +17,20 @@ const GROQ_LIMITS: ModelLimits = {
   requestsPerDay: 1_000,
 };
 
+// Represents the time zone of Gemini's day: its daily limits reset at
+// midnight Pacific time.
+export const GEMINI_DAY_TIME_ZONE = timeZoneNamed("America/Los_Angeles");
+
 // Represents Gemini's models, in the order the router tries them. The router
 // tries all of Gemini's models before Groq's.
 export const GEMINI_MODELS: readonly Model[] = [
-  { provider: "gemini", name: "gemini-3.1-flash-lite", limits: GEMINI_LITE_LIMITS },
-  { provider: "gemini", name: "gemini-3.5-flash-lite", limits: GEMINI_LITE_LIMITS },
-  { provider: "gemini", name: "gemini-3.8-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gemini", name: "gemini-3.7-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gemini", name: "gemini-3.6-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gemini", name: "gemini-3.5-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gemini", name: "gemini-3-flash-preview", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.1-flash-lite", limits: GEMINI_LITE_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.5-flash-lite", limits: GEMINI_LITE_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.8-flash", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.7-flash", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.6-flash", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.5-flash", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3-flash-preview", limits: GEMINI_FLASH_LIMITS },
 ];
 
 // Represents Groq's models, in the order the router tries them.

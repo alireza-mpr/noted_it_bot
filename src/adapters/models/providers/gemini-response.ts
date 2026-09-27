@@ -58,11 +58,17 @@ export function parseGeminiResponse(
       detail: `empty answer (finishReason: ${finishReason})`,
     };
   }
+  const usageMetadata = geminiBody?.usageMetadata;
   return {
     ok: true,
     model,
     text,
-    totalTokens: geminiBody?.usageMetadata?.totalTokenCount ?? 0,
+    inputTokens: usageMetadata?.promptTokenCount ?? 0,
+    // Thinking counts as output, as it does in Groq's completion_tokens.
+    outputTokens:
+      (usageMetadata?.candidatesTokenCount ?? 0) +
+      (usageMetadata?.thoughtsTokenCount ?? 0),
+    totalTokens: usageMetadata?.totalTokenCount ?? 0,
     dailyRequests: null,
   };
 }
@@ -73,7 +79,12 @@ interface GeminiBody {
     content?: { parts?: { text?: string }[] };
     finishReason?: string;
   }[];
-  usageMetadata?: { totalTokenCount?: number };
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    thoughtsTokenCount?: number;
+    totalTokenCount?: number;
+  };
   error?: {
     status?: string;
     message?: string;

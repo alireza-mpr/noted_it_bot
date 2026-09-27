@@ -212,7 +212,7 @@ The attribute names every area shares:
 | The chat | `telegram.chat.id` |
 | An error | `exception.type`, `exception.message`, `exception.stacktrace` |
 | An HTTP status | `http.response.status_code` |
-| The model | `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
+| The model | `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
 | The reply language | `telegram.reply_language` |
 | The message text and the model answer | `extraction.message_text`, `extraction.model_answer` |
 
@@ -252,9 +252,9 @@ code, together with that area.
 | `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/`, with the answer → draft parser (step 4d-3) | ⏳ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
 | `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | `adapters/database/d1-usage-store.ts`, `adapters/database/d1-user-settings-store.ts`, `adapters/database/batch-with-table.ts`; the port `domain/user/user-settings-store.ts`; `QUOTA_RESET_AFTER_MS` → `domain/quota/user-quota-policy.ts` | ✅ |
-| `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/`, with the models (step 4d) | ⏳ |
+| `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/d1-counted-model-usage-store.ts` (table `gemini_usage`), `adapters/database/d1-retry-after-model-usage-store.ts` (table `groq_usage`); `dateTimeAest` → `dateTimeTextIn` in `generic/date-time/time-zone.ts` | ✅ |
 | `providers/*` | `adapters/models/model.ts` (`ProviderConfig` → `Model`, `ProviderLimits` → `ModelLimits`), `model-result.ts`, `provider-client.ts`; `adapters/models/providers/` (`registry.ts` → `model-list.ts`, the clients, the answer parsers, `jsonSchema.ts` → `groq-json-schema.ts`) | ✅ |
-| `router/*`, `quotaLimit/*` | `adapters/models/` (step 4d-2) | ⏳ |
+| `router/*`, `quotaLimit/*` | `adapters/models/router.ts` (`generate` → `ask`, `MeteredProvider` → `RoutedProvider`), `router-log.ts` (OpenTelemetry events), `model-usage-store.ts` (`UsageRepository` → `ModelUsageStore`); the usage windows → private in `d1-counted-model-usage-store.ts`; `createRouter` → `app/` (step 5) | ✅ (`createRouter` ⏳) |
 | `prompts/diag_ping.txt` | with `/diag` in `app/commands/` (step 5) | ⏳ |
 | `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
 | `web/*` | `adapters/web/` | ⏳ |
@@ -285,7 +285,7 @@ after each commit.
 | 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ✅ |
 | 4c | Adapters: the database for users (the quota usage and the user settings) | ✅ |
 | 4d-1 | Adapters: the provider clients (Gemini, Groq), the model list and limits, the model result types | ✅ |
-| 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ⏳ |
+| 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ✅ |
 | 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`) | ⏳ |
 | 4e | Adapters: Telegram (the client, update types, the webhook, replies) | ⏳ |
 | 4f | Adapters: the web pages (the /tz page and its routes) | ⏳ |

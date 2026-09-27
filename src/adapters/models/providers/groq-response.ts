@@ -60,6 +60,8 @@ export function parseGroqResponse(
     ok: true,
     model,
     text,
+    inputTokens: groqBody?.usage?.prompt_tokens ?? 0,
+    outputTokens: groqBody?.usage?.completion_tokens ?? 0,
     totalTokens: groqBody?.usage?.total_tokens ?? 0,
     dailyRequests: dailyRequestsOf(headers),
   };
@@ -71,7 +73,11 @@ interface GroqBody {
     message?: { content?: string | null };
     finish_reason?: string;
   }[];
-  usage?: { total_tokens?: number };
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
   error?: { type?: string; message?: string };
 }
 

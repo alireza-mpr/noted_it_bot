@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 import { D1UserSettingsStore } from "../../../../src/adapters/database/d1-user-settings-store";
-import { timeZoneNamed } from "../../generic/date-time/time-zone-named";
+import { timeZoneNamed } from "../../../../src/generic/date-time/time-zone";
 
 const TEST_DB = (env as unknown as { TEST_DB: D1Database }).TEST_DB;
 const USER_ID = 42;

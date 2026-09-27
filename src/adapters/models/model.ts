@@ -1,5 +1,6 @@
-// Represents a company that runs models behind an API.
-export type Provider = "gemini" | "groq";
+// Represents a company that runs models behind an API. The values are
+// OpenTelemetry's names (gen_ai.provider.name).
+export type Provider = "gcp.gemini" | "groq";
 
 // Represents a model's free limits. A model at a limit is used up until the
 // limit's minute or day ends.

@@ -4,7 +4,7 @@ import type { TimeOfDay } from "./time-of-day";
 declare const parsedTimeZone: unique symbol;
 
 // Represents an IANA time zone name in its standard spelling, e.g.
-// "Asia/Tehran". Only parseTimeZoneName creates one.
+// "Asia/Tehran". Only parseTimeZoneName and timeZoneNamed create one.
 export type IanaTimeZone = string & { readonly [parsedTimeZone]: true };
 
 // Represents a date and a time of day in a time zone.
@@ -24,6 +24,34 @@ export function parseTimeZoneName(name: string): IanaTimeZone | null {
   } catch {
     return null;
   }
+}
+
+// Returns the time zone for a name written in the code, e.g. a constant.
+// Throws if the name is not a time zone: that is a bug in the code.
+export function timeZoneNamed(name: string): IanaTimeZone {
+  const timeZone = parseTimeZoneName(name);
+  if (timeZone === null) {
+    throw new Error(`not a time zone: ${name}`);
+  }
+  return timeZone;
+}
+
+// Returns the date and time in the time zone at a moment, as text, e.g.
+// "2026-09-28 14:05:09".
+export function dateTimeTextIn(timeZone: IanaTimeZone, moment: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(moment);
+  const partOf = (partType: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === partType)?.value;
+  return `${partOf("year")}-${partOf("month")}-${partOf("day")} ${partOf("hour")}:${partOf("minute")}:${partOf("second")}`;
 }
 
 // Returns the date and the time of day in the time zone at a moment.

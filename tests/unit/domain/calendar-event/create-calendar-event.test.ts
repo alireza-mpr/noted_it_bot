@@ -8,7 +8,7 @@ import type {
 } from "../../../../src/domain/calendar-event/calendar-event-draft";
 import { createCalendarEvent, type CalendarEventResult } from "../../../../src/domain/calendar-event/create-calendar-event";
 import type { Repeat } from "../../../../src/domain/calendar-event/repeat";
-import { timeZoneNamed } from "../../generic/date-time/time-zone-named";
+import { timeZoneNamed } from "../../../../src/generic/date-time/time-zone";
 
 // Only eventUidOf creates a real one. The tests need no real hash.
 const TEST_EVENT_UID = "test@notedit" as EventUid;

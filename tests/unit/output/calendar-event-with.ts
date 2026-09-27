@@ -1,5 +1,5 @@
 import type { CalendarEvent, EventUid } from "../../../src/domain/calendar-event/calendar-event";
-import { timeZoneNamed } from "../generic/date-time/time-zone-named";
+import { timeZoneNamed } from "../../../src/generic/date-time/time-zone";
 
 // Returns a one-off event on Wednesday 23 Sep 2026, 20:00–21:00 in Tehran,
 // with the given fields changed.
