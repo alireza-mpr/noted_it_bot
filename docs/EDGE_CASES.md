@@ -76,3 +76,24 @@ event by hours.
 **Handling now.** With no zone from the message, the event uses the user's
 `/tz` choice, or UTC if they haven't set one, and the caption says which zone
 was used and how to change it.
+
+## A suburb the models know differently
+
+**Message.** A Persian book-club announcement for "Nunawading Community Hub".
+Nunawading is a Melbourne suburb, but the message never says "Melbourne".
+
+**What happened.** The live extraction test started failing on 27 September
+2026 without any code change. `gemini-3.1-flash-lite` had used up its daily
+quota, so the router moved on to `gemini-3.5-flash-lite`. The first model
+places the suburb and returns `Australia/Melbourne`; the second plays safe and
+returns `timezone_hint: null`, every time.
+
+**Handling now.** Both answers are acceptable: with null, the event uses the
+user's `/tz` zone or UTC, and the caption says which. The test for this message
+accepts either, so it no longer depends on which model has quota left. The
+prompt isn't pushed to guess harder, since that would invite wrong zones for
+ambiguous places (see "A place that names no city").
+
+**Worth knowing.** The live tests share the dev Gemini quota with the dev bot,
+and each run makes about a dozen calls, so running them often moves requests
+onto the later, sometimes weaker, models.

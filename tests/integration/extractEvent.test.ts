@@ -71,7 +71,11 @@ const cases: [message: string, expected: Expected][] = [
       weekday: "SU",
       start_time: "17:00",
       end_time: "19:00",
-      timezone_hint: "Australia/Melbourne",
+      // Nunawading is a Melbourne suburb, but the message never says
+      // "Melbourne": gemini-3.1-flash-lite places it, gemini-3.5-flash-lite
+      // plays safe with null. Both are fine for users (null falls back to their
+      // /tz zone or UTC, with a note), so which model answered mustn't fail this.
+      timezone_hint: expect.toBeOneOf(["Australia/Melbourne", null]),
       location: "Nunawading Community Hub | اتاق شماره دو",
     },
   ],
