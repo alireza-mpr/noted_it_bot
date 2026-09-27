@@ -33,10 +33,26 @@ adapters".
    code never checks the same thing again, and never uses `!`.
 5. **Functions by default. Classes only for state or a replaceable part**, for
    example a repository, a model client, or the Telegram client.
-6. **Files read top down.** The main exported function comes first. Helpers
-   come after it.
-7. **Model with types.** Use discriminated unions for "one of several cases".
-   Use `null` only when "nothing" is a real, normal value.
+6. **Files read top down,** in this order, after the imports:
+   1. private constants;
+   2. exported types;
+   3. exported functions, the main one first;
+   4. private functions and types.
+7. **Avoid `null` and `undefined`.**
+   - A field that means "one of several cases" becomes a union with a `kind`,
+     not a nullable field. Example: `{ kind: "floating" } | { kind: "user";
+     name: string }`, not `timeZone: string | null`.
+   - A field or parameter that is almost always set is required. Give it a
+     default when it is created, instead of making it optional.
+   - A list is never `null`. Use an empty list `[]`.
+   - Use a real default when one makes sense (a missing title becomes
+     `"Event"`).
+   - Never use both `null` and `undefined` for "missing".
+   - **Exception, at the edges only:** raw outside data (the model's answer,
+     Telegram updates, database rows, HTTP bodies) can be nullable. Convert it
+     once, at the edge, into types without nulls.
+   - `null` is OK only when "nothing" is a normal answer (for example "no
+     location"). Even then, prefer a union when it reads more clearly.
 
 ## Folders
 

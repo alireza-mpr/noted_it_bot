@@ -19,8 +19,13 @@ Follow [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md) for every change:
 - `domain/` and `output/` never import from `app/` or `adapters/`;
 - functions by default, classes only for state or a replaceable part;
 - check data once at the edge, then use typed values (no `!`);
+- avoid `null` and `undefined`: use unions with a `kind`, required fields,
+  empty lists and real defaults; only raw data at the edges may be nullable,
+  and it is converted once;
 - results are unions with an `ok` field;
-- files read top down: the main exported function first.
+- files read top down, after the imports: private constants, then exported
+  types, then exported functions (the main one first), then private functions
+  and types.
 
 New files go to their target folder in that doc. When you move a file, update
 its status in the "Where each file goes" table. Never mix file moves and logic
