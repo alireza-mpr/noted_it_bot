@@ -9,8 +9,8 @@ describe("resolveTimezone", () => {
     expect(resolveTimezone("asia/tehran")).toBe("Asia/Tehran");
   });
 
-  it("defaults to Melbourne when there is no hint", () => {
-    expect(resolveTimezone(null)).toBe("Australia/Melbourne");
+  it("defaults to appConfig.defaultTimezone when there is no hint", () => {
+    expect(resolveTimezone(null)).toBe("UTC");
   });
 
   it("returns null for a name that isn't a timezone", () => {

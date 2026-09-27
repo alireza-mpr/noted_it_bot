@@ -24,7 +24,6 @@ export async function langCommandHandler(
   env: Env,
   message: TelegramMessage,
   replier: Replier,
-  defaultTimezone: string,
 ): Promise<void> {
   const arg = (message.text ?? "").slice(PREFIX.length).trim();
   const userId = message.from.id;
@@ -35,7 +34,7 @@ export async function langCommandHandler(
   }
 
   if (arg.toLowerCase() === "auto") {
-    await setUserLanguageOverride(env, userId, null, defaultTimezone);
+    await setUserLanguageOverride(env, userId, null);
     logActivity("lang_reset");
     await replier
       .withLang(toSupportedLanguage(message.from.language_code) ?? DEFAULT_LANGUAGE)
@@ -50,7 +49,7 @@ export async function langCommandHandler(
     return;
   }
 
-  await setUserLanguageOverride(env, userId, resolved, defaultTimezone);
+  await setUserLanguageOverride(env, userId, resolved);
   logActivity("lang_set", { language: resolved });
   await replier
     .withLang(resolved)

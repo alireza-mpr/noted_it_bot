@@ -26,8 +26,10 @@
   "START_MESSAGE": "Ciao! Sono il bot {0} 👋.\n\n📆 Inoltrami qualsiasi messaggio che contenga un evento. Estrarrò i dettagli e ti invierò un link a un tocco per aggiungerlo a Google Calendar, più un file per Apple Calendar, Outlook o qualsiasi altra app.\n\n🕙 Per ora leggo solo date esplicite\n(\"19 set - 20:00\"), non \"domani\".\nRicavo il fuso orario dal messaggio. Se non è indicato, impostane uno con il comando /tz.\n\n🔁 Funzionano anche gli eventi ricorrenti (\"ogni giovedì, 19:30\"). Il link aggiunge ovunque la sessione di oggi; aprilo su un computer per ottenere l'intera serie, oppure imposta tu stesso la ripetizione da telefono usando lo schema che ti mando.\n\n🌎 Rispondo per impostazione predefinita nella lingua del tuo Telegram. Per cambiarla, invia il comando /lang, ad es. /lang fa per ricevere le mie risposte in persiano.",
   "START_QUOTA_NOTE": "🎁 Con il piano gratuito puoi inviare fino a {0} richieste al giorno.",
   "TZ_BUTTON_LABEL": "Imposta il mio fuso orario",
+  "TZ_DEFAULT_NOTE": "<i>🌐 Il messaggio non indicava un fuso orario, quindi ho usato {0}. Per impostare il tuo, invia /tz.</i>",
   "TZ_LINK_MESSAGE": "Tocca il pulsante qui sotto per impostare il tuo fuso orario. Il link funziona per 1 minuto.",
   "TZ_SET_CONFIRMATION": "Ricevuto — d'ora in poi userò il fuso orario {0} per te.",
+  "TZ_USER_NOTE": "<i>🌐 Il messaggio non indicava un fuso orario, quindi ho usato il tuo, {0}. Per cambiarlo, invia /tz.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ Non hai più abbastanza quota giornaliera per oggi. Riprova tra {0}.",
   "USER_DAILY_QUOTA_REMAINING": "🔢 Hai ancora {0} richiesta/e per oggi."
 }

@@ -222,10 +222,23 @@ Users can override the auto-detected language with `/lang <language>`: a code (`
 `resolveLanguage`). An unsupported language gets a reply listing the supported ones. `/lang auto` resets it. The override is stored per user in the
 `user_preference` table of the `USAGE_DB` D1 database (`src/db/sql/userPreference.ts`,
 `src/repositories/userPreferenceRepository.ts`): `userId` (primary key), `lang` (`NULL` means
-auto-detect; `/lang auto` calls `setLang(userId, null, …)`) and `timezone` (set by `/tz` through
-`setTimezone`; when a user's row is first created by `/lang` it gets `appConfig.defaultTimezone`,
-`UTC`, from [appConfig.ts](src/appConfig/appConfig.ts)). The bot stores the time zone but
-nothing reads it yet. The table is created on first use like the others.
+auto-detect; `/lang auto` calls `setLang(userId, null)`) and `timezone` (set by `/tz` through
+`setTimezone`; `NULL` until the user picks one). Both are read in one query at the start of every update.
+The table is created on first use like the others.
+
+**Which time zone an event uses.** In order: a zone the message states or implies (the model's
+`timezone_hint`); otherwise the user's `/tz` choice; otherwise `appConfig.defaultTimezone` (`UTC`, in
+[appConfig.ts](src/appConfig/appConfig.ts)). In the last two cases the caption says which zone was used and points to
+`/tz` (`TZ_USER_NOTE` / `TZ_DEFAULT_NOTE`); all-day events get no note, since their date doesn't depend on a zone.
+
+`timezone` used to be `NOT NULL`, with `/lang` filling in the default. SQLite can't loosen that constraint in
+place, so an existing table is rebuilt once (the data is copied unchanged; a stored `UTC` behaves the same as
+`NULL` while the default is `UTC`). Run it **before** deploying code that writes `NULL`:
+
+```bash
+npx wrangler d1 execute noted-it-dev-usage --remote --env dev --command "CREATE TABLE user_preference_new (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT); INSERT INTO user_preference_new (userId, lang, timezone) SELECT userId, lang, timezone FROM user_preference; DROP TABLE user_preference; ALTER TABLE user_preference_new RENAME TO user_preference;"
+# and noted-it-prod-usage --env prod for prod
+```
 
 ### Setting the time zone (`/tz`)
 
@@ -269,11 +282,11 @@ language code are skipped). Find the namespace id with `npx wrangler kv namespac
 ```bash
 NS=<USER_LANG_NAMESPACE_ID>
 {
-  echo "CREATE TABLE IF NOT EXISTS user_preference (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT NOT NULL);"
+  echo "CREATE TABLE IF NOT EXISTS user_preference (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT);"
   npx wrangler kv key list --namespace-id "$NS" --remote | jq -r '.[].name | select(test("^chat:[0-9]+$"))' | while read -r key; do
     lang=$(npx wrangler kv key get --namespace-id "$NS" --remote "$key")
     if [[ "$lang" =~ ^[a-z]{2,3}(-[A-Z]{2})?$ ]]; then
-      echo "INSERT INTO user_preference (userId, lang, timezone) VALUES (${key#chat:}, '$lang', 'UTC') ON CONFLICT(userId) DO UPDATE SET lang = excluded.lang;"
+      echo "INSERT INTO user_preference (userId, lang, timezone) VALUES (${key#chat:}, '$lang', NULL) ON CONFLICT(userId) DO UPDATE SET lang = excluded.lang;"
     fi
   done
 } > user_preference.sql

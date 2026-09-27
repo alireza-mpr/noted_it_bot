@@ -7,7 +7,7 @@ import {
   DEFAULT_LANGUAGE,
   toSupportedLanguage,
 } from "../../translation/language";
-import { getUserLanguageOverride } from "../../translation/userLanguage";
+import { UserPreferenceRepository } from "../../repositories/userPreferenceRepository";
 import {
   userQuotaPolicy,
   type QuotaReservation,
@@ -80,6 +80,7 @@ async function handleMessage(
   config: AppConfig,
   consumed: ConsumedQuota,
   origin: string,
+  userTimezone: string | null,
 ): Promise<void> {
   if (message.text === "/start") {
     logActivity("start");
@@ -95,7 +96,7 @@ async function handleMessage(
     return diagCommandHandler(router, replier);
   }
   if (isLangCommand(message.text)) {
-    return langCommandHandler(env, message, replier, config.defaultTimezone);
+    return langCommandHandler(env, message, replier);
   }
   if (isTzCommand(message.text)) {
     return tzCommandHandler(env, message, replier, origin);
@@ -135,6 +136,7 @@ async function handleMessage(
     replier,
     consumed.remaining,
     consumed.show,
+    userTimezone,
   );
   if (!answered && reservation) {
     await refundUserQuota(reservation);
@@ -160,24 +162,34 @@ function handleMembershipChange(change: TelegramChatMemberUpdate): void {
   }
 }
 
-// Extracts the user-preferred language from the storage. Fall back to English if the stored preference can't be read.
-async function readUserLanguage(
+interface UserSettings {
+  lang: string;
+  // null when the user hasn't picked one with /tz.
+  timezone: string | null;
+}
+
+// Reads the user's language and time zone in one D1 read. The language falls
+// back to Telegram's, then English; if the preferences can't be read, English
+// and no time zone.
+async function readUserSettings(
   env: Env,
   message: TelegramMessage,
-): Promise<string> {
+): Promise<UserSettings> {
   try {
-    const langOverride = await getUserLanguageOverride(env, message.from.id);
-    return (
-      toSupportedLanguage(langOverride) ??
-      toSupportedLanguage(message.from.language_code) ??
-      DEFAULT_LANGUAGE
-    );
+    const preference = await new UserPreferenceRepository(env.USAGE_DB).find(message.from.id);
+    return {
+      lang:
+        toSupportedLanguage(preference?.lang) ??
+        toSupportedLanguage(message.from.language_code) ??
+        DEFAULT_LANGUAGE,
+      timezone: preference?.timezone ?? null,
+    };
   } catch (err) {
     logger.error(
-      "could not read the user's language, using English",
+      "could not read the user's preferences, using English",
       describeError(err),
     );
-    return DEFAULT_LANGUAGE;
+    return { lang: DEFAULT_LANGUAGE, timezone: null };
   }
 }
 
@@ -208,7 +220,7 @@ export async function updateHandler(
   setLogField("firstName", message.from.first_name ?? null);
   setLogField("chatId", message.chat.id);
 
-  const lang = await readUserLanguage(env, message);
+  const { lang, timezone } = await readUserSettings(env, message);
   const text = message.text ?? message.caption;
   logger.info("update received", {
     command: text?.startsWith("/") ? text.split(/[\s@]/)[0] : null,
@@ -227,6 +239,7 @@ export async function updateHandler(
       appConfig,
       consumed,
       new URL(request.url).origin,
+      timezone,
     );
   } catch (err) {
     outcome = "error";

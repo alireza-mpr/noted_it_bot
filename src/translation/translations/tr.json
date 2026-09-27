@@ -26,8 +26,10 @@
   "START_MESSAGE": "Merhaba! Ben {0} botuyum 👋.\n\n📆 Bir etkinlik içeren herhangi bir mesajı bana iletin. Ayrıntıları çıkarıp Google Calendar'a tek dokunuşla ekleyebileceğiniz bir bağlantı ile Apple Calendar, Outlook veya başka bir yer için bir dosya göndereceğim.\n\n🕙 Şimdilik yalnızca açık tarihleri okuyorum\n(\"19 Eyl - 20:00\"), \"yarın\" gibi ifadeleri değil.\nSaat dilimini mesajdan çıkarırım. Mesajda yoksa kendinizinkini /tz komutuyla ayarlayın.\n\n🔁 Tekrarlayan etkinlikler de çalışır (\"her Perşembe, 19:30\"). Bağlantı bugünkü oturumu her yerde ekler; tüm seriyi almak için bir bilgisayarda açın ya da telefonda tekrarı benim gönderdiğim kalıpla kendiniz ayarlayın.\n\n🌎 Varsayılan olarak Telegram dilinizde yanıt veririm. Değiştirmek için /lang komutunu gönderin, örneğin yanıtlarımı Farsça almak için /lang fa.",
   "START_QUOTA_NOTE": "🎁 Ücretsiz planda günde en fazla {0} istek gönderebilirsiniz.",
   "TZ_BUTTON_LABEL": "Saat dilimimi ayarla",
+  "TZ_DEFAULT_NOTE": "<i>🌐 Mesajda saat dilimi belirtilmediği için {0} kullandım. Kendi saat diliminizi ayarlamak için /tz gönderin.</i>",
   "TZ_LINK_MESSAGE": "Saat diliminizi ayarlamak için aşağıdaki düğmeye dokunun. Bağlantı 1 dakika boyunca çalışır.",
   "TZ_SET_CONFIRMATION": "Anlaşıldı — bundan sonra sizin için {0} saat dilimini kullanacağım.",
+  "TZ_USER_NOTE": "<i>🌐 Mesajda saat dilimi belirtilmediği için sizinkini kullandım: {0}. Değiştirmek için /tz gönderin.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ Bugün için yeterli günlük kotanız kalmadı. {0} sonra tekrar deneyin.",
   "USER_DAILY_QUOTA_REMAINING": "🔢 Bugün için {0} isteğiniz kaldı."
 }

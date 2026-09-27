@@ -16,22 +16,8 @@ export class UserPreferenceRepository {
     return results[1].results[0] ?? null;
   }
 
-  async getLang(userId: number): Promise<string | null> {
-    return (await this.find(userId))?.lang ?? null;
-  }
-
-  async getTimezone(userId: number, defaultTimezone: string): Promise<string> {
-    return (await this.find(userId))?.timezone ?? defaultTimezone;
-  }
-
-  async setLang(
-    userId: number,
-    lang: string | null,
-    defaultTimezone: string,
-  ): Promise<void> {
-    await this.run([
-      this.db.prepare(SET_USER_LANG).bind(userId, lang, defaultTimezone),
-    ]);
+  async setLang(userId: number, lang: string | null): Promise<void> {
+    await this.run([this.db.prepare(SET_USER_LANG).bind(userId, lang)]);
   }
 
   async setTimezone(userId: number, timezone: string): Promise<void> {

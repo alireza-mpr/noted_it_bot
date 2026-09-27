@@ -1,4 +1,4 @@
-const DEFAULT_TIMEZONE = "Australia/Melbourne";
+import { appConfig } from "../appConfig/appConfig";
 
 // Converts a wall-clock date/time in `timeZone` to the equivalent UTC Date,
 // without any external library. Standard trick: format the same instant in
@@ -21,12 +21,12 @@ export function zonedTimeToUtc(
   return new Date(asUtc.getTime() + offsetMs);
 }
 
-// The model's timezone hint as a canonical IANA name ("Iran" becomes
-// "Asia/Tehran"), the default when there is none, or null when Intl doesn't
+// The event's timezone hint as a canonical IANA name ("Iran" becomes
+// "Asia/Tehran"), appConfig.defaultTimezone when there is none, or null when Intl doesn't
 // recognise it ("Iran Standard Time"), so the caller can decline the event.
 export function resolveTimezone(timezoneHint: string | null): string | null {
   if (!timezoneHint) {
-    return DEFAULT_TIMEZONE;
+    return appConfig.defaultTimezone;
   }
   try {
     return new Intl.DateTimeFormat("en", {

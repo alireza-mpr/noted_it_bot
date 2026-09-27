@@ -26,8 +26,10 @@
   "START_MESSAGE": "Cześć! Jestem botem {0} 👋.\n\n📆 Prześlij mi dowolną wiadomość z wydarzeniem. Wyciągnę szczegóły i wyślę Ci link do dodania go do Google Calendar jednym dotknięciem oraz plik dla Apple Calendar, Outlooka lub innej aplikacji.\n\n🕙 Na razie czytam tylko jednoznaczne daty\n(\"19 wrz - 20:00\"), a nie \"jutro\".\nStrefę czasową ustalam na podstawie wiadomości. Jeśli jej tam nie ma, ustaw swoją poleceniem /tz.\n\n🔁 Wydarzenia cykliczne też działają (\"w każdy czwartek, 19:30\"). Link dodaje dzisiejszy termin wszędzie; otwórz go na komputerze, aby dodać całą serię, albo ustaw powtarzanie na telefonie samodzielnie według wzoru, który wyślę.\n\n🌎 Domyślnie odpowiadam w języku Twojego Telegrama. Aby to zmienić, wyślij polecenie /lang, np. /lang fa, aby otrzymywać moje odpowiedzi po persku.",
   "START_QUOTA_NOTE": "🎁 W planie darmowym możesz wysłać do {0} zapytań dziennie.",
   "TZ_BUTTON_LABEL": "Ustaw moją strefę czasową",
+  "TZ_DEFAULT_NOTE": "<i>🌐 Wiadomość nie podawała strefy czasowej, więc użyłem {0}. Aby ustawić swoją, wyślij /tz.</i>",
   "TZ_LINK_MESSAGE": "Dotknij przycisku poniżej, aby ustawić swoją strefę czasową. Link działa przez 1 minutę.",
   "TZ_SET_CONFIRMATION": "Rozumiem — od teraz będę używać dla Ciebie strefy czasowej {0}.",
+  "TZ_USER_NOTE": "<i>🌐 Wiadomość nie podawała strefy czasowej, więc użyłem Twojej: {0}. Aby ją zmienić, wyślij /tz.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ Nie masz już wystarczającego dziennego limitu na dziś. Spróbuj ponownie za {0}.",
   "USER_DAILY_QUOTA_REMAINING": "🔢 Liczba pozostałych zapytań na dziś: {0}."
 }

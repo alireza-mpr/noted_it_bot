@@ -13,6 +13,8 @@ export interface BuiltCalendarEvent {
   icsFilename: string;
   icsContent: string;
   googleCalendarUrl: string;
+  // The canonical IANA zone the event's times are in.
+  timeZone: string;
   allDay: boolean;
   summaryLines: string[];
   recurrence: string | null;
@@ -391,6 +393,7 @@ export function buildCalendarEvent(
     icsFilename: "event.ics",
     icsContent: lines.join("\r\n"),
     googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
+    timeZone,
     allDay,
     summaryLines,
     recurrence: recurrence

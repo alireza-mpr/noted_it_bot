@@ -34,6 +34,14 @@ I work out the time zone from the message. If it doesn't say, set yours with the
   ALL_DAY_NOTE:
     "<i>🤔 By the way, no specific time was mentioned, so this was added as an all-day event.</i>",
 
+  // Added to an event's caption when the message gave no time zone; {0} is the
+  // zone used: the user's /tz choice, or appConfig.defaultTimezone.
+  TZ_USER_NOTE:
+    "<i>🌐 The message didn't mention a time zone, so I used yours, {0}. To change it, send /tz.</i>",
+
+  TZ_DEFAULT_NOTE:
+    "<i>🌐 The message didn't mention a time zone, so I used {0}. To set yours, send /tz.</i>",
+
   RECURRING_NOTE:
     "<i>🔁 This event repeats. The link above adds today's session; on a phone it usually won't add the repeat, so open it on a computer for the full series, or set it to repeat yourself using the pattern above.</i>",
 

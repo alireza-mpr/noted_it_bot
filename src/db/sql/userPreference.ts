@@ -2,7 +2,7 @@ export const CREATE_USER_PREFERENCE_TABLE = `
 CREATE TABLE IF NOT EXISTS user_preference (
   userId   INTEGER NOT NULL PRIMARY KEY,
   lang     TEXT,
-  timezone TEXT NOT NULL
+  timezone TEXT
 )`;
 
 export const SELECT_USER_PREFERENCE = `
@@ -12,7 +12,7 @@ WHERE userId = ?`;
 
 export const SET_USER_LANG = `
 INSERT INTO user_preference (userId, lang, timezone)
-VALUES (?, ?, ?)
+VALUES (?, ?, NULL)
 ON CONFLICT(userId) DO UPDATE SET
   lang = excluded.lang`;
 

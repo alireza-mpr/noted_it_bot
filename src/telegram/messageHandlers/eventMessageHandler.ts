@@ -8,6 +8,7 @@ import type { ExtractedEvent } from "../../extractedEvents/extractedEvent";
 import { recurrenceProblem } from "../../extractedEvents/recurrence";
 import type { MessageId } from "../../interactiveMessages/messages";
 import { fillPlaceholder } from "../../translation/placeholders";
+import { appConfig } from "../../appConfig/appConfig";
 import { logActivity } from "../../logging/activityLog";
 import type { Router } from "../../router/router";
 import { escapeHtmlAttribute } from "../telegramHtml";
@@ -21,6 +22,7 @@ async function buildCaption(
   replier: Replier,
   remainingQuota: number,
   showQuota: boolean,
+  timezoneNote: string | null,
 ): Promise<string> {
   const captionTemplate = replier.translate("CALENDAR_CAPTION_TEMPLATE");
   const linkLabel = replier.translate("LINK_LABEL");
@@ -44,6 +46,9 @@ async function buildCaption(
       caption += `\n\n${replier.translate(note)}`;
     }
   }
+  if (timezoneNote) {
+    caption += `\n\n${timezoneNote}`;
+  }
 
   if (!showQuota) {
     return caption;
@@ -54,6 +59,22 @@ async function buildCaption(
     String(remainingQuota),
   );
   return `${caption}\n\n${escapeHtmlAttribute(quotaLine)}`;
+}
+
+// Says which zone was assumed when the message gave none, and how to change it.
+// An all-day event has no time, so its zone doesn't matter.
+function timezoneNote(
+  source: "message" | "user" | "default",
+  calendarEvent: BuiltCalendarEvent,
+  replier: Replier,
+): string | null {
+  if (source === "message" || calendarEvent.allDay) {
+    return null;
+  }
+  return replier.translate(
+    source === "user" ? "TZ_USER_NOTE" : "TZ_DEFAULT_NOTE",
+    calendarEvent.timeZone,
+  );
 }
 
 // Tells the user extraction has started. A failed send must not stop the extraction.
@@ -73,6 +94,7 @@ export async function eventMessageHandler(
   replier: Replier,
   remainingQuota: number,
   showQuota: boolean,
+  userTimezone: string | null,
 ): Promise<boolean> {
   const downstream = await extractEvent(router, content, () =>
     sayExtracting(replier),
@@ -94,6 +116,10 @@ export async function eventMessageHandler(
   }
 
   const event: ExtractedEvent = JSON.parse(downstream.message);
+  // A zone the message states or implies wins; otherwise the user's /tz choice,
+  // otherwise appConfig.defaultTimezone. The last two are pointed out in the caption.
+  const timezoneSource = event.timezone_hint ? "message" : userTimezone ? "user" : "default";
+  event.timezone_hint ??= userTimezone ?? appConfig.defaultTimezone;
   const problem = recurrenceProblem(event);
   if (problem) {
     logger.error("declined recurring event", {
@@ -135,7 +161,13 @@ export async function eventMessageHandler(
   await replier.sendDocument(
     calendarEvent.icsFilename,
     calendarEvent.icsContent,
-    await buildCaption(calendarEvent, replier, remainingQuota, showQuota),
+    await buildCaption(
+      calendarEvent,
+      replier,
+      remainingQuota,
+      showQuota,
+      timezoneNote(timezoneSource, calendarEvent, replier),
+    ),
   );
   return true;
 }

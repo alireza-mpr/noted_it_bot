@@ -26,8 +26,10 @@
   "START_MESSAGE": "¡Hola! Soy el bot {0} 👋.\n\n📆 Reenvíame cualquier mensaje que contenga un evento. Extraeré los detalles y te enviaré un enlace de un solo toque para añadirlo a Google Calendar, además de un archivo para Apple Calendar, Outlook o cualquier otra aplicación.\n\n🕙 Por ahora solo leo fechas explícitas\n(\"19 sep - 20:00\"), no \"mañana\".\nDeduzco la zona horaria del mensaje. Si no la indica, configura la tuya con el comando /tz.\n\n🔁 Los eventos recurrentes también funcionan (\"todos los jueves, 19:30\"). El enlace añade la sesión de hoy en todas partes; ábrelo en un ordenador para obtener la serie completa, o configura tú mismo la repetición en el móvil con el patrón que te envío.\n\n🌎 Respondo por defecto en el idioma de tu Telegram. Para cambiarlo, envía el comando /lang, p. ej., /lang fa para recibir mis respuestas en persa.",
   "START_QUOTA_NOTE": "🎁 En el plan gratuito puedes enviar hasta {0} solicitudes al día.",
   "TZ_BUTTON_LABEL": "Configurar mi zona horaria",
+  "TZ_DEFAULT_NOTE": "<i>🌐 El mensaje no indicaba zona horaria, así que usé {0}. Para configurar la tuya, envía /tz.</i>",
   "TZ_LINK_MESSAGE": "Toca el botón de abajo para configurar tu zona horaria. El enlace funciona durante 1 minuto.",
   "TZ_SET_CONFIRMATION": "Entendido — a partir de ahora usaré la zona horaria {0} para ti.",
+  "TZ_USER_NOTE": "<i>🌐 El mensaje no indicaba zona horaria, así que usé la tuya, {0}. Para cambiarla, envía /tz.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ No te queda cuota diaria suficiente para hoy. Inténtalo de nuevo dentro de {0}.",
   "USER_DAILY_QUOTA_REMAINING": "🔢 Te quedan {0} solicitud(es) para hoy."
 }

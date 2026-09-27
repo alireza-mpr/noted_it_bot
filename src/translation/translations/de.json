@@ -26,8 +26,10 @@
   "START_MESSAGE": "Hallo! Ich bin der Bot {0} 👋.\n\n📆 Leite mir jede Nachricht weiter, in der ein Termin steht. Ich ziehe die Details heraus und schicke dir einen Link zum Hinzufügen mit einem Fingertipp zu Google Calendar, dazu eine Datei für Apple Calendar, Outlook oder alles andere.\n\n🕙 Vorerst lese ich nur ausdrückliche Datumsangaben\n(\"19. Sep. - 20 Uhr\"), nicht \"morgen\".\nDie Zeitzone leite ich aus der Nachricht ab. Steht sie nicht darin, stelle deine mit dem Befehl /tz ein.\n\n🔁 Wiederkehrende Termine funktionieren auch (\"jeden Donnerstag, 19:30 Uhr\"). Der Link fügt überall den heutigen Termin hinzu; öffne ihn auf einem Computer, um die ganze Serie zu bekommen, oder stelle die Wiederholung auf dem Handy selbst mit dem Muster ein, das ich sende.\n\n🌎 Ich antworte standardmäßig in der Sprache deines Telegram. Um sie zu ändern, sende den Befehl /lang, z. B. /lang fa, um meine Antworten auf Persisch zu erhalten.",
   "START_QUOTA_NOTE": "🎁 Im kostenlosen Tarif kannst du bis zu {0} Anfragen pro Tag senden.",
   "TZ_BUTTON_LABEL": "Meine Zeitzone festlegen",
+  "TZ_DEFAULT_NOTE": "<i>🌐 Die Nachricht nennt keine Zeitzone, daher habe ich {0} verwendet. Um deine festzulegen, sende /tz.</i>",
   "TZ_LINK_MESSAGE": "Tippe auf die Schaltfläche unten, um deine Zeitzone festzulegen. Der Link funktioniert 1 Minute lang.",
   "TZ_SET_CONFIRMATION": "Alles klar — ich verwende ab jetzt die Zeitzone {0} für dich.",
+  "TZ_USER_NOTE": "<i>🌐 Die Nachricht nennt keine Zeitzone, daher habe ich deine verwendet: {0}. Zum Ändern sende /tz.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ Du hast für heute nicht mehr genug Tageskontingent. Versuche es in {0} erneut.",
   "USER_DAILY_QUOTA_REMAINING": "🔢 Du hast für heute noch {0} Anfrage(n) übrig."
 }
