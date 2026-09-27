@@ -6,98 +6,176 @@ import type {
   WeekOfMonth,
 } from "../domain/calendar-event/repeat";
 import type { DateOnly, Weekday } from "../generic/date-time/date-only";
+import { fillPlaceholders } from "../generic/text/fill-placeholders";
+import type { BotMessageId } from "../i18n/bot-message";
+import type { SupportedLanguage } from "../i18n/supported-language";
+import { translate } from "../i18n/translation";
 import { formatDateWithYear, formatWeekdayName } from "./localized-date-time";
+import {
+  formatNumber,
+  formatTimeSpan,
+  type TimeUnit,
+} from "./localized-number";
 
-// The repeat sentence is part of the event, not one of the bot's messages, so
-// it is always in English.
-const SENTENCE_LANGUAGE = "en";
-
-const WEEK_OF_MONTH_NAMES: Record<WeekOfMonth, string> = {
-  1: "first",
-  2: "second",
-  3: "third",
-  4: "fourth",
-  last: "last",
+const EVERY_ONE_UNIT: Record<TimeUnit, BotMessageId> = {
+  day: "REPEAT_EVERY_DAY",
+  week: "REPEAT_EVERY_WEEK",
+  month: "REPEAT_EVERY_MONTH",
+  year: "REPEAT_EVERY_YEAR",
 };
 
-// Returns an English sentence about the event's repeat, e.g. "Repeats every 2
-// weeks on Monday and Wednesday, until Jan 5, 2027", or null for a one-off
-// event.
-export function repeatSentenceOf(calendarEvent: CalendarEvent): string | null {
+const EVERY_N_UNITS: Record<TimeUnit, BotMessageId> = {
+  day: "REPEAT_EVERY_N_DAYS",
+  week: "REPEAT_EVERY_N_WEEKS",
+  month: "REPEAT_EVERY_N_MONTHS",
+  year: "REPEAT_EVERY_N_YEARS",
+};
+
+const ON_WEEK_OF_MONTH: Record<WeekOfMonth, BotMessageId> = {
+  1: "REPEAT_MONTHLY_ON_FIRST",
+  2: "REPEAT_MONTHLY_ON_SECOND",
+  3: "REPEAT_MONTHLY_ON_THIRD",
+  4: "REPEAT_MONTHLY_ON_FOURTH",
+  last: "REPEAT_MONTHLY_ON_LAST",
+};
+
+// Returns a sentence about the event's repeat, in the language, e.g.
+// "Repeats every 2 weeks on Monday and Wednesday, until Jan 5, 2027", or null
+// for a one-off event.
+export function repeatSentenceOf(
+  calendarEvent: CalendarEvent,
+  language: SupportedLanguage,
+): string | null {
   const repeat = calendarEvent.repeat;
   if (repeat === null) {
     return null;
   }
-  return `Repeats ${patternPhraseOf(repeat.pattern)}${endPhraseOf(repeat.end)}`;
+  const patternPhrase = patternPhraseOf(repeat.pattern, language);
+  const endPhrase = endPhraseOf(repeat.end, language);
+  return endPhrase === null
+    ? textOf("REPEAT_SENTENCE", [patternPhrase], language)
+    : textOf("REPEAT_SENTENCE_WITH_END", [patternPhrase, endPhrase], language);
 }
 
 // Returns e.g. "every Thursday" or "on the first Friday of every month".
-function patternPhraseOf(pattern: RepeatPattern): string {
-  const interval = pattern.interval;
-  const everyUnit = (unit: string) =>
-    interval === 1 ? `every ${unit}` : `every ${interval} ${unit}s`;
+function patternPhraseOf(
+  pattern: RepeatPattern,
+  language: SupportedLanguage,
+): string {
   switch (pattern.frequency) {
     case "daily":
-      return everyUnit("day");
+      return everyPhraseOf("day", pattern.interval, language);
     case "weekly":
-      if (pattern.weekdays.length === 0) {
-        return everyUnit("week");
-      }
-      return interval === 1
-        ? `every ${weekdayListOf(pattern.weekdays)}`
-        : `every ${interval} weeks on ${weekdayListOf(pattern.weekdays)}`;
+      return weeklyPhraseOf(pattern.weekdays, pattern.interval, language);
     case "monthly":
-      return monthlyPhraseOf(pattern.dayOfMonth, everyUnit("month"));
+      return monthlyPhraseOf(
+        pattern.dayOfMonth,
+        everyPhraseOf("month", pattern.interval, language),
+        language,
+      );
     case "yearly":
-      return everyUnit("year");
+      return everyPhraseOf("year", pattern.interval, language);
   }
 }
 
-// Returns e.g. "every month", "on the 15th of every month" or "on the first
+// Returns e.g. "every week", "every 2 weeks", "every Monday and Wednesday" or
+// "every 2 weeks on Monday and Wednesday".
+function weeklyPhraseOf(
+  weekdays: Weekday[],
+  interval: number,
+  language: SupportedLanguage,
+): string {
+  if (weekdays.length === 0) {
+    return everyPhraseOf("week", interval, language);
+  }
+  const weekdayList = weekdayListOf(weekdays, language);
+  return interval === 1
+    ? textOf("REPEAT_WEEKLY_ON", [weekdayList], language)
+    : textOf(
+        "REPEAT_EVERY_N_WEEKS_ON",
+        [formatTimeSpan(interval, "week", language), weekdayList],
+        language,
+      );
+}
+
+// Returns e.g. "every month", "on day 15 of every month" or "on the first
 // Friday of every 2 months".
-function monthlyPhraseOf(dayOfMonth: MonthlyDay, everyMonth: string): string {
+function monthlyPhraseOf(
+  dayOfMonth: MonthlyDay,
+  everyMonthPhrase: string,
+  language: SupportedLanguage,
+): string {
   switch (dayOfMonth.kind) {
     case "same-as-first-date":
-      return everyMonth;
+      return everyMonthPhrase;
     case "fixed-day":
-      return `on the ${ordinalNumberOf(dayOfMonth.day)} of ${everyMonth}`;
+      return textOf(
+        "REPEAT_MONTHLY_ON_DAY",
+        [formatNumber(dayOfMonth.day, language), everyMonthPhrase],
+        language,
+      );
     case "weekday-of-month":
-      return `on the ${WEEK_OF_MONTH_NAMES[dayOfMonth.week]} ${weekdayListOf(dayOfMonth.weekdays)} of ${everyMonth}`;
+      return textOf(
+        ON_WEEK_OF_MONTH[dayOfMonth.week],
+        [weekdayListOf(dayOfMonth.weekdays, language), everyMonthPhrase],
+        language,
+      );
   }
 }
 
-// Returns e.g. ", until Jan 5, 2027" or ", 4 times", or "" for no end.
-function endPhraseOf(repeatEnd: RepeatEnd<DateOnly>): string {
+// Returns e.g. "until Jan 5, 2027" or "4 times", or null for no end.
+function endPhraseOf(
+  repeatEnd: RepeatEnd<DateOnly>,
+  language: SupportedLanguage,
+): string | null {
   switch (repeatEnd.kind) {
     case "never":
-      return "";
+      return null;
     case "until":
-      return `, until ${formatDateWithYear(repeatEnd.date, SENTENCE_LANGUAGE)}`;
+      return textOf(
+        "REPEAT_UNTIL",
+        [formatDateWithYear(repeatEnd.date, language)],
+        language,
+      );
     case "after":
-      return `, ${repeatEnd.times} ${repeatEnd.times === 1 ? "time" : "times"}`;
+      return textOf(
+        repeatEnd.times === 1 ? "REPEAT_ONE_TIME" : "REPEAT_TIMES",
+        [formatNumber(repeatEnd.times, language)],
+        language,
+      );
   }
+}
+
+// Returns e.g. "every day" or "every 3 days".
+function everyPhraseOf(
+  timeUnit: TimeUnit,
+  interval: number,
+  language: SupportedLanguage,
+): string {
+  return interval === 1
+    ? translate(EVERY_ONE_UNIT[timeUnit], language)
+    : textOf(
+        EVERY_N_UNITS[timeUnit],
+        [formatTimeSpan(interval, timeUnit, language)],
+        language,
+      );
 }
 
 // Returns e.g. "Monday and Wednesday".
-function weekdayListOf(weekdays: Weekday[]): string {
-  return new Intl.ListFormat(SENTENCE_LANGUAGE, {
+function weekdayListOf(
+  weekdays: Weekday[],
+  language: SupportedLanguage,
+): string {
+  return new Intl.ListFormat(language, {
     style: "long",
     type: "conjunction",
-  }).format(
-    weekdays.map((weekday) => formatWeekdayName(weekday, SENTENCE_LANGUAGE)),
-  );
+  }).format(weekdays.map((weekday) => formatWeekdayName(weekday, language)));
 }
 
-// Returns e.g. "1st", "2nd", "11th", "23rd".
-function ordinalNumberOf(value: number): string {
-  const lastTwoDigits = value % 100;
-  if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
-    return `${value}th`;
-  }
-  const suffixByLastDigit: Record<number, string> = {
-    1: "st",
-    2: "nd",
-    3: "rd",
-  };
-  return `${value}${suffixByLastDigit[value % 10] ?? "th"}`;
+function textOf(
+  botMessageId: BotMessageId,
+  values: string[],
+  language: SupportedLanguage,
+): string {
+  return fillPlaceholders(translate(botMessageId, language), values);
 }
