@@ -206,7 +206,7 @@ code, together with that area.
 | `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ✅ |
 | `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts` | ⏳ |
 | `extractedEvents/recurrence.ts` (RRULE) | `output/rrule.ts` | ✅ |
-| `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/caption.ts` | ⏳ |
+| `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/repeat-sentence.ts` | ✅ |
 | date formatting in a language (in `calendarEvent.ts`) | `output/localized-date-time.ts` | ✅ |
 | `time/formatWait.ts` | not decided yet (the quota refusal message) | ⏳ |
 | `interactiveMessages/messages.ts`, `translation/*` | `i18n/` | ⏳ |
@@ -235,7 +235,13 @@ after each commit.
 | 0 | The folder skeleton, and the import-rule test | ✅ |
 | 1 | The domain model: the types for dates, time zones, events, repeats, the quota and user settings. `null` only where a value is optional by nature (principle 7). | ✅ |
 | 2 | The domain rules, as pure functions: creating a calendar event from a draft, calendars, the year rule, repeats, the quota | ✅ |
-| 3 | Output: the `.ics` file, the Google Calendar link, the caption | ⏳ |
+| 3a | Output: the calendar file (`.ics`) | ✅ |
+| 3b | Output: the Google Calendar link | ✅ |
+| 3c-1 | Output: dates and times in the reply language | ✅ |
+| 3c-2 | Output: the repeat sentence, in English (as in the old code) | ✅ |
+| 3c-3 | i18n: the message texts, the translations, and the lookup | ⏳ |
+| 3c-4 | Output: the repeat sentence in the reply language, with stored templates (a bug fix: no English inside a non-English reply) | ⏳ |
+| 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ⏳ |
 | 4 | Adapters: Telegram, the database, the models, logging, the web pages | ⏳ |
 | 5 | App: one use case per file (create an event, set a language, set a time zone, …) | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
