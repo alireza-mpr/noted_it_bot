@@ -11,12 +11,12 @@ import { planEvent, type EventPlan, type EventZone } from "./eventPlan";
 import type { ExtractedEvent } from "./extractedEvent";
 import { buildRrule, describeRecurrence } from "./recurrence";
 
-// The stated weekday does not match the date. The texts are in the reply
-// language, for the caption.
+// Represents a date in a message where the combination of weekday and date is
+// wrong, or does not exist within a reasonable window before or after today.
 export interface WeekdayMismatch {
-  stated: string;
+  statedWeekday: string;
   date: string;
-  actual: string;
+  realWeekday: string;
 }
 
 export interface BuiltCalendarEvent {
@@ -199,7 +199,7 @@ function weekdayMismatch(
   const weekdayName = (date: DateOnly) =>
     formatDate(date, lang, { weekday: "long" });
   return {
-    stated: weekdayName({
+    statedWeekday: weekdayName({
       year: 2024,
       month: 1,
       day: WEEKDAY_REFERENCE_DAY[plan.statedWeekday],
@@ -209,7 +209,7 @@ function weekdayMismatch(
       month: "short",
       year: "numeric",
     }),
-    actual: weekdayName(plan.date),
+    realWeekday: weekdayName(plan.date),
   };
 }
 

@@ -38,7 +38,7 @@ function buildCaption(calendarEvent: BuiltCalendarEvent, replier: Replier, remai
     parts.push(
       fillPlaceholders(
         replier.translate("WEEKDAY_MISMATCH_NOTE"),
-        [mismatch.stated, mismatch.date, mismatch.actual].map(escapeHtmlAttribute),
+        [mismatch.statedWeekday, mismatch.date, mismatch.realWeekday].map(escapeHtmlAttribute),
       ),
     );
   }

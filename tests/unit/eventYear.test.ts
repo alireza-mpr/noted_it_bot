@@ -101,25 +101,25 @@ describe("a weekday that doesn't match the date", () => {
     const built = buildCalendarEvent(mondayJan20(), "u", "en", DEC_2026)!;
     expect(built.icsContent).toContain("DTSTART;TZID=UTC:20260120T180000");
     expect(built.inPast).toBe(true);
-    expect(built.weekdayMismatch).toEqual({ stated: "Monday", date: "Jan 20, 2026", actual: "Tuesday" });
+    expect(built.weekdayMismatch).toEqual({ statedWeekday: "Monday", date: "Jan 20, 2026", realWeekday: "Tuesday" });
   });
 
   it("on 1 Feb 2026, also goes to 20 Jan 2026, twelve days back", () => {
     const built = buildCalendarEvent(mondayJan20(), "u", "en", FEB_2026)!;
     expect(built.icsContent).toContain("DTSTART;TZID=UTC:20260120T180000");
     expect(built.inPast).toBe(true);
-    expect(built.weekdayMismatch?.actual).toBe("Tuesday");
+    expect(built.weekdayMismatch?.realWeekday).toBe("Tuesday");
   });
 
   it("is caught when the message states the year too", () => {
     const built = buildCalendarEvent(mondayJan20({ year: 2026 }), "u", "en", FEB_2026)!;
-    expect(built.weekdayMismatch).toEqual({ stated: "Monday", date: "Jan 20, 2026", actual: "Tuesday" });
+    expect(built.weekdayMismatch).toEqual({ statedWeekday: "Monday", date: "Jan 20, 2026", realWeekday: "Tuesday" });
   });
 
   it("names the weekdays in the reply language, on the Gregorian calendar", () => {
     const built = buildCalendarEvent(mondayJan20({ year: 2026 }), "u", "fa", FEB_2026)!;
-    expect(built.weekdayMismatch?.stated).toBe("دوشنبه");
-    expect(built.weekdayMismatch?.actual).toBe("سه‌شنبه");
+    expect(built.weekdayMismatch?.statedWeekday).toBe("دوشنبه");
+    expect(built.weekdayMismatch?.realWeekday).toBe("سه‌شنبه");
     expect(built.weekdayMismatch?.date).toContain("۲۰۲۶");
   });
 
@@ -184,7 +184,7 @@ describe("a date in another calendar, written without a year", () => {
   it("with a weekday no nearby year fits, uses the current Persian year and flags it", () => {
     const built = buildCalendarEvent({ ...FILM_NIGHT, weekday: "MO" }, "u", "en", MEHR_5_1405)!;
     expect(built.icsContent).toContain("DTSTART:20261001T190000");
-    expect(built.weekdayMismatch).toEqual({ stated: "Monday", date: "Oct 1, 2026", actual: "Thursday" });
+    expect(built.weekdayMismatch).toEqual({ statedWeekday: "Monday", date: "Oct 1, 2026", realWeekday: "Thursday" });
   });
 
   it("places a Hebrew date with no year: 15 Tishrei, a Saturday, is 26 September 2026", () => {
