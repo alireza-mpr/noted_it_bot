@@ -1,0 +1,195 @@
+import {
+  fromGregorian,
+  toGregorian,
+} from "../../generic/date-time/calendar-conversion";
+import type { CalendarId } from "./calendar";
+import type { DateOnly } from "../../generic/date-time/date-only";
+import {
+  localDateTimeIn,
+  type IanaTimeZone,
+  type LocalDateTime,
+} from "../../generic/date-time/time-zone";
+import type { CalendarEvent, EventUid } from "./calendar-event";
+import type {
+  CalendarEventDraft,
+  WrittenDate,
+  WrittenEndDate,
+} from "./calendar-event-draft";
+import { firstDateOf } from "./first-date-rule";
+import type { Repeat, RepeatEnd } from "./repeat";
+import { repeatWorksInCalendar } from "./repeat-calendar-rule";
+import { repeatDeclineReason } from "./repeat-decline-rule";
+import { eventTimeZoneOf } from "./time-zone-order-rule";
+import {
+  wrongGuessNotesOfOneOffEvent,
+  wrongGuessNotesOfRepeatingEvent,
+} from "./wrong-guess-rule";
+import { pickEndYear, pickYear } from "./year-rule";
+
+// Represents the result of creating a calendar event: the calendar event,
+// or the reason why there is none. The detail is for the logs.
+export type CalendarEventResult =
+  | { ok: true; calendarEvent: CalendarEvent }
+  | { ok: false; reason: "no-event" | "repeat-declined"; detail: string };
+
+// Represents what creating a calendar event needs besides the draft and its
+// UID.
+export interface EventCreationContext {
+  userTimeZone: IanaTimeZone | null;
+  now: Date;
+  floatingTimeZone: IanaTimeZone;
+}
+
+// Returns the calendar event for a draft, or the reason why there is none.
+export function createCalendarEvent(
+  draft: CalendarEventDraft,
+  eventUid: EventUid,
+  eventCreationContext: EventCreationContext,
+): CalendarEventResult {
+  const { userTimeZone, now, floatingTimeZone } = eventCreationContext;
+  const eventTimeZone = eventTimeZoneOf(draft.timeZone, userTimeZone);
+  const localNow = localDateTimeIn(
+    eventTimeZone.kind === "floating"
+      ? floatingTimeZone
+      : eventTimeZone.timeZone,
+    now,
+  );
+  const eventDetails: EventDetails = {
+    uid: eventUid,
+    title: draft.title,
+    location: draft.location,
+    time: draft.time,
+    timeZone: eventTimeZone,
+  };
+  return draft.repeat === null
+    ? createOneOffEvent(draft, eventDetails, localNow.date)
+    : createRepeatingEvent(draft, draft.repeat, eventDetails, localNow);
+}
+
+function createOneOffEvent(
+  draft: CalendarEventDraft,
+  eventDetails: EventDetails,
+  today: DateOnly,
+): CalendarEventResult {
+  if (draft.date === null) {
+    return noEvent("no date");
+  }
+  const gregorianDate = toGregorian(
+    draft.writtenInCalendar,
+    dateWithYear(draft.writtenInCalendar, draft.date, today),
+  );
+  if (gregorianDate === null) {
+    return noEvent("the date does not exist");
+  }
+  return {
+    ok: true,
+    calendarEvent: {
+      ...eventDetails,
+      date: gregorianDate,
+      repeat: null,
+      ...wrongGuessNotesOfOneOffEvent(draft.date.weekday, gregorianDate, today),
+    },
+  };
+}
+
+function createRepeatingEvent(
+  draft: CalendarEventDraft,
+  writtenRepeat: Repeat<WrittenEndDate>,
+  eventDetails: EventDetails,
+  localNow: LocalDateTime,
+): CalendarEventResult {
+  const pattern = writtenRepeat.pattern;
+  if (!repeatWorksInCalendar(draft.writtenInCalendar, pattern)) {
+    return noEvent(
+      `a ${pattern.frequency} repeat in the ${draft.writtenInCalendar} calendar`,
+    );
+  }
+
+  const startDateInCalendar =
+    draft.date === null
+      ? null
+      : dateWithYear(draft.writtenInCalendar, draft.date, localNow.date);
+  const startDate =
+    startDateInCalendar === null
+      ? null
+      : toGregorian(draft.writtenInCalendar, startDateInCalendar);
+  if (startDateInCalendar !== null && startDate === null) {
+    return noEvent("the start date does not exist");
+  }
+  const repeatEnd = toGregorianRepeatEnd(
+    draft.writtenInCalendar,
+    writtenRepeat.end,
+    startDateInCalendar ?? fromGregorian(draft.writtenInCalendar, localNow.date),
+  );
+  if (repeatEnd === null) {
+    return noEvent("the end date does not exist");
+  }
+
+  const gregorianRepeat: Repeat<DateOnly> = { pattern, end: repeatEnd };
+  const firstDate = firstDateOf(startDate, pattern, draft.time, localNow);
+  if (firstDate === null) {
+    return repeatDeclined("no day matches the pattern");
+  }
+  const declineReason = repeatDeclineReason(
+    gregorianRepeat,
+    startDate !== null,
+    firstDate,
+  );
+  if (declineReason !== null) {
+    return repeatDeclined(declineReason);
+  }
+
+  return {
+    ok: true,
+    calendarEvent: {
+      ...eventDetails,
+      date: firstDate,
+      repeat: gregorianRepeat,
+      ...wrongGuessNotesOfRepeatingEvent(),
+    },
+  };
+}
+
+// Returns the written date with a year, in its own calendar.
+function dateWithYear(
+  writtenInCalendar: CalendarId,
+  writtenDate: WrittenDate,
+  today: DateOnly,
+): DateOnly {
+  return {
+    year: pickYear(writtenInCalendar, writtenDate, today),
+    month: writtenDate.month,
+    day: writtenDate.day,
+  };
+}
+
+// Returns the repeat end with a Gregorian end date, or null if the end date
+// does not exist.
+function toGregorianRepeatEnd(
+  writtenInCalendar: CalendarId,
+  writtenEnd: RepeatEnd<WrittenEndDate>,
+  startDateInCalendar: DateOnly,
+): RepeatEnd<DateOnly> | null {
+  if (writtenEnd.kind !== "until") {
+    return writtenEnd;
+  }
+  const endDate = toGregorian(writtenInCalendar, {
+    year: pickEndYear(writtenEnd.date, startDateInCalendar),
+    month: writtenEnd.date.month,
+    day: writtenEnd.date.day,
+  });
+  return endDate === null ? null : { kind: "until", date: endDate };
+}
+
+function noEvent(detail: string): CalendarEventResult {
+  return { ok: false, reason: "no-event", detail };
+}
+
+function repeatDeclined(detail: string): CalendarEventResult {
+  return { ok: false, reason: "repeat-declined", detail };
+}
+
+type EventDetails = Pick<
+  CalendarEvent,
+  "uid" | "title" | "location" | "time" | "timeZone"
+>;

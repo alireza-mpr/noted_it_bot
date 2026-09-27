@@ -29,6 +29,9 @@ rule. Do not add a fix for that one message.
 and the names the model may use for it ("Jalali", "Lunar Hijri", "Hebrew" …).
 To add a calendar, add a row.
 
+Only calendars whose years are plain numbers are in the table. The Japanese
+calendar is not: its years count within eras.
+
 A plain "Hijri" is **not** in the table, on purpose:
 - in Iran, it means the solar calendar;
 - in Arab countries, it means the lunar calendar.
@@ -66,8 +69,8 @@ weekday: "Saturday 26 September", "Thursday 9 Mehr".
 **The end date of a repeat** with no year: use the start's year. If that puts
 the end before the start, use the next year.
 
-**"Today"** means today in the event's time zone. If the event has no zone,
-the default zone is used.
+**"Today"** means today in the event's time zone. If the event has no time
+zone, the floating time zone is used (now UTC).
 
 ### Showing a wrong guess to the user
 
@@ -105,34 +108,65 @@ year.
 - Hebrew leap years have an extra month. So a Hebrew month number late in the
   year can mean different months in different years.
 
+## Repeats
+
+All dates of a repeat are worked out by our code, never by the model.
+
+**The first date:**
+- With a start date: the first day on or after the start date that matches
+  the pattern (e.g. "every Thursday, from Saturday 26 Sep" starts on Thursday
+  1 Oct).
+- With no start date: the first matching day from today. Today counts only
+  if the event has not started yet.
+- A weekly repeat with no weekdays happens on the weekday of the first date.
+
+**A repeat is declined when it cannot be trusted.** A wrong repeat would
+silently fill someone's calendar, so the bot says no instead of guessing:
+- the model's confidence is below 0.7;
+- the interval is not a whole number of at least 1;
+- a monthly weekday pattern has no weekdays, or a day of the month is not
+  between 1 and 31;
+- "after N times" has N below 1;
+- there is no start date, and the pattern does not say which days (e.g.
+  "every week", "every year");
+- no day matches the pattern within about two years;
+- the end date is before the first date.
+
+**Monthly and yearly repeats work only in the Gregorian calendar.** Other
+calendars' months are not Gregorian months. Such a message gets no event.
+
 ## Time zones
 
 The event's time zone, in this order:
 
-1. The zone the message states or suggests (the model's `timezone_hint`).
-2. Otherwise, the user's `/tz` zone.
-3. Otherwise, no zone: **"floating"** time.
+1. The time zone the message states or suggests (the model's `timezone_hint`).
+2. Otherwise, the user's `/tz` time zone.
+3. Otherwise, no time zone: **"floating"** time.
    - The `.ics` file has no `TZID`.
    - The Google link has local times and no `ctz`.
-   - Every calendar shows the time as written, in its own zone. 18:00 stays
+   - Every calendar shows the time as written, in its own time zone. 18:00 stays
      18:00.
 
-In cases 2 and 3, the caption tells the user, and explains how to set a zone
+**What a user may type in `/tz`:** only "Area/Location" names (e.g.
+"Asia/Tehran") and UTC or GMT. Short names like "EST" or "CST" are refused,
+because they are unclear ("CST" is used in the USA, China and Cuba).
+
+In cases 2 and 3, the caption tells the user, and explains how to set a time zone
 with `/tz`.
 
-**Why no default zone?** The first version used UTC. A user in Melbourne with
-no `/tz` zone got an 18:00 event as 18:00 UTC. Google Calendar showed it at
+**Why no default time zone?** The first version used UTC. A user in Melbourne with
+no `/tz` time zone got an 18:00 event as 18:00 UTC. Google Calendar showed it at
 4:00 the next morning. The caption explained it, but the calendar entry was
 still wrong.
 
 **The model decides about places, and models are different.**
-- "Notting Hill" is in London and in Melbourne. So "no zone" is the right
+- "Notting Hill" is in London and in Melbourne. So "no time zone" is the right
   answer.
 - "Nunawading" is only in Melbourne. But it depends on the model:
   `gemini-3.1-flash-lite` answers `Australia/Melbourne`, and
   `gemini-3.5-flash-lite` answers nothing.
-- Both answers are safe, because a missing zone uses the rules above.
-- We do not push the models to guess more. That would give wrong zones for
+- Both answers are safe, because a missing time zone uses the rules above.
+- We do not push the models to guess more. That would give wrong time zones for
   places like "Notting Hill".
 - The live tests accept both answers when the place is a suburb.
 
@@ -140,12 +174,22 @@ still wrong.
 about 12 calls. Frequent runs push requests to later models, which are
 sometimes weaker.
 
+## The same message, forwarded again
+
+The event UID is calculated from the message text: a SHA-256 hash of the
+text, without spaces at the start and end. So the same message always gives
+the same UID.
+
+- When a user forwards the same message again, the calendar app updates the
+  event. It does not add a copy.
+- If the text changes at all (even one character), it is a new event.
+
 ## The real messages that showed us these rules
 
 | Date | Message | What went wrong | Rule now |
 |---|---|---|---|
 | 27 Sep 2026 | "🎲 گیم‌نایت شنبه ۲۶ سپتامبر …" (game night, Saturday 26 Sep, no year) | The event was in 2027. The date had just passed, so the bot took next year. | A missing year |
-| 27 Sep 2026 | The same message: "Notting Hill Neighbourhood House" | No zone, so UTC. 18:00 became 4:00 the next morning in Melbourne. | Time zones (floating time) |
+| 27 Sep 2026 | The same message: "Notting Hill Neighbourhood House" | No time zone, so UTC. 18:00 became 4:00 the next morning in Melbourne. | Time zones (floating time) |
 | 27 Sep 2026 | A book-club post at "Nunawading Community Hub" | The live test failed when another model answered. | Time zones (models are different) |
 | 27 Sep 2026 | "Thursday 9 Mehr" (film night, Solar Hijri, no year) | Declined: other calendars needed a stated year. | One conversion step, for every calendar |
 

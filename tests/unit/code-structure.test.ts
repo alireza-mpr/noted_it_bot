@@ -4,11 +4,12 @@ import { describe, expect, it } from "vitest";
 // What each folder may import from. See "Folders" in docs/CODE_STRUCTURE.md.
 // Folders not listed here (the old ones, and app/) are not checked.
 const ALLOWED_IMPORTS: Record<string, string[]> = {
-  domain: ["domain"],
-  output: ["output", "domain", "i18n"],
+  generic: ["generic"],
+  domain: ["domain", "generic"],
+  output: ["output", "domain", "i18n", "generic"],
   i18n: ["i18n"],
   config: ["config"],
-  adapters: ["adapters", "domain", "output", "i18n", "config"],
+  adapters: ["adapters", "domain", "output", "i18n", "config", "generic"],
 };
 
 // Every source file as text. Vite reads them when the tests are built, because
@@ -18,6 +19,10 @@ const SOURCES = import.meta.glob<string>("../../src/**/*.ts", {
   import: "default",
   eager: true,
 });
+
+// Matches a kebab-case name, e.g. "create-calendar-event". See "Casing" in
+// docs/CODE_STRUCTURE.md.
+const KEBAB_CASE_NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 describe("code structure", () => {
   it("finds the source files", () => {
@@ -37,6 +42,18 @@ describe("code structure", () => {
         .map(({ specifier }) => `${file.replace("../../", "")} imports ${specifier}`);
     });
     expect(broken).toEqual([]);
+  });
+
+  it("names every folder and file in kebab-case, outside legacy/", () => {
+    const badNames = Object.keys(SOURCES)
+      .map((file) => file.replace("../../src/", ""))
+      .filter((path) => !path.startsWith("legacy/"))
+      .filter((path) =>
+        path
+          .split("/")
+          .some((pathPart) => !KEBAB_CASE_NAME.test(pathPart.split(".")[0])),
+      );
+    expect(badNames).toEqual([]);
   });
 });
 
