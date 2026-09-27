@@ -46,6 +46,7 @@ The D1 costs we measured are in [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
 | 6   | Translate the bot's messages once, ahead of time    | FR4, NFR1, NFR2 |
 | 7   | Pure rules in the middle, input and output at the edges | all        |
 | 8   | Always answer Telegram with 200 after the auth check | NFR4, NFR2 |
+| 9   | Logging and monitoring: OpenTelemetry names, sent to Axiom | NFR1, NFR2, NFR4 |
 
 ---
 
@@ -262,3 +263,62 @@ queue stayed stuck until it was cleared by hand.
 **Trade-offs.**
 - A failed message is not retried. The user has to send it again.
 - The logs show what failed.
+
+---
+
+### ADR-9 — Logging and monitoring
+
+**Problem.**
+- The bot runs on free plans with hard daily limits (NFR1, NFR2). We must see
+  when a limit gets close, before users do.
+- The old log names were free text, with mixed casing and several names for
+  one idea. A reworded message broke queries without any error.
+
+**Options**
+
+| Option | Bad |
+|---|---|
+| Keep our own free-text names | Queries break silently; no standard for new names |
+| Our own naming convention | A convention nobody else knows; other tools do not understand it |
+| OpenTelemetry (OTel) names, sent by our own code to Axiom | (chosen) |
+| Cloudflare's own OTel export to Axiom | Needs the Workers Paid plan; billed from 1 Oct 2026; still in beta |
+
+**Decision.**
+- Every log event uses the OTel log record's field names (`severityText`,
+  `eventName`, `traceId`, `scope.name`) and OTel attribute names (e.g.
+  `user.id`, `exception.message`). The rules are in "Logging" in
+  [CODE_STRUCTURE.md](CODE_STRUCTURE.md#logging).
+- Our own names start with our area (e.g. `telegram.chat.id`), never with an
+  OTel namespace. We do not add an app prefix: only this bot writes to the
+  dataset, and `service.name` names it.
+- One request is one log session with one `traceId`. Its events are sent to
+  the `app-logs` dataset in Axiom in one batch, after the response. Every
+  event is also printed to the console, so Workers Logs keeps a copy.
+- Because the names are OTel names, a later switch to Cloudflare's OTel export
+  changes only the sender.
+
+**Trade-offs.**
+- The names are long, and APL needs quotes for names with dots:
+  `['user.id']`.
+- Some OTel names (`user.*`, `gen_ai.*`) are still "development" in OTel, so
+  they may change.
+- The logs hold message texts and user names. `/start` tells users (see
+  [PRODUCT.md](PRODUCT.md)).
+- Every printed line counts toward the Workers Logs limit (200k lines per day
+  on the free plan).
+
+**What to monitor (draft).** The event names come from each area when it is
+rewritten (steps 4c–5). The limits for alerts are first guesses: set them
+after a few weeks of normal traffic.
+
+| Risk | What to watch | Where | Alert when |
+|---|---|---|---|
+| **A swarm of abusers** (NFR2) | New users per hour (`user_activity.bot_started`); users who used up their quota (`user_activity.quota_used_up`); messages per user per hour | Axiom | New users per hour are far above normal (e.g. 10×); many new users use up their quota within minutes |
+| **Cloudflare capacity** (NFR1) | Worker requests per day (free: 100k); D1 rows read (5M) and written (100k) per day; Workers Logs lines per day (200k) | Cloudflare dashboard (exact numbers). Early warning in Axiom: log D1's `meta.rows_read` and `meta.rows_written` per request | A daily count passes 70% of its limit |
+| **LLM usage, and running out** (NFR1, NFR4) | Calls per model against its limits; models used up for the day; messages that no model answered; tokens per day (`gen_ai.usage.*`) | Axiom; the D1 tables `gemini_usage` and `groq_usage` | The first message of the day that no model answered; all Gemini models used up early in their day |
+| **Errors** (NFR4) | Every `ERROR` event (by the level rule, a developer must act); a jump in `WARN` events; a provider's 401 or 403 (a bad API key); webhook 401s (a wrong or cleared webhook secret); failed sends to Axiom (console only) | Axiom; Workers Logs for failed sends to Axiom | Any `ERROR`; any 401 or 403 at once |
+
+**Open questions.**
+- How many Axiom monitors does our plan allow, and where should alerts go
+  (e.g. email, or a Telegram message to the owner)?
+- Should the bot stop taking new users when a daily limit gets close?

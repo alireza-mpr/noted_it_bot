@@ -118,6 +118,18 @@ this list is called the "ubiquitous language".
 | Router | Tries the models in order: Gemini first, then Groq. | `adapters/models/` |
 | Extraction | Sends a message to a model, and turns the model answer into a draft. | — |
 
+## Logging
+
+| Word | Meaning | In code |
+|---|---|---|
+| Log event | One line the bot logs, as an OpenTelemetry log record: a severity, an event name and attributes. | `LogEvent`, `Logger` |
+| Event name | The name of one kind of log event, e.g. `quota.consumed`. Not a calendar event. | `LogEvent.eventName` |
+| Log attribute | A named value in a log event, with an OpenTelemetry name, e.g. `user.id`. | `LogAttributes` |
+| Scope | The part of the code that logs, e.g. `user-activity`. | `scope.name` |
+| Log session | The log events of one request. They are sent to Axiom together, at the end. | `runLogSession` |
+| Trace id | The id of a log session. Every log event of the session has it. | `traceId` |
+| User activity | A log event for one thing a user did, e.g. `user_activity.time_zone_set`. | `UserActivity`, `logUserActivity` |
+
 ## Code structure
 
 | Word | Meaning | In code |
@@ -132,7 +144,7 @@ this list is called the "ubiquitous language".
 | Value object | A small value with no identity, only its content (e.g. a date, a time zone). Its parse function is its only constructor, and lives next to it. | e.g. `IanaTimeZone` |
 | Factory | Creates a complex object from several inputs, using rules. | `createCalendarEvent` |
 | Port | An interface that the inside declares for something it needs from outside. | e.g. `UsageStore` |
-| Adapter | Code that talks to the outside world. It implements a port, or turns raw data into typed values. | `src/adapters/` |
+| Adapter | Code that talks to the outside world. It implements a port, turns raw data into typed values, or writes output (e.g. the logger). | `src/adapters/` |
 | Edge | Where raw data comes in or goes out. The adapters are the edge. | `src/adapters/` |
 
 ## Words we don't use

@@ -87,7 +87,8 @@ src/
     hash/             hashing a text
     html/             escaping text for HTML
     icalendar/        RFC 5545 text and date formats
-    text/             filling {0}, {1}, … in a text
+    json/             turning a value into JSON text, without throwing
+    text/             filling {0}, {1}, … in a text; cutting a long text
   domain/      pure rules, no input or output
     calendar-event/   CalendarEventDraft → a CalendarEvent, the calendars we
                       accept, the year rule, repeats
@@ -170,6 +171,7 @@ implements it, and `app/` connects the two.
 | Files and folders | kebab-case | `calendar-event/create-calendar-event.ts` |
 | Env vars and secrets | UPPER_SNAKE_CASE | `GEMINI_API_KEY` |
 | Docs | UPPER_SNAKE_CASE | `CODE_STRUCTURE.md` |
+| Log event names and attributes | OpenTelemetry: lowercase, dots between parts, snake_case inside a part (see [Logging](#logging)) | `user_activity.time_zone_set`, `http.response.status_code` |
 
 Files and folders are all lowercase because macOS ignores letter case in file
 names and Linux (CI) does not. So a wrong case in an import works on a Mac and
@@ -183,6 +185,34 @@ fails in CI.
 | **Why** | Inside the body, on the line it explains | Only when the code would look wrong without it. |
 | **How** | Nowhere | If the code needs it, split it into functions with clear names. |
 | **Product rules** (e.g. the year rule, the time zone order) | [docs/EDGE_CASES.md](EDGE_CASES.md) | The comment names the rule, e.g. "See 'A missing year' in EDGE_CASES.md". |
+
+### Logging
+
+Log events use OpenTelemetry (OTel) names. See ADR-9 in
+[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md).
+
+| Part | Rule | Example |
+|---|---|---|
+| The event's own fields | The field names of an OTel log record | `severityText`, `eventName`, `traceId`, `scope.name` |
+| Event names | One name per kind of event. Each logger lists its names in a union: `Logger<EventName>` | `quota.consumed` |
+| Attributes | OTel's name, when OTel has one | `user.id`, `http.response.status_code` |
+| Our own names | Start with our area. Never start with an OTel namespace (e.g. `user.`, `http.`, `error.`, `event.`, `session.`, `message.`, `service.`): check the [OTel registry](https://opentelemetry.io/docs/specs/semconv/registry/attributes/) | `telegram.chat.id`, `extraction.message_text` |
+| Values from a fixed list | snake_case | `no_model` |
+| Levels | `error`: a developer must act. `warn`: something failed, but the bot handled it. `info`: normal behaviour. | |
+| One fact, one event | Never log the same fact twice. | |
+| Errors | `exceptionAttributesOf(error)`, never nested under another attribute | |
+
+The attribute names every area shares:
+
+| Idea | Attribute |
+|---|---|
+| The user | `user.id`, `user.name` (the Telegram username), `user.full_name` (the first name and the last name) |
+| The chat | `telegram.chat.id` |
+| An error | `exception.type`, `exception.message`, `exception.stacktrace` |
+| An HTTP status | `http.response.status_code` |
+| The model | `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
+| The reply language | `telegram.reply_language` |
+| The message text and the model answer | `extraction.message_text`, `extraction.model_answer` |
 
 ## What replaces what
 
@@ -202,7 +232,7 @@ code, together with that area.
 | `RECURRENCE_MIN_CONFIDENCE` in `extractedEvents/recurrence.ts` | `todo/repeat-confidence.ts`, until we decide where it belongs | ⏳ |
 | `extractedEvents/eventUid.ts` | `domain/calendar-event/event-uid-rule.ts`, `generic/hash/sha256-hex.ts` | ✅ |
 | `policy/userQuotaPolicy.ts` | `domain/quota/user-quota-policy.ts`, with the `UsageStore` port in `domain/quota/usage-store.ts` | ✅ |
-| `policy/userQuotaPolicyLogger.ts` | `adapters/logging/` | ⏳ |
+| `policy/userQuotaPolicyLogger.ts` | the quota use case in `app/` logs the line with a `Logger` (step 5) | ⏳ |
 | the user's language and time zone (`repositories/userPreferenceRepository.ts`) | `domain/user/user-settings.ts` (type) | ✅ |
 | `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/calendar-file.ts`, `generic/icalendar/` | ✅ |
 | `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ✅ |
@@ -221,7 +251,7 @@ code, together with that area.
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
 | `db/schema/*`, `db/sql/*`, `repositories/*`, `time/dateTimeAest.ts` | `adapters/database/` | ⏳ |
 | `providers/*`, `router/*`, `quotaLimit/*`, `prompts/diag_ping.txt` | `adapters/models/` | ⏳ |
-| `logging/*` | `adapters/logging/` | ⏳ |
+| `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
 | `web/*` | `adapters/web/` | ⏳ |
 | `appConfig/appConfig.ts`, `env.ts` | `config/app-config.ts` (`appConfig` → `APP_CONFIG`, `defaultTimezone` → `floatingTimeZoneName`), `config/env.ts` | ✅ |
 | `buildCalendarEvent` (used only by tests) | a helper in `tests/` | ⏳ |
@@ -247,7 +277,7 @@ after each commit.
 | 3c-4 | Output: the repeat sentence in the reply language, with stored templates (a bug fix: no English inside a non-English reply) | ✅ |
 | 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ✅ |
 | 4a | Config: `APP_CONFIG` and `Env` | ✅ |
-| 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ⏳ |
+| 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ✅ |
 | 4c | Adapters: the database (tables, SQL, repositories) | ⏳ |
 | 4d | Adapters: the models (Gemini, Groq, model limits, the router) | ⏳ |
 | 4e | Adapters: Telegram (the client, update types, the webhook, replies) | ⏳ |
