@@ -30,7 +30,7 @@ export interface LogSessionEnv {
 }
 
 const MAX_TEXT_LENGTH = 10_000;
-const MAX_EVENTS_PER_SESSION = 500;
+const MAX_EVENTS_PER_SESSION = 1000;
 
 const sessions = new AsyncLocalStorage<LogSession>();
 
@@ -58,7 +58,9 @@ function safeStringify(value: unknown): string {
 }
 
 export function describeError(err: unknown): LogFields {
-  return { error: err instanceof Error ? (err.stack ?? err.message) : String(err) };
+  return {
+    error: err instanceof Error ? (err.stack ?? err.message) : String(err),
+  };
 }
 
 function emit(
