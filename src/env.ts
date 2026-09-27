@@ -5,6 +5,5 @@ export interface Env {
   GEMINI_API_KEY: string;
   GROQ_API_KEY: string;
   AXIOM_TOKEN: string;
-  MESSAGE_LOG: KVNamespace;
   USAGE_DB: D1Database;
 }

@@ -1,3 +1,4 @@
+import { logActivity } from "../logging/activityLog";
 import { Logger, describeError, setLogField } from "../logging/logger";
 import type { TelegramClient } from "../telegram/telegramClient";
 import { fillPlaceholder } from "../translation/placeholders";
@@ -55,16 +56,18 @@ export async function handleTzPage(request: Request, env: TzRouteEnv, nowMs: num
     return expiredPage(request);
   }
 
-  const { uid, lang } = result.payload;
+  const { uid, username, lang } = result.payload;
   setLogField("userId", uid);
+  setLogField("username", username ?? null);
   const saveToken = await signTzToken(env.WEBHOOK_SECRET, {
     uid,
+    username: username ?? null,
     lang,
     purpose: "save",
     exp: nowMs + SAVE_TOKEN_TTL_MS,
   });
   const nonce = newNonce();
-  logger.info("time zone page opened");
+  logActivity("tz_page_opened");
   return new Response(renderTzPage({ lang: toSupportedLanguage(lang) ?? "en", saveToken, nonce }), {
     headers: pageSecurityHeaders(nonce),
   });
@@ -98,8 +101,9 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
     return json(403, { ok: false, error: "expired" });
   }
 
-  const { uid, lang } = result.payload;
+  const { uid, username, lang } = result.payload;
   setLogField("userId", uid);
+  setLogField("username", username ?? null);
 
   const timezone = canonicalTimezone(body.timezone);
   if (!timezone) {
@@ -108,7 +112,7 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
   }
 
   await setUserTimezone(env, uid, timezone);
-  logger.info("timezone set", { timezone, via: "page" });
+  logActivity("tz_set", { timezone, via: "page" });
 
   try {
     await deps.telegram.sendMessage(

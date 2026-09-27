@@ -7,6 +7,7 @@ import {
 } from "../../translation/language";
 import { setUserLanguageOverride } from "../../translation/userLanguage";
 import type { Env } from "../../env";
+import { logActivity } from "../../logging/activityLog";
 import { Logger } from "../../logging/logger";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
@@ -35,7 +36,7 @@ export async function langCommandHandler(
 
   if (arg.toLowerCase() === "auto") {
     await setUserLanguageOverride(env, userId, null, defaultTimezone);
-    logger.info("language override cleared");
+    logActivity("lang_reset");
     await replier
       .withLang(toSupportedLanguage(message.from.language_code) ?? DEFAULT_LANGUAGE)
       .say("LANG_RESET_CONFIRMATION");
@@ -50,7 +51,7 @@ export async function langCommandHandler(
   }
 
   await setUserLanguageOverride(env, userId, resolved, defaultTimezone);
-  logger.info("language override set", { language: resolved });
+  logActivity("lang_set", { language: resolved });
   await replier
     .withLang(resolved)
     .say("LANG_SET_CONFIRMATION", getLanguageDisplayName(resolved));

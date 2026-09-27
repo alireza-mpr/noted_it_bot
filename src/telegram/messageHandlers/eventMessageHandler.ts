@@ -8,11 +8,10 @@ import type { ExtractedEvent } from "../../extractedEvents/extractedEvent";
 import { recurrenceProblem } from "../../extractedEvents/recurrence";
 import type { MessageId } from "../../interactiveMessages/messages";
 import { fillPlaceholder } from "../../translation/placeholders";
-import { messageLogger } from "../../logging/messageLogger";
+import { logActivity } from "../../logging/activityLog";
 import type { Router } from "../../router/router";
 import { escapeHtmlAttribute } from "../telegramHtml";
 import type { Replier } from "../replier";
-import type { TelegramMessage } from "../telegramTypes";
 import { describeError, Logger } from "../../logging/logger";
 
 const logger = new Logger("eventMessageHandler");
@@ -69,7 +68,6 @@ async function sayExtracting(replier: Replier): Promise<void> {
 // Returns whether a model answered, so the caller knows whether the quota
 // taken for this message should be given back.
 export async function eventMessageHandler(
-  message: TelegramMessage,
   content: string,
   router: Router,
   replier: Replier,
@@ -79,10 +77,8 @@ export async function eventMessageHandler(
   const downstream = await extractEvent(router, content, () =>
     sayExtracting(replier),
   );
-  await messageLogger.log("provider response received", {
-    userId: message.from.id,
+  logger.info("provider response received", {
     receivedMessage: content,
-    providerRequest: content,
     providerResponse: downstream.message,
     model: downstream.model ?? null,
   });
@@ -92,6 +88,7 @@ export async function eventMessageHandler(
       detail: downstream.message,
       failure: downstream.failure,
     });
+    logActivity("event_requested", { outcome: "no_model" });
     await replier.say("NO_AVAILABLE_MODEL_MESSAGE");
     return false;
   }
@@ -103,6 +100,7 @@ export async function eventMessageHandler(
       problem,
       response: downstream.message,
     });
+    logActivity("event_requested", { outcome: "declined" });
     await replier.sayWithQuota(
       "RECURRENCE_DECLINED_MESSAGE",
       remainingQuota,
@@ -120,6 +118,7 @@ export async function eventMessageHandler(
     logger.error("could not build a calendar event from extraction", {
       response: downstream.message,
     });
+    logActivity("event_requested", { outcome: "no_event" });
     await replier.sayWithQuota(
       "NO_CALENDAR_EVENT_MESSAGE",
       remainingQuota,
@@ -128,7 +127,8 @@ export async function eventMessageHandler(
     return true;
   }
 
-  logger.info("calendar event created", {
+  logActivity("event_requested", {
+    outcome: "created",
     recurring: Boolean(calendarEvent.recurrence),
     allDay: calendarEvent.allDay,
   });

@@ -1,6 +1,5 @@
 import type { Env } from "../env";
 import { runLogSession } from "../logging/logger";
-import { messageLogger } from "../logging/messageLogger";
 import { userQuotaPolicy } from "../policy/userQuotaPolicy";
 import { createRouter } from "../router/router";
 import { updateHandler } from "./messageHandlers/updateHandler";
@@ -33,7 +32,6 @@ export default {
       }
 
       userQuotaPolicy.init(env.USAGE_DB);
-      messageLogger.init(env.MESSAGE_LOG);
 
       await updateHandler(
         request,

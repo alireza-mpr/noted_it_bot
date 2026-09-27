@@ -71,7 +71,7 @@ describe("tzCommandHandler", () => {
     const token = decodeURIComponent(url.slice(`${ORIGIN}/tz?token=`.length));
     expect(await verifyTzToken(SECRET, token, "open", NOW)).toEqual({
       ok: true,
-      payload: { uid: 42, lang: "fa", purpose: "open", exp: NOW + OPEN_TOKEN_TTL_MS },
+      payload: { uid: 42, username: null, lang: "fa", purpose: "open", exp: NOW + OPEN_TOKEN_TTL_MS },
     });
     expect((await verifyTzToken(SECRET, token, "open", NOW + OPEN_TOKEN_TTL_MS + 1)).ok).toBe(false);
   });

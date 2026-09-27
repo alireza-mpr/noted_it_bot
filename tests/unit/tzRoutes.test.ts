@@ -44,7 +44,7 @@ describe("GET /tz", () => {
 
     const config = JSON.parse(html.match(/<script type="application\/json" id="cfg">(.*?)<\/script>/s)![1]);
     const saved = await verifyTzToken(SECRET, config.token, "save", NOW);
-    expect(saved).toEqual({ ok: true, payload: { uid: UID, lang: "fa", purpose: "save", exp: NOW + SAVE_TOKEN_TTL_MS } });
+    expect(saved).toEqual({ ok: true, payload: { uid: UID, username: null, lang: "fa", purpose: "save", exp: NOW + SAVE_TOKEN_TTL_MS } });
     expect((await verifyTzToken(SECRET, config.token, "open", NOW)).ok).toBe(false);
     expect(html).not.toContain(await openToken());
   });

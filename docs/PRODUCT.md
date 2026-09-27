@@ -82,12 +82,13 @@ appear in the `/` autocomplete menu.
 ### Reliability & observability
 - Always acknowledges Telegram updates (so one failure can never block the
   update queue); users see a generic error, details go to logs.
-- Workers Logs enabled; rejected access attempts logged as warnings.
-- Message log (user id, message, Gemini request/response) kept in KV
-  for **14 days**, as disclosed in `/start`.
+- Workers Logs enabled, and every event also sent to Axiom with the user's id and username.
+- Message log (message, model answer, model) kept in Axiom, as disclosed in `/start`.
+- User activity (commands, language and time zone changes, event requests, quota refusals, blocking and
+  unblocking the bot) logged as `user activity` events.
 
 ### Delivery pipeline
-- Two fully separate environments (own bot, Worker, KV namespaces, secrets):
+- Two fully separate environments (own bot, Worker, D1 database, secrets):
   **dev** (`@noted_it_dev_bot`) and **prod** (`@noted_it_bot`).
 - CI on every push: typecheck + tests against the real Gemini API.
 - **dev** auto-deploys on every push to `main`, versioned

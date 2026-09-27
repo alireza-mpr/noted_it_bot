@@ -1,8 +1,12 @@
 import type { Env } from "../../env";
 import { appConfig, type AppConfig } from "../../appConfig/appConfig";
+import { logActivity } from "../../logging/activityLog";
 import { describeError, Logger, setLogField } from "../../logging/logger";
 import { formatWait } from "../../time/formatWait";
-import { DEFAULT_LANGUAGE, toSupportedLanguage } from "../../translation/language";
+import {
+  DEFAULT_LANGUAGE,
+  toSupportedLanguage,
+} from "../../translation/language";
 import { getUserLanguageOverride } from "../../translation/userLanguage";
 import {
   userQuotaPolicy,
@@ -21,7 +25,11 @@ import { versionCommandHandler } from "../commands/versionCommandHandler";
 import { eventMessageHandler } from "./eventMessageHandler";
 import { Replier } from "../replier";
 import type { TelegramClient } from "../telegramClient";
-import type { TelegramMessage, TelegramUpdate } from "../telegramTypes";
+import type {
+  TelegramChatMemberUpdate,
+  TelegramMessage,
+  TelegramUpdate,
+} from "../telegramTypes";
 
 const logger = new Logger("updateHandler");
 
@@ -34,6 +42,7 @@ async function consumeUserQuota(
   const result = await userQuotaPolicy.tryConsume(userId, dailyQuota);
   if (!result.successful) {
     await userQuotaPolicy.logger.exhausted(userId);
+    logActivity("quota_exhausted");
     await replier.say(
       "USER_DAILY_QUOTA_EXCEEDED",
       formatWait(result.retryAt, Date.now()),
@@ -72,10 +81,19 @@ async function handleMessage(
   consumed: ConsumedQuota,
   origin: string,
 ): Promise<void> {
-  if (message.text === "/start") return startCommandHandler(replier, config);
-  if (message.text === "/ver") return versionCommandHandler(env, replier);
+  if (message.text === "/start") {
+    logActivity("start");
+    return startCommandHandler(replier, config);
+  }
+  if (message.text === "/ver") {
+    logActivity("ver");
+    return versionCommandHandler(env, replier);
+  }
   // /diag is deliberately not registered via setMyCommands, so it stays hidden from the menu.
-  if (message.text === "/diag") return diagCommandHandler(router, replier);
+  if (message.text === "/diag") {
+    logActivity("diag");
+    return diagCommandHandler(router, replier);
+  }
   if (isLangCommand(message.text)) {
     return langCommandHandler(env, message, replier, config.defaultTimezone);
   }
@@ -88,6 +106,7 @@ async function handleMessage(
     logger.error("message had no text or caption", {
       telegramMessage: message,
     });
+    logActivity("event_requested", { outcome: "no_text" });
     await replier.say("NO_TEXT_MESSAGE");
     return;
   }
@@ -111,7 +130,6 @@ async function handleMessage(
   }
 
   const answered = await eventMessageHandler(
-    message,
     content,
     router,
     replier,
@@ -120,6 +138,24 @@ async function handleMessage(
   );
   if (!answered && reservation) {
     await refundUserQuota(reservation);
+  }
+}
+
+// Telegram sends my_chat_member when a user blocks the bot ("Stop and block
+// bot": kicked) or unblocks or restarts it (member). Deleting the chat without
+// blocking sends nothing, so it can't be seen.
+function handleMembershipChange(change: TelegramChatMemberUpdate): void {
+  setLogField("userId", change.from.id);
+  setLogField("username", change.from.username ?? null);
+  setLogField("chatId", change.chat.id);
+
+  const status = change.new_chat_member.status;
+  if (status === "kicked") {
+    logActivity("bot_blocked", { via: "membership" });
+  } else if (status === "member") {
+    logActivity("bot_unblocked");
+  } else {
+    logger.info("membership changed", { status, chatType: change.chat.type });
   }
 }
 
@@ -136,7 +172,10 @@ async function readUserLanguage(
       DEFAULT_LANGUAGE
     );
   } catch (err) {
-    logger.error("could not read the user's language, using English", describeError(err));
+    logger.error(
+      "could not read the user's language, using English",
+      describeError(err),
+    );
     return DEFAULT_LANGUAGE;
   }
 }
@@ -153,6 +192,11 @@ export async function updateHandler(
     logger.error("unhandled error processing update", describeError(err));
     return undefined;
   });
+  if (update?.my_chat_member) {
+    handleMembershipChange(update.my_chat_member);
+    return;
+  }
+
   const message = update?.message;
   if (!message) {
     return;

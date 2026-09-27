@@ -2,6 +2,7 @@ export type TzTokenPurpose = "open" | "save";
 
 export interface TzTokenPayload {
   uid: number;
+  username?: string | null;
   lang: string;
   purpose: TzTokenPurpose;
   exp: number;
@@ -9,7 +10,10 @@ export interface TzTokenPayload {
 
 export type TzTokenResult =
   | { ok: true; payload: TzTokenPayload }
-  | { ok: false; reason: "malformed" | "bad signature" | "wrong purpose" | "expired" };
+  | {
+      ok: false;
+      reason: "malformed" | "bad signature" | "wrong purpose" | "expired";
+    };
 
 export const OPEN_TOKEN_TTL_MS = 60_000;
 export const SAVE_TOKEN_TTL_MS = 10 * 60_000;
@@ -22,7 +26,10 @@ function toBase64Url(bytes: Uint8Array): string {
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);
   }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function fromBase64Url(text: string): Uint8Array | null {
@@ -47,9 +54,16 @@ function hmacKey(secret: string): Promise<CryptoKey> {
   );
 }
 
-export async function signTzToken(secret: string, payload: TzTokenPayload): Promise<string> {
+export async function signTzToken(
+  secret: string,
+  payload: TzTokenPayload,
+): Promise<string> {
   const body = toBase64Url(encoder.encode(JSON.stringify(payload)));
-  const signature = await crypto.subtle.sign("HMAC", await hmacKey(secret), encoder.encode(DOMAIN + body));
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    await hmacKey(secret),
+    encoder.encode(DOMAIN + body),
+  );
   return `${body}.${toBase64Url(new Uint8Array(signature))}`;
 }
 
@@ -60,6 +74,10 @@ function isPayload(value: unknown): value is TzTokenPayload {
     candidate !== null &&
     Number.isSafeInteger(candidate.uid) &&
     (candidate.uid as number) > 0 &&
+    (candidate.username === undefined ||
+      candidate.username === null ||
+      (typeof candidate.username === "string" &&
+        candidate.username.length <= 64)) &&
     typeof candidate.lang === "string" &&
     (candidate.purpose === "open" || candidate.purpose === "save") &&
     typeof candidate.exp === "number" &&
@@ -83,7 +101,10 @@ export async function verifyTzToken(
   if (!signatureBytes || !bodyBytes) {
     return { ok: false, reason: "malformed" };
   }
-  if (toBase64Url(signatureBytes) !== signature || toBase64Url(bodyBytes) !== body) {
+  if (
+    toBase64Url(signatureBytes) !== signature ||
+    toBase64Url(bodyBytes) !== body
+  ) {
     return { ok: false, reason: "malformed" };
   }
 

@@ -99,23 +99,23 @@ message → expected-JSON cases (partial match via `toMatchObject`, so you only
 assert the fields you care about), through the real router. Runs inside the
 Workers runtime via `@cloudflare/vitest-plugin`.
 
-Tests use no local files or simulated storage: the `dev` KV namespaces and the
-dev D1 database are **remote bindings** (`remote = true` in
+The dev D1 database is a **remote binding** (`remote = true` in
 [wrangler.toml](wrangler.toml)), so a test run reads and writes the real dev
-resources — locally exactly as in CI. Everything comes from environment
+database — locally exactly as in CI. The one exception is `TEST_DB`, a local-only D1 declared in
+`vitest.config.ts`, which the repository tests use to run real SQL without touching dev. Everything comes from environment
 variables, the same three CI sets:
 
 ```bash
 export GEMINI_API_KEY=...          # from the dev environment's secrets
 export GROQ_API_KEY=...            # optional: lets the router reach Groq in the tests
-export CLOUDFLARE_API_TOKEN=...    # needs Workers KV Storage: Edit and D1: Edit
+export CLOUDFLARE_API_TOKEN=...    # needs D1: Edit
 export CLOUDFLARE_ACCOUNT_ID=...
 npm ci && npm run typecheck && npm test
 ```
 
 `vitest.config.ts` takes `GEMINI_API_KEY` and `GROQ_API_KEY` from the environment, or else from your local
 `secrets/dev.json` (so you don't have to export them), and fails fast if `GEMINI_API_KEY` is missing. Runs are slower
-than a simulated setup (every KV/D1 call is a network round trip) and leave usage
+than a simulated setup (every D1 call is a network round trip) and leave usage
 rows in the dev `gemini_usage` table. To run only the offline tests:
 `npx vitest run tests/unit`.
 
@@ -123,7 +123,7 @@ rows in the dev `gemini_usage` table. To run only the offline tests:
 
 - `.github/workflows/ci.yml` — two jobs, on every push (the PR run stops after `build`):
   - `build` installs deps, typechecks, and runs the test suite (real Gemini API,
-    real dev KV and D1 via remote bindings; needs `GEMINI_API_KEY`, `GROQ_API_KEY`,
+    real dev D1 via a remote binding; needs `GEMINI_API_KEY`, `GROQ_API_KEY`,
     `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`).
   - `deploy-dev` needs `build`, so it runs only when the tests pass, and only on
     `main`. To deploy despite failing tests (say, the dev Gemini quota is used up),
@@ -246,7 +246,7 @@ just gets the link. `/tz` doesn't use up daily quota (there's no model call).
 
 **Who is asking.** The page and endpoint learn the user from a signed token, never from anything the browser
 sends (`src/web/tzToken.ts`): `base64url(payload).base64url(HMAC-SHA256)`, keyed by `WEBHOOK_SECRET` with a domain
-prefix, so no new secret is needed. The payload is `{uid, lang, purpose, exp}`. There are two tokens: the **link**
+prefix, so no new secret is needed. The payload is `{uid, username, lang, purpose, exp}`; `username` is only there so the page's logs name the user. There are two tokens: the **link**
 (`purpose: "open"`) is valid for **1 minute**; opening it returns the page with a separate **save** token
 (`purpose: "save"`, **10 minutes**), so a leaked link is useless after a minute, but someone searching the list isn't cut
 off. Neither can be used for the other's job, tampering is detected, and a token must be spelled exactly as it was
@@ -282,21 +282,38 @@ npx wrangler d1 execute noted-it-dev-usage --remote --file user_preference.sql  
 
 ### Message logging
 
-Per the `/start` disclosure ("I may keep your messages to fix bugs"), every
-message that goes through event extraction is logged to a `MESSAGE_LOG` KV
-namespace by `messageLogger` (`MessageLogger` in `src/logging/messageLogger.ts`,
-initialised per request in the handler): the sender's numeric Telegram user id, the message/caption text as received,
-what was sent to Gemini, Gemini's response, and the `model` that gave it (null
-when no model answered), plus a
-`{logger: "messageLogger", time: {date_time_aest}}` header — each entry expires
-automatically after **14 days**
-(`expirationTtl`). Logging failures are swallowed (best-effort) and never
-affect the actual reply.
+Per the `/start` disclosure ("I may keep your messages to fix bugs"), every message that goes through event
+extraction is logged to Axiom as a `provider response received` event: the text as received
+(`receivedMessage`), the model's answer (`providerResponse`) and the `model` that gave it (null when no model
+answered), plus the request's `userId` and `username`. There is no separate store for messages; they are kept
+as long as the Axiom dataset keeps its data.
 
-```bash
-npx wrangler kv namespace create MESSAGE_LOG --env dev
-npx wrangler kv namespace create MESSAGE_LOG --env prod
+### User activity
+
+What a user does is logged as one `user activity` event with an `activity` field
+(`src/logging/activityLog.ts`), next to the request's `userId`, `username` and `chatId`:
+
+| `activity` | extra fields | when |
+|---|---|---|
+| `start`, `ver`, `diag` | | the command was sent |
+| `lang_set` / `lang_reset` | `language` | `/lang <language>` / `/lang auto` |
+| `tz_link_sent`, `tz_page_opened` | | `/tz` without an exact zone, then the link opened |
+| `tz_set` | `timezone`, `via` (`command`/`page`) | a time zone was saved |
+| `event_requested` | `outcome` (`created`, `declined`, `no_event`, `no_model`, `no_text`); `recurring`, `allDay` when created | a message went to event extraction |
+| `quota_exhausted` | | a message was refused for quota |
+| `bot_blocked` | `via` (`membership`, or `send_refused` when Telegram refused a send with 403 "blocked") | the user blocked the bot |
+| `bot_unblocked` | | the user unblocked or restarted the bot |
+
+Blocking reaches the bot as a `my_chat_member` update (status `kicked`, then `member` on unblock). A user who
+deletes the chat without blocking sends nothing, so that can't be seen.
+
 ```
+['app-logs'] | where message == "user activity" and userId == 42 | sort by _time asc
+['app-logs'] | where activity == "bot_blocked" | summarize count() by bin(_time, 1d)
+```
+
+The `/tz` page and `/tz/save` are separate web requests; their events get `userId` and `username` from the
+signed token (see [Setting the time zone](#setting-the-time-zone-tz)).
 
 ### Axiom logging
 
@@ -307,7 +324,7 @@ org is in another one). There are no direct `console.*` calls in `src/`: everyth
 a `Logger`, which prints one JSON line to the console (so Workers Logs still has it) and queues
 the same event for Axiom.
 
-- The existing loggers — `RouterLog`, `MessageLogger` and
+- The existing loggers — `RouterLog` and
   `UserQuotaPolicyLogger` — each take a `Logger` (default `new Logger("<name>")`).
 - Every other call site uses a module-level `new Logger("<name>")`; the name becomes the event's
   `source`. Pass extra structured fields as the second argument (`logger.error("threw", describeError(err))`,
@@ -351,12 +368,12 @@ failure is only printed to the console and never affects the reply. Message text
 | `quota refunded` | `remainingQuota` | no model answered, so the unit was given back |
 | `available models` / `attempting model` / `model succeeded` | `models`, `model`, `tokens` | router steps (warn/error for rate limited, unavailable, failed) |
 | `extracted` | `sourceText`, `event` | event extraction result |
-| `message received` | `userId`, `receivedMessage`, `providerRequest`, `providerResponse`, `model` | message log entry |
-| `calendar event created` | `recurring`, `allDay` | a calendar file is about to be sent |
+| `provider response received` | `receivedMessage`, `providerResponse`, `model` | message log entry |
+| `user activity` | `activity`, … | see [User activity](#user-activity) |
 | `translation generated` / `translation cache hit` (debug) | `lang`, `model` | reply translation |
-| `language override set` / `language override cleared` | `language` | `/lang` |
 | `diag check completed` | `check`, `healthy` | `/diag` |
-| `reply sent` | `type` (`text`/`document`), `lang`, `filename` | after Telegram accepted the reply |
+| `reply sent` | `type` (`text`/`document`), `lang`, `filename` | after the reply was sent |
+| `telegram send failed` (warn) | `method`, `status`, `description` | Telegram refused a reply (other than a block) |
 | `update processed` | `outcome` (`ok`/`error`), `durationMs` | end of every update |
 
 A normal request is roughly 5 to 12 events. Each is also printed to the console, so it counts
@@ -365,17 +382,15 @@ towards the Workers Logs limit as well (200,000 lines a day on the free plan, th
 ### Viewing and searching logs
 
 Every log line also goes to **Axiom** (see [Axiom logging](#axiom-logging)); the
-places below are where each kind lived before that and still do. Logs are in four
-places, depending on what they are (dashboard menu names are from memory):
+places below are where some of them can also be seen (dashboard menu names are from memory):
 
 | Log | Where | See it |
 |---|---|---|
-| User messages (sender, text sent to Gemini, reply) | KV `MESSAGE_LOG`, keys `<timestamp>-<uuid>`, 14-day TTL | `npx wrangler kv key list --binding MESSAGE_LOG --env dev --remote`, then `npx wrangler kv key get --binding MESSAGE_LOG --env dev --remote "<key>"`; or dashboard → Workers KV → the namespace |
 | Router steps (`routerLog`) | Workers Logs (console) | dashboard → Workers & Pages → the Worker → Logs; live: `npx wrangler tail --env dev --format pretty` |
 | Last failure per model | D1 table `gemini_usage` (`lastError`, `lastErrorAest`, `lastSuccessAest`) | `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError, lastSuccessAest FROM gemini_usage"` |
 
 Replace `dev` with `prod` (and the D1 name with `noted-it-prod-usage`) for prod.
-Test runs don't write to KV, and their router lines print to your terminal.
+Test runs don't send to Axiom, and their router lines print to your terminal.
 
 **Searching by keyword**
 
@@ -385,16 +400,6 @@ Test runs don't write to KV, and their router lines print to your terminal.
   `--format json` to pipe into `jq`. It streams from now on; it doesn't search
   history. For history, use the Logs page in the dashboard, which has a search
   box and filters.
-- **KV has no search.** It can only list keys by prefix. To search entry
-  contents, fetch and grep them (fine for a few hundred entries, slow beyond):
-
-  ```bash
-  npx wrangler kv key list --binding MESSAGE_LOG --env dev --remote \
-    | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8")).forEach(k=>console.log(k.name))' \
-    | xargs -P 8 -I{} sh -c 'npx wrangler kv key get --binding MESSAGE_LOG --env dev --remote "{}"; echo' \
-    | grep -i "keyword"
-  ```
-
 - **D1 is real SQL**, so use `LIKE`:
   `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage WHERE lastError LIKE '%503%'"`
 
