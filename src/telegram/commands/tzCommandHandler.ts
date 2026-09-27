@@ -1,6 +1,6 @@
 import { logActivity } from "../../logging/activityLog";
 import { canonicalTimezone } from "../../time/canonicalTimezone";
-import { setUserTimezone, type UserTimezoneEnv } from "../../time/userTimezone";
+import { UserPreferenceRepository } from "../../repositories/userPreferenceRepository";
 import { OPEN_TOKEN_TTL_MS, signTzToken } from "../../web/tzToken";
 import type { Replier } from "../replier";
 import type { TelegramMessage } from "../telegramTypes";
@@ -9,7 +9,8 @@ export function isTzCommand(text: string | undefined): boolean {
   return /^\/tz(@\w+)?(\s|$)/.test(text ?? "");
 }
 
-export interface TzCommandEnv extends UserTimezoneEnv {
+export interface TzCommandEnv {
+  USAGE_DB: D1Database;
   WEBHOOK_SECRET: string;
 }
 
@@ -24,7 +25,7 @@ export async function tzCommandHandler(
 
   const exact = arg ? canonicalTimezone(arg) : null;
   if (exact) {
-    await setUserTimezone(env, message.from.id, exact);
+    await new UserPreferenceRepository(env.USAGE_DB).setTimezone(message.from.id, exact);
     logActivity("tz_set", { timezone: exact, via: "command" });
     await replier.say("TZ_SET_CONFIRMATION", exact);
     return;

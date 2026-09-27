@@ -18,7 +18,7 @@ rule. Do not add a fix for that one message.
 
 1. The model copies the date as written. It also names the calendar
    ("Gregorian", "Solar Hijri", …).
-2. One step, `toGregorianEvent` (`src/extractedEvents/toGregorianEvent.ts`),
+2. One step, `toGregorianDates` (`src/extractedEvents/toGregorian.ts`),
    converts the dates to Gregorian and adds any missing year. It works the
    same for every calendar.
 3. Everything after this step sees only Gregorian dates: the repeat check, the
@@ -48,7 +48,7 @@ weekday: "Saturday 26 September", "Thursday 9 Mehr".
 
 - The model copies the weekday as written (the `weekday` field). It never
   calculates it from the date.
-- Our code picks the year (`pickYear` in `src/time/timezone.ts`). It counts
+- Our code picks the year (`pickYear` in `src/extractedEvents/toGregorian.ts`). It counts
   years in the message's own calendar.
 
 **The rule:**

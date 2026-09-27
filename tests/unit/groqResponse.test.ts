@@ -16,7 +16,7 @@ describe("parseGroqResponse", () => {
     });
 
     expect(parseGroqResponse(MODEL, 200, body, new Headers())).toEqual({
-      result: "ok",
+      ok: true,
       model: MODEL,
       text: "Pong",
       totalTokens: 97,
@@ -34,7 +34,7 @@ describe("parseGroqResponse", () => {
     });
 
     expect(parseGroqResponse(MODEL, 200, body, headers)).toMatchObject({
-      result: "ok",
+      ok: true,
       rateLimit: { remainingRequests: 999, limitRequests: 1000 },
     });
   });
@@ -43,8 +43,8 @@ describe("parseGroqResponse", () => {
     expect(
       parseGroqResponse(MODEL, 429, error("requests", "Please try again in 2s."), new Headers({ "retry-after": "2" })),
     ).toMatchObject({
-      result: "failed",
-      failure: { kind: "rateLimited", httpStatus: 429, retryAfterSeconds: 2 },
+      ok: false,
+      kind: "rateLimited", httpStatus: 429, retryAfterSeconds: 2,
     });
   });
 
@@ -52,10 +52,10 @@ describe("parseGroqResponse", () => {
     for (const headers of [new Headers(), new Headers({ "retry-after": "" }), new Headers({ "retry-after": "soon" })]) {
       const answer = parseGroqResponse(MODEL, 429, "{}", headers);
 
-      expect(answer).toMatchObject({ failure: { kind: "rateLimited" } });
+      expect(answer).toMatchObject({ kind: "rateLimited" });
       expect(
-        answer.result === "failed" && answer.failure.kind === "rateLimited"
-          ? answer.failure.retryAfterSeconds
+        !answer.ok && answer.kind === "rateLimited"
+          ? answer.retryAfterSeconds
           : "wrong shape",
       ).toBeUndefined();
     }
@@ -71,7 +71,7 @@ describe("parseGroqResponse", () => {
   ])("maps HTTP %i to %s", (status, kind) => {
     expect(
       parseGroqResponse(MODEL, status, error("x", "boom"), new Headers()),
-    ).toMatchObject({ result: "failed", failure: { kind, httpStatus: status } });
+    ).toMatchObject({ ok: false, kind, httpStatus: status });
   });
 
   it("reports an empty answer with its finish reason", () => {
@@ -80,8 +80,8 @@ describe("parseGroqResponse", () => {
     });
 
     expect(parseGroqResponse(MODEL, 200, body, new Headers())).toMatchObject({
-      result: "failed",
-      failure: { kind: "emptyResponse", detail: "empty response (finish_reason: length)" },
+      ok: false,
+      kind: "emptyResponse", detail: "empty response (finish_reason: length)",
     });
   });
 });

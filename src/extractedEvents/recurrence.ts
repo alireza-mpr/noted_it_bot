@@ -1,24 +1,9 @@
-import type { ExtractedEvent, Recurrence, Weekday } from "./extractedEvent";
-import { resolveTimezone } from "../time/timezone";
-import { toGregorianEvent } from "./toGregorianEvent";
+import { addDays, daysInMonth, isWeekday, weekdayOf, type DateOnly } from "../time/dateOnly";
+import type { Recurrence, Weekday } from "./extractedEvent";
 
 // Below this confidence, a message that looks like a repeat is declined, not
 // guessed. A wrong repeat rule would silently fill someone's calendar.
 export const RECURRENCE_MIN_CONFIDENCE = 0.7;
-
-export interface YMD {
-  year: number;
-  month: number;
-  day: number;
-}
-
-export type RecurrencePlan =
-  | { ok: true; first: YMD; until: YMD | null }
-  | { ok: false; reason: string };
-
-// Index = Date#getUTCDay().
-const WEEKDAY_BY_INDEX: Weekday[] = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-const VALID_WEEKDAYS = new Set<string>(WEEKDAY_BY_INDEX);
 
 const DAY_NAMES: Record<Weekday, string> = {
   MO: "Monday",
@@ -38,76 +23,24 @@ const ORDINAL_NAMES: Record<number, string> = {
   [-1]: "last",
 };
 
-function toDate(d: YMD): Date {
-  return new Date(Date.UTC(d.year, d.month - 1, d.day));
-}
-
-function fromDate(date: Date): YMD {
-  return {
-    year: date.getUTCFullYear(),
-    month: date.getUTCMonth() + 1,
-    day: date.getUTCDate(),
-  };
-}
-
-function addDays(d: YMD, days: number): YMD {
-  const date = toDate(d);
-  date.setUTCDate(date.getUTCDate() + days);
-  return fromDate(date);
-}
-
-function compare(a: YMD, b: YMD): number {
-  return toDate(a).getTime() - toDate(b).getTime();
-}
-
-function daysInMonth(d: YMD): number {
-  return new Date(Date.UTC(d.year, d.month, 0)).getUTCDate();
-}
-
-function toMinutes(time: string): number {
-  const [hour, minute] = time.split(":").map(Number);
-  return hour * 60 + minute;
-}
-
-// Today's date and time in `timeZone` (not the server's UTC time).
-function zonedNow(now: Date, timeZone: string): { ymd: YMD; minutes: number } {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)!.value);
-  return {
-    ymd: { year: get("year"), month: get("month"), day: get("day") },
-    minutes: get("hour") * 60 + get("minute"),
-  };
-}
-
 // Does this day match the pattern's weekdays, ordinal and day of the month?
 // (The interval and the end are handled by the calendar app.)
-function matches(d: YMD, r: Recurrence): boolean {
-  const weekday = WEEKDAY_BY_INDEX[toDate(d).getUTCDay()];
-  const hasWeekdays = !!r.weekdays?.length;
+function matches(date: DateOnly, r: Recurrence): boolean {
+  const weekday = weekdayOf(date);
+  const weekdays = r.weekdays ?? [];
 
   switch (r.frequency) {
     case "weekly":
-      return hasWeekdays ? r.weekdays!.includes(weekday) : true;
+      return weekdays.length === 0 || weekdays.includes(weekday);
     case "monthly":
-      if (hasWeekdays && r.ordinal != null) {
-        if (!r.weekdays!.includes(weekday)) {
+      if (weekdays.length > 0 && r.ordinal != null) {
+        if (!weekdays.includes(weekday)) {
           return false;
         }
-        return r.ordinal === -1
-          ? d.day + 7 > daysInMonth(d)
-          : Math.ceil(d.day / 7) === r.ordinal;
+        return r.ordinal === -1 ? date.day + 7 > daysInMonth(date) : Math.ceil(date.day / 7) === r.ordinal;
       }
       if (r.month_day != null) {
-        return d.day === r.month_day;
+        return date.day === r.month_day;
       }
       return true;
     default:
@@ -115,7 +48,9 @@ function matches(d: YMD, r: Recurrence): boolean {
   }
 }
 
-function findMatch(from: YMD, r: Recurrence): YMD | null {
+// The first day on or after `from` that matches the pattern, or null if none
+// does within about two years.
+export function firstOccurrence(from: DateOnly, r: Recurrence): DateOnly | null {
   for (let i = 0; i < 800; i++) {
     const candidate = addDays(from, i);
     if (matches(candidate, r)) {
@@ -125,143 +60,49 @@ function findMatch(from: YMD, r: Recurrence): YMD | null {
   return null;
 }
 
-// Finds the first date and the end date. Or returns the reason why the
-// pattern cannot become a calendar series. All date calculations happen here,
-// never in the model.
-export function planRecurrence(
-  event: ExtractedEvent,
-  now: Date = new Date(),
-): RecurrencePlan {
-  const r = event.recurrence;
-  if (!r) {
-    return { ok: false, reason: "no recurrence" };
+// Why a repeat rule cannot be trusted, or null if it is fine. A rule we
+// cannot trust is declined, because a wrong one silently fills someone's
+// calendar. All date calculations happen in our code, never in the model.
+export function repeatRuleProblem(r: Recurrence, confidence: number, hasStartDate: boolean): string | null {
+  if (confidence < RECURRENCE_MIN_CONFIDENCE) {
+    return `low confidence (${confidence})`;
   }
-
-  if (event.confidence < RECURRENCE_MIN_CONFIDENCE) {
-    return { ok: false, reason: `low confidence (${event.confidence})` };
-  }
-
   if (!["daily", "weekly", "monthly", "yearly"].includes(r.frequency)) {
-    return { ok: false, reason: `unknown frequency ${r.frequency}` };
+    return `unknown frequency ${r.frequency}`;
   }
   if (!Number.isInteger(r.interval) || r.interval < 1) {
-    return { ok: false, reason: `invalid interval ${r.interval}` };
+    return `invalid interval ${r.interval}`;
   }
-  if (
-    r.weekdays &&
-    (r.weekdays.length === 0 || r.weekdays.some((d) => !VALID_WEEKDAYS.has(d)))
-  ) {
-    return { ok: false, reason: "invalid weekdays" };
+  const weekdays = r.weekdays ?? [];
+  if (r.weekdays && (weekdays.length === 0 || weekdays.some((d) => !isWeekday(d)))) {
+    return "invalid weekdays";
   }
-  if (
-    r.ordinal != null &&
-    !(
-      r.frequency === "monthly" &&
-      r.weekdays?.length &&
-      [1, 2, 3, 4, -1].includes(r.ordinal)
-    )
-  ) {
-    return {
-      ok: false,
-      reason: "ordinal only applies to monthly weekday patterns",
-    };
+  if (r.ordinal != null && !(r.frequency === "monthly" && weekdays.length > 0 && [1, 2, 3, 4, -1].includes(r.ordinal))) {
+    return "ordinal only applies to monthly weekday patterns";
   }
   if (
     r.month_day != null &&
-    !(
-      r.frequency === "monthly" &&
-      Number.isInteger(r.month_day) &&
-      r.month_day >= 1 &&
-      r.month_day <= 31
-    )
+    !(r.frequency === "monthly" && Number.isInteger(r.month_day) && r.month_day >= 1 && r.month_day <= 31)
   ) {
-    return { ok: false, reason: "month_day only applies to monthly patterns" };
+    return "month_day only applies to monthly patterns";
   }
-  if (r.frequency === "monthly" && r.weekdays?.length && r.ordinal == null) {
-    return { ok: false, reason: "monthly weekday pattern without an ordinal" };
+  if (r.frequency === "monthly" && weekdays.length > 0 && r.ordinal == null) {
+    return "monthly weekday pattern without an ordinal";
   }
-  if (r.end_kind === "count" && !(Number.isInteger(r.count) && r.count! >= 1)) {
-    return { ok: false, reason: "invalid count" };
+  if (r.end_kind === "count" && !(r.count !== null && Number.isInteger(r.count) && r.count >= 1)) {
+    return "invalid count";
   }
-
-  const hasStartDate = event.month !== null && event.day !== null;
   if (!hasStartDate) {
     // No start date: the pattern itself must say which days.
-    const selfContained =
+    const saysWhichDays =
       r.frequency === "daily" ||
-      (r.frequency === "weekly" && !!r.weekdays?.length) ||
-      (r.frequency === "monthly" &&
-        ((!!r.weekdays?.length && r.ordinal != null) || r.month_day != null));
-    if (!selfContained) {
-      return {
-        ok: false,
-        reason: "no start date and the pattern doesn't say which days",
-      };
+      (r.frequency === "weekly" && weekdays.length > 0) ||
+      (r.frequency === "monthly" && ((weekdays.length > 0 && r.ordinal != null) || r.month_day != null));
+    if (!saysWhichDays) {
+      return "no start date and the pattern doesn't say which days";
     }
   }
-
-  const timeZone = resolveTimezone(event.timezone_hint);
-  if (!timeZone) {
-    return { ok: false, reason: "unrecognised timezone" };
-  }
-  const { ymd: today, minutes } = zonedNow(now, timeZone);
-
-  let from: YMD;
-  if (hasStartDate) {
-    // toGregorianEvent adds the years. A start date with no year was not
-    // converted.
-    if (event.year === null) {
-      return { ok: false, reason: "start date has no year" };
-    }
-    from = { year: event.year, month: event.month!, day: event.day! };
-  } else {
-    from = today;
-    // Today counts only if the event has not started yet.
-    if (event.start_time && minutes >= toMinutes(event.start_time)) {
-      from = addDays(today, 1);
-    }
-  }
-
-  const first = findMatch(from, r);
-  if (!first) {
-    return { ok: false, reason: "no matching first occurrence" };
-  }
-
-  let until: YMD | null = null;
-  if (r.end_kind === "until") {
-    if (r.until_month == null || r.until_day == null) {
-      return { ok: false, reason: "until date incomplete" };
-    }
-    if (r.until_year == null) {
-      return { ok: false, reason: "end date has no year" };
-    }
-    until = { year: r.until_year, month: r.until_month, day: r.until_day };
-    if (compare(until, first) < 0) {
-      return { ok: false, reason: "end date is before the first occurrence" };
-    }
-  }
-
-  return { ok: true, first, until };
-}
-
-// Returns null if the repeat is fine (or there is no repeat). Otherwise it
-// returns the reason to decline. A repeat rule we cannot trust is declined,
-// because a wrong one silently fills someone's calendar.
-export function recurrenceProblem(
-  event: ExtractedEvent,
-  now: Date = new Date(),
-): string | null {
-  // Dates that cannot be converted are not a repeat problem. Building the
-  // event declines them.
-  const converted = toGregorianEvent(event, now);
-  if (!converted?.recurrence) {
-    return null;
-  }
-  if (converted.date_kind !== "absolute" && converted.date_kind !== "weekday") {
-    return null;
-  }
-  const plan = planRecurrence(converted, now);
-  return plan.ok ? null : plan.reason;
+  return null;
 }
 
 // The RRULE value (without the "RRULE:" prefix). The caller formats

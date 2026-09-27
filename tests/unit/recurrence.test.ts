@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
-import {
-  describeRecurrence,
-  recurrenceProblem,
-} from "../../src/extractedEvents/recurrence";
+import { recurrenceProblem } from "../../src/extractedEvents/eventPlan";
+import { describeRecurrence } from "../../src/extractedEvents/recurrence";
 import type {
   ExtractedEvent,
   Recurrence,

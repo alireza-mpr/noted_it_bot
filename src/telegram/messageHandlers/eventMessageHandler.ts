@@ -1,11 +1,7 @@
-import {
-  buildCalendarEvent,
-  type BuiltCalendarEvent,
-} from "../../extractedEvents/calendarEvent";
+import { renderCalendarEvent, type BuiltCalendarEvent } from "../../extractedEvents/calendarEvent";
+import { planEvent } from "../../extractedEvents/eventPlan";
 import { computeEventUid } from "../../extractedEvents/eventUid";
 import { extractEvent } from "../../extractedEvents/extractEvent";
-import type { ExtractedEvent } from "../../extractedEvents/extractedEvent";
-import { recurrenceProblem } from "../../extractedEvents/recurrence";
 import type { MessageId } from "../../interactiveMessages/messages";
 import { fillPlaceholder, fillPlaceholders } from "../../translation/placeholders";
 import { logActivity } from "../../logging/activityLog";
@@ -16,73 +12,51 @@ import { describeError, Logger } from "../../logging/logger";
 
 const logger = new Logger("eventMessageHandler");
 
-async function buildCaption(
-  calendarEvent: BuiltCalendarEvent,
-  replier: Replier,
-  remainingQuota: number,
-  showQuota: boolean,
-  timezoneNote: string | null,
-): Promise<string> {
-  const captionTemplate = replier.translate("CALENDAR_CAPTION_TEMPLATE");
-  const linkLabel = replier.translate("LINK_LABEL");
+// Tells the user which zone was used when the message had none, and how to
+// change it. All-day events have no time, so their zone does not matter.
+function timezoneNote(calendarEvent: BuiltCalendarEvent, replier: Replier): string | null {
+  const zone = calendarEvent.zone;
+  if (zone.kind === "message" || calendarEvent.allDay) {
+    return null;
+  }
+  return zone.kind === "user" ? replier.translate("TZ_USER_NOTE", zone.name) : replier.translate("TZ_FLOATING_NOTE");
+}
 
+function buildCaption(calendarEvent: BuiltCalendarEvent, replier: Replier, remainingQuota: number | null): string {
   const summaryLines = [...calendarEvent.summaryLines];
   if (calendarEvent.recurrence) {
     summaryLines.push(`🔁 ${calendarEvent.recurrence}`);
   }
-
-  const googleUrl = escapeHtmlAttribute(calendarEvent.googleCalendarUrl);
-  const link = `<a href="${googleUrl}">${linkLabel}</a>`;
-  const summaryBlock = summaryLines.map(escapeHtmlAttribute).join("\n");
-  let caption = `${summaryBlock}\n\n🔔 ${fillPlaceholder(captionTemplate, link)}`;
+  const link = `<a href="${escapeHtmlAttribute(calendarEvent.googleCalendarUrl)}">${replier.translate("LINK_LABEL")}</a>`;
+  const parts = [
+    summaryLines.map(escapeHtmlAttribute).join("\n"),
+    `🔔 ${fillPlaceholder(replier.translate("CALENDAR_CAPTION_TEMPLATE"), link)}`,
+  ];
 
   const mismatch = calendarEvent.weekdayMismatch;
   if (mismatch) {
-    caption += `\n\n${fillPlaceholders(
-      replier.translate("WEEKDAY_MISMATCH_NOTE"),
-      [mismatch.stated, mismatch.date, mismatch.actual].map(escapeHtmlAttribute),
-    )}`;
+    parts.push(
+      fillPlaceholders(
+        replier.translate("WEEKDAY_MISMATCH_NOTE"),
+        [mismatch.stated, mismatch.date, mismatch.actual].map(escapeHtmlAttribute),
+      ),
+    );
   }
-
-  const notes: (MessageId | null)[] = [
-    calendarEvent.inPast ? "PAST_EVENT_NOTE" : null,
-    calendarEvent.recurrence ? "RECURRING_NOTE" : null,
-    calendarEvent.allDay ? "ALL_DAY_NOTE" : null,
+  const notes: MessageId[] = [
+    ...(calendarEvent.inPast ? (["PAST_EVENT_NOTE"] as const) : []),
+    ...(calendarEvent.recurrence ? (["RECURRING_NOTE"] as const) : []),
+    ...(calendarEvent.allDay ? (["ALL_DAY_NOTE"] as const) : []),
   ];
-  for (const note of notes) {
-    if (note) {
-      caption += `\n\n${replier.translate(note)}`;
-    }
-  }
-  if (timezoneNote) {
-    caption += `\n\n${timezoneNote}`;
-  }
+  parts.push(...notes.map((note) => replier.translate(note)));
 
-  if (!showQuota) {
-    return caption;
+  const zoneNote = timezoneNote(calendarEvent, replier);
+  if (zoneNote) {
+    parts.push(zoneNote);
   }
-
-  const quotaLine = replier.translate(
-    "USER_DAILY_QUOTA_REMAINING",
-    String(remainingQuota),
-  );
-  return `${caption}\n\n${escapeHtmlAttribute(quotaLine)}`;
-}
-
-// Tells the user which zone was used when the message had none, and how to
-// change it. All-day events have no time, so their zone does not matter.
-function timezoneNote(
-  source: "message" | "user" | "floating",
-  calendarEvent: BuiltCalendarEvent,
-  replier: Replier,
-): string | null {
-  if (source === "message" || calendarEvent.allDay) {
-    return null;
+  if (remainingQuota !== null) {
+    parts.push(escapeHtmlAttribute(replier.quotaLine(remainingQuota)));
   }
-  if (source === "user" && calendarEvent.timeZone) {
-    return replier.translate("TZ_USER_NOTE", calendarEvent.timeZone);
-  }
-  return replier.translate("TZ_FLOATING_NOTE");
+  return parts.join("\n\n");
 }
 
 // Tells the user that extraction has started. If sending fails, extraction
@@ -96,88 +70,51 @@ async function sayExtracting(replier: Replier): Promise<void> {
 }
 
 // Returns whether a model answered. The caller uses it to decide whether to
-// give back the quota for this message.
+// give back the quota for this message. remainingQuota is null when no quota
+// is in use.
 export async function eventMessageHandler(
   content: string,
   router: Router,
   replier: Replier,
-  remainingQuota: number,
-  showQuota: boolean,
+  remainingQuota: number | null,
   userTimezone: string | null,
 ): Promise<boolean> {
-  const downstream = await extractEvent(router, content, () =>
-    sayExtracting(replier),
-  );
+  const extraction = await extractEvent(router, content, () => sayExtracting(replier));
   logger.info("provider response received", {
     receivedMessage: content,
-    providerResponse: downstream.message,
-    model: downstream.model ?? null,
+    providerResponse: extraction.ok ? JSON.stringify(extraction.event) : null,
+    model: extraction.ok ? extraction.model : null,
   });
 
-  if (downstream.result === "failed") {
-    logger.error("downstream call failed", {
-      detail: downstream.message,
-      failure: downstream.failure,
-    });
+  if (!extraction.ok) {
+    logger.error("downstream call failed", { failure: extraction });
     logActivity("event_requested", { outcome: "no_model" });
     await replier.say("NO_AVAILABLE_MODEL_MESSAGE");
     return false;
   }
 
-  const event: ExtractedEvent = JSON.parse(downstream.message);
-  // The zone in the message wins. Otherwise the user's /tz zone. Otherwise no
-  // zone: the times stay "floating" (as written, in the calendar's own zone).
-  // The caption mentions the last two cases.
-  const timezoneSource = event.timezone_hint ? "message" : userTimezone ? "user" : "floating";
-  event.timezone_hint ??= userTimezone;
-  const problem = recurrenceProblem(event);
-  if (problem) {
-    logger.error("declined recurring event", {
-      problem,
-      response: downstream.message,
+  const planned = planEvent(extraction.event, userTimezone, new Date());
+  if (!planned.ok) {
+    const declined = planned.reason === "repeat_declined";
+    logger.error(declined ? "declined recurring event" : "could not build a calendar event from extraction", {
+      problem: planned.detail,
+      response: JSON.stringify(extraction.event),
     });
-    logActivity("event_requested", { outcome: "declined" });
-    await replier.sayWithQuota(
-      "RECURRENCE_DECLINED_MESSAGE",
-      remainingQuota,
-      showQuota,
-    );
+    logActivity("event_requested", { outcome: declined ? "declined" : "no_event" });
+    await replier.sayWithQuota(declined ? "RECURRENCE_DECLINED_MESSAGE" : "NO_CALENDAR_EVENT_MESSAGE", remainingQuota);
     return true;
   }
 
-  const calendarEvent = buildCalendarEvent(
-    event,
-    await computeEventUid(content),
-    replier.lang,
-  );
-  if (!calendarEvent) {
-    logger.error("could not build a calendar event from extraction", {
-      response: downstream.message,
-    });
-    logActivity("event_requested", { outcome: "no_event" });
-    await replier.sayWithQuota(
-      "NO_CALENDAR_EVENT_MESSAGE",
-      remainingQuota,
-      showQuota,
-    );
-    return true;
-  }
-
+  const calendarEvent = renderCalendarEvent(planned.plan, await computeEventUid(content), replier.lang, new Date());
   logActivity("event_requested", {
     outcome: "created",
-    recurring: Boolean(calendarEvent.recurrence),
+    recurring: planned.plan.repeat !== null,
     allDay: calendarEvent.allDay,
   });
   await replier.sendDocument(
     calendarEvent.icsFilename,
     calendarEvent.icsContent,
-    await buildCaption(
-      calendarEvent,
-      replier,
-      remainingQuota,
-      showQuota,
-      timezoneNote(timezoneSource, calendarEvent, replier),
-    ),
+    buildCaption(calendarEvent, replier, remainingQuota),
   );
   return true;
 }

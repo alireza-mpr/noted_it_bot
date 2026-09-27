@@ -5,7 +5,7 @@ import {
   supportedLanguageNames,
   toSupportedLanguage,
 } from "../../translation/language";
-import { setUserLanguageOverride } from "../../translation/userLanguage";
+import { UserPreferenceRepository } from "../../repositories/userPreferenceRepository";
 import type { Env } from "../../env";
 import { logActivity } from "../../logging/activityLog";
 import { Logger } from "../../logging/logger";
@@ -27,6 +27,7 @@ export async function langCommandHandler(
 ): Promise<void> {
   const arg = (message.text ?? "").slice(PREFIX.length).trim();
   const userId = message.from.id;
+  const preferences = new UserPreferenceRepository(env.USAGE_DB);
 
   if (!arg) {
     await replier.say("LANG_USAGE");
@@ -34,7 +35,7 @@ export async function langCommandHandler(
   }
 
   if (arg.toLowerCase() === "auto") {
-    await setUserLanguageOverride(env, userId, null);
+    await preferences.setLang(userId, null);
     logActivity("lang_reset");
     await replier
       .withLang(toSupportedLanguage(message.from.language_code) ?? DEFAULT_LANGUAGE)
@@ -49,7 +50,7 @@ export async function langCommandHandler(
     return;
   }
 
-  await setUserLanguageOverride(env, userId, resolved);
+  await preferences.setLang(userId, resolved);
   logActivity("lang_set", { language: resolved });
   await replier
     .withLang(resolved)

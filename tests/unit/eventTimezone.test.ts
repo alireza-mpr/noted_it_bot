@@ -27,7 +27,7 @@ async function send(extracted: ExtractedEvent, userTimezone: string | null) {
   const router = {
     generate: async (_request: unknown, onModelFound?: () => Promise<void>) => {
       await onModelFound?.();
-      return { result: "ok", model: "m", text: JSON.stringify(extracted), totalTokens: 1 };
+      return { ok: true, model: "m", text: JSON.stringify(extracted), totalTokens: 1 };
     },
   } as unknown as Router;
   const documents: { content: string; caption: string }[] = [];
@@ -37,7 +37,7 @@ async function send(extracted: ExtractedEvent, userTimezone: string | null) {
       void documents.push({ content, caption }),
   } as unknown as TelegramClient;
 
-  await eventMessageHandler("text", router, new Replier(telegram, 7, "en"), 4, true, userTimezone);
+  await eventMessageHandler("text", router, new Replier(telegram, 7, "en"), 4, userTimezone);
   expect(documents).toHaveLength(1);
   return documents[0];
 }

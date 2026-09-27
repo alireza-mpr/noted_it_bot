@@ -318,9 +318,19 @@ to the bot, and open the link.
 
 ### Dates, calendars and repeats
 
-**Dates** are handled by one step for every calendar (`toGregorianEvent`). A
-missing year is picked by one rule (`pickYear`). The full rules are in
-[docs/EDGE_CASES.md](docs/EDGE_CASES.md).
+**From the model's answer to the calendar file**, in two steps:
+1. `planEvent` (`src/extractedEvents/eventPlan.ts`) checks the model's answer
+   once. It returns an `EventPlan` (Gregorian dates with years, the times, the
+   time zone, the repeat), or the reason why there is no event.
+   - Dates in any calendar are converted by `toGregorianDates`
+     (`src/extractedEvents/toGregorian.ts`). A missing year is picked by one
+     rule (`pickYear`, in the same file). The full rules are in
+     [docs/EDGE_CASES.md](docs/EDGE_CASES.md).
+2. `renderCalendarEvent` (`src/extractedEvents/calendarEvent.ts`) turns the plan
+   into the `.ics` file, the Google link and the caption parts. It checks
+   nothing: the plan is already checked.
+
+Dates use one type everywhere: `DateOnly` (`src/time/dateOnly.ts`).
 
 **Repeats** ("every Thursday 7:30pm", "every 2 weeks until 29 Nov", "first
 Friday of the month"):
@@ -417,8 +427,9 @@ and picks the next model that still has room. Today, event extraction and
   npx wrangler d1 create noted-it-prod-usage
   ```
 
-**The result type.** `generate` returns `{result: "ok", text, totalTokens}` or
-`{result: "failed", failure}`. `failure` is `{kind, httpStatus?, detail}`:
+**The result type.** `generate` returns a `ProviderSuccess`
+(`{ok: true, model, text, totalTokens}`) or a `ProviderFailure`
+(`{ok: false, kind, httpStatus?, detail}`):
 
 | `kind` | Meaning |
 |--------|---------|
@@ -455,7 +466,7 @@ Every log line goes to the **`app-logs`** dataset in [Axiom](https://axiom.co).
 
 **How to log:**
 - Create a logger with `new Logger("<name>")`. The name becomes the event's
-  `source`. Some classes (`RouterLog`, `UserQuotaPolicyLogger`) take a `Logger`
+  `source`. Some classes (for example `RouterLog`) take a `Logger`
   as a parameter.
 - Put data in fields, not in the message:
   `logger.error("threw", describeError(err))`,

@@ -9,6 +9,7 @@ export interface ProviderRequest {
 }
 
 interface FailureDetails {
+  ok: false;
   httpStatus?: number;
   detail: string;
 }
@@ -36,15 +37,15 @@ export interface ProviderRateLimit {
   limitRequests: number;
 }
 
-export type ProviderResult =
-  | {
-      result: "ok";
-      model: string;
-      text: string;
-      totalTokens: number;
-      rateLimit?: ProviderRateLimit;
-    }
-  | { result: "failed"; failure: ProviderFailure };
+export interface ProviderSuccess {
+  ok: true;
+  model: string;
+  text: string;
+  totalTokens: number;
+  rateLimit?: ProviderRateLimit;
+}
+
+export type ProviderResult = ProviderSuccess | ProviderFailure;
 
 // What the router needs: one call to one specific model.
 export interface ProviderClient {

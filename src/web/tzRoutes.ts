@@ -5,7 +5,7 @@ import { fillPlaceholder } from "../translation/placeholders";
 import { toSupportedLanguage } from "../translation/language";
 import { translateStatic } from "../translation/translate";
 import { canonicalTimezone } from "../time/canonicalTimezone";
-import { setUserTimezone } from "../time/userTimezone";
+import { UserPreferenceRepository } from "../repositories/userPreferenceRepository";
 import { renderMessagePage, renderTzPage, pageSecurityHeaders } from "./tzPage";
 import {
   SAVE_TOKEN_TTL_MS,
@@ -114,7 +114,7 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
     return json(400, { ok: false, error: "invalid_timezone" });
   }
 
-  await setUserTimezone(env, uid, timezone);
+  await new UserPreferenceRepository(env.USAGE_DB).setTimezone(uid, timezone);
   logActivity("tz_set", { timezone, via: "page" });
 
   try {

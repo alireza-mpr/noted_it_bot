@@ -16,6 +16,8 @@ export class UserPreferenceRepository {
     return results[1].results[0] ?? null;
   }
 
+  // A /lang choice replaces Telegram's language (message.from.language_code)
+  // for all of that user's future replies. null means "use Telegram's".
   async setLang(userId: number, lang: string | null): Promise<void> {
     await this.run([this.db.prepare(SET_USER_LANG).bind(userId, lang)]);
   }

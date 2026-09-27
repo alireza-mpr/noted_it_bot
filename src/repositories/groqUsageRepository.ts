@@ -7,9 +7,8 @@ import {
   SELECT_GROQ_USAGE,
 } from "../db/sql/groqUsage";
 import type { ProviderConfig } from "../providers/ProviderConfig";
-import type { ProviderRateLimit } from "../providers/providerClient";
+import type { ProviderSuccess, ProviderFailure } from "../providers/providerClient";
 import { GROQ_MODELS } from "../providers/registry";
-import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
 import { dateTimeAest } from "../time/dateTimeAest";
 import type { UsageRepository } from "../router/router";
 
@@ -39,12 +38,7 @@ export class GroqUsageRepository implements UsageRepository {
     );
   }
 
-  async recordUsage(
-    model: ProviderConfig,
-    _tokens: number,
-    now: Date,
-    rateLimit?: ProviderRateLimit,
-  ): Promise<void> {
+  async recordSuccess(model: ProviderConfig, answer: ProviderSuccess, now: Date): Promise<void> {
     const at = dateTimeAest(now);
     await this.run(
       this.db
@@ -52,44 +46,31 @@ export class GroqUsageRepository implements UsageRepository {
         .bind(
           model.model,
           at,
-          rateLimit?.remainingRequests ?? null,
-          rateLimit?.limitRequests ?? null,
+          answer.rateLimit?.remainingRequests ?? null,
+          answer.rateLimit?.limitRequests ?? null,
           at,
         ),
     );
   }
 
-  // Which limit was hit does not matter here. Only the retry time matters.
-  async markQuotaExhausted(
-    model: ProviderConfig,
-    _quotaLimitScope: QuotaLimitScope,
-    now: Date,
-    retryAfterSeconds?: number,
-  ): Promise<void> {
-    const seconds = retryAfterSeconds ?? DEFAULT_RETRY_AFTER_SECONDS;
-    await this.run(
-      this.db
-        .prepare(MARK_GROQ_EXHAUSTED)
-        .bind(model.model, dateTimeAest(now), now.getTime() + seconds * 1000),
-    );
-  }
-
-  async recordError(
-    model: ProviderConfig,
-    message: string,
-    now: Date,
-  ): Promise<void> {
+  // A 429 makes the model unavailable until its retry-after time. Which limit
+  // was hit does not matter. Every failure is stored as the last error.
+  async recordFailure(model: ProviderConfig, failure: ProviderFailure, message: string, now: Date): Promise<void> {
     const at = dateTimeAest(now);
-    await this.run(
-      this.db.prepare(RECORD_GROQ_ERROR).bind(model.model, at, message, at),
-    );
+    const statements = [this.db.prepare(RECORD_GROQ_ERROR).bind(model.model, at, message, at)];
+    if (failure.kind === "rateLimited") {
+      const seconds = failure.retryAfterSeconds ?? DEFAULT_RETRY_AFTER_SECONDS;
+      statements.unshift(
+        this.db.prepare(MARK_GROQ_EXHAUSTED).bind(model.model, at, now.getTime() + seconds * 1000),
+      );
+    }
+    await this.run(...statements);
   }
 
-  private async run<T = unknown>(statement: D1PreparedStatement): Promise<T[]> {
-    const results = await this.db.batch<T>([
-      groqUsageTableStatement(this.db),
-      statement,
-    ]);
+  // Runs the statements in one batch, after creating the table if needed.
+  // Returns the first statement's rows.
+  private async run<T = unknown>(...statements: D1PreparedStatement[]): Promise<T[]> {
+    const results = await this.db.batch<T>([groqUsageTableStatement(this.db), ...statements]);
     return results[1].results;
   }
 }

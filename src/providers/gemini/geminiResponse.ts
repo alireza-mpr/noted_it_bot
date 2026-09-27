@@ -1,4 +1,4 @@
-import type { ProviderFailure, ProviderResult } from "../providerClient";
+import type { ProviderResult } from "../providerClient";
 
 interface GeminiBody {
   candidates?: {
@@ -35,10 +35,6 @@ export function parseGeminiResponse(
   body: string,
 ): ProviderResult {
   const data = parseJson(body);
-  const fail = (failure: ProviderFailure): ProviderResult => ({
-    result: "failed",
-    failure,
-  });
   const detail = () => describeError(data, body);
 
   if (httpStatus === 429) {
@@ -48,16 +44,17 @@ export function parseGeminiResponse(
     const quotaLimitScope = quotaIds.some((id) => id.includes("PerDay"))
       ? "day"
       : "minute";
-    return fail({
+    return {
+      ok: false,
       kind: "rateLimited",
       quotaLimitScope,
       httpStatus,
       detail: detail(),
-    });
+    };
   }
 
   if (httpStatus === 503 || data?.error?.status === "UNAVAILABLE") {
-    return fail({ kind: "unavailable", httpStatus, detail: detail() });
+    return { ok: false, kind: "unavailable", httpStatus, detail: detail() };
   }
 
   if (httpStatus < 200 || httpStatus >= 300) {
@@ -67,7 +64,7 @@ export function parseGeminiResponse(
         : httpStatus >= 500
           ? "serverError"
           : "badRequest";
-    return fail({ kind, httpStatus, detail: detail() });
+    return { ok: false, kind, httpStatus, detail: detail() };
   }
 
   const text = (data?.candidates?.[0]?.content?.parts ?? [])
@@ -76,15 +73,16 @@ export function parseGeminiResponse(
     .trim();
   if (!text) {
     const finishReason = data?.candidates?.[0]?.finishReason ?? "none";
-    return fail({
+    return {
+      ok: false,
       kind: "emptyResponse",
       httpStatus,
       detail: `empty response (finishReason: ${finishReason})`,
-    });
+    };
   }
 
   return {
-    result: "ok",
+    ok: true,
     model,
     text,
     totalTokens: data?.usageMetadata?.totalTokenCount ?? 0,

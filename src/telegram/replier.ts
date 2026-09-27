@@ -26,20 +26,13 @@ export class Replier {
     await this.sendPlain(this.translate(id, value));
   }
 
-  async sayWithQuota(
-    id: MessageId,
-    remainingQuota: number,
-    showQuota: boolean,
-  ): Promise<void> {
+  // Adds the quota line when a quota is in use (remainingQuota is not null).
+  async sayWithQuota(id: MessageId, remainingQuota: number | null): Promise<void> {
     const text = this.translate(id);
-    if (!showQuota) {
-      await this.sendPlain(text);
-      return;
-    }
-    await this.sendPlain(`${text}\n\n${this.quotaLine(remainingQuota)}`);
+    await this.sendPlain(remainingQuota === null ? text : `${text}\n\n${this.quotaLine(remainingQuota)}`);
   }
 
-  private quotaLine(remainingQuota: number): string {
+  quotaLine(remainingQuota: number): string {
     return this.translate("USER_DAILY_QUOTA_REMAINING", String(remainingQuota));
   }
 
@@ -70,11 +63,8 @@ export class Replier {
     logger.info("reply sent", { type: "document", lang: this.lang, filename });
   }
 
-  async reportError(remainingQuota: number, showQuota: boolean): Promise<void> {
-    const errorText = this.translate("GENERIC_ERROR_MESSAGE");
-    const quotaText = showQuota ? this.quotaLine(remainingQuota) : "";
-    const text = quotaText ? `${errorText}\n\n${quotaText}` : errorText;
-    await this.sendPlain(text).catch((err) =>
+  async reportError(): Promise<void> {
+    await this.sendPlain(this.translate("GENERIC_ERROR_MESSAGE")).catch((err) =>
       logger.error("failed to report error back to chat", describeError(err)),
     );
   }

@@ -20,7 +20,7 @@ async function send(response: string) {
     generate: async (request: { userPrompt: string }, onModelFound?: () => Promise<void>) => {
       expect(request.userPrompt).toBe(MESSAGE);
       await onModelFound?.();
-      return { result: "ok", model: "m", text: response, totalTokens: 1 };
+      return { ok: true, model: "m", text: response, totalTokens: 1 };
     },
   } as unknown as Router;
   const documents: { content: string; caption: string }[] = [];
@@ -30,7 +30,7 @@ async function send(response: string) {
       void documents.push({ content, caption }),
   } as unknown as TelegramClient;
 
-  await eventMessageHandler(MESSAGE, router, new Replier(telegram, 7, "fa"), 4, true, null);
+  await eventMessageHandler(MESSAGE, router, new Replier(telegram, 7, "fa"), 4, null);
   expect(documents).toHaveLength(1);
   return documents[0];
 }

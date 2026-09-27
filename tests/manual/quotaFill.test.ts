@@ -55,9 +55,9 @@ class RecordingClient implements ProviderClient {
       call: this.callNumber,
       model: model.id,
       outcome:
-        answer.result === "ok"
+        answer.ok
           ? "ok"
-          : `${answer.failure.kind}${answer.failure.httpStatus ?? ""}`,
+          : `${answer.kind}${answer.httpStatus ?? ""}`,
     });
     return answer;
   }
@@ -116,10 +116,10 @@ describe("quota fill (manual)", () => {
       const replies: string[] = [];
       const failureKinds: string[] = [];
       for (const answer of answers) {
-        if (answer.result === "ok") {
+        if (answer.ok) {
           replies.push(answer.text.trim());
         } else {
-          failureKinds.push(answer.failure.kind);
+          failureKinds.push(answer.kind);
         }
       }
 

@@ -1,4 +1,4 @@
-import type { ProviderFailure, ProviderResult } from "../providerClient";
+import type { ProviderResult } from "../providerClient";
 
 interface GroqBody {
   choices?: {
@@ -42,25 +42,22 @@ export function parseGroqResponse(
   headers: Headers,
 ): ProviderResult {
   const data = parseJson(body);
-  const fail = (failure: ProviderFailure): ProviderResult => ({
-    result: "failed",
-    failure,
-  });
   const detail = () => describeError(data, body);
 
   if (httpStatus === 429) {
     // retry-after is in whole seconds. Groq sends it only with a 429.
     const retryAfter = headerNumber(headers, "retry-after");
-    return fail({
+    return {
+      ok: false,
       kind: "rateLimited",
       retryAfterSeconds: retryAfter !== undefined && retryAfter > 0 ? retryAfter : undefined,
       httpStatus,
       detail: detail(),
-    });
+    };
   }
 
   if (httpStatus === 503) {
-    return fail({ kind: "unavailable", httpStatus, detail: detail() });
+    return { ok: false, kind: "unavailable", httpStatus, detail: detail() };
   }
 
   if (httpStatus < 200 || httpStatus >= 300) {
@@ -70,23 +67,24 @@ export function parseGroqResponse(
         : httpStatus >= 500
           ? "serverError"
           : "badRequest";
-    return fail({ kind, httpStatus, detail: detail() });
+    return { ok: false, kind, httpStatus, detail: detail() };
   }
 
   const text = data?.choices?.[0]?.message?.content?.trim();
   if (!text) {
     const finishReason = data?.choices?.[0]?.finish_reason ?? "none";
-    return fail({
+    return {
+      ok: false,
       kind: "emptyResponse",
       httpStatus,
       detail: `empty response (finish_reason: ${finishReason})`,
-    });
+    };
   }
 
   const remainingRequests = headerNumber(headers, "x-ratelimit-remaining-requests");
   const limitRequests = headerNumber(headers, "x-ratelimit-limit-requests");
   return {
-    result: "ok",
+    ok: true,
     model,
     text,
     totalTokens: data?.usage?.total_tokens ?? 0,

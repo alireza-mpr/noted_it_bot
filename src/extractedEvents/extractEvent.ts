@@ -1,5 +1,4 @@
 import eventExtractPrompt from "../prompts/event_extract.txt";
-import { MESSAGES } from "../interactiveMessages/messages";
 import type { ProviderFailure } from "../providers/providerClient";
 import type { Router } from "../router/router";
 import { EVENT_SCHEMA } from "./event_schema";
@@ -8,24 +7,16 @@ import { describeError, Logger } from "../logging/logger";
 
 const logger = new Logger("extractEvent");
 
-export interface DownstreamResult {
-  result: "ok" | "failed";
-  message: string;
-  failure?: ProviderFailure;
-  // The model that gave a successful answer.
-  model?: string;
-}
+// On failure: why no model answered (the last provider failure).
+export type ExtractionResult = { ok: true; event: ExtractedEvent; model: string } | ProviderFailure;
 
-const NO_AVAILABLE_MODEL: DownstreamResult = {
-  result: "failed",
-  message: MESSAGES.NO_AVAILABLE_MODEL_MESSAGE,
-};
-
+// Asks the models to read the event in a message. onModelFound runs just
+// before the first model is tried (see Router.generate).
 export async function extractEvent(
   router: Router,
   telegramMessageText: string,
   onModelFound?: () => Promise<void>,
-): Promise<DownstreamResult> {
+): Promise<ExtractionResult> {
   try {
     const answer = await router.generate(
       {
@@ -35,22 +26,15 @@ export async function extractEvent(
       },
       onModelFound,
     );
-    if (answer.result === "failed") {
-      return { ...NO_AVAILABLE_MODEL, failure: answer.failure };
+    if (!answer.ok) {
+      return answer;
     }
 
     const event: ExtractedEvent = JSON.parse(answer.text);
     logger.info("extracted", { sourceText: telegramMessageText, event });
-    return {
-      result: "ok",
-      message: JSON.stringify(event),
-      model: answer.model,
-    };
+    return { ok: true, event, model: answer.model };
   } catch (err) {
     logger.error("threw", describeError(err));
-    return {
-      ...NO_AVAILABLE_MODEL,
-      failure: { kind: "internal", detail: String(err) },
-    };
+    return { ok: false, kind: "internal", detail: String(err) };
   }
 }

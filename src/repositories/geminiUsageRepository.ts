@@ -8,7 +8,7 @@ import {
   SELECT_GEMINI_EFFECTIVE_USAGE,
 } from "../db/sql/geminiUsage";
 import type { ProviderConfig } from "../providers/ProviderConfig";
-import type { QuotaLimitScope } from "../quotaLimit/quotaLimitScope";
+import type { ProviderSuccess, ProviderFailure } from "../providers/providerClient";
 import { GEMINI_MODELS } from "../providers/registry";
 import { dateTimeAest } from "../time/dateTimeAest";
 import { currentDay, currentMinute } from "../quotaLimit/quotaWindows";
@@ -42,70 +42,41 @@ export class GeminiUsageRepository implements UsageRepository {
     });
   }
 
-  async recordUsage(
-    model: ProviderConfig,
-    tokens: number,
-    now: Date,
-  ): Promise<void> {
+  async recordSuccess(model: ProviderConfig, answer: ProviderSuccess, now: Date): Promise<void> {
     const at = dateTimeAest(now);
     await this.run(
       this.db
         .prepare(RECORD_GEMINI_USAGE)
-        .bind(model.model, currentDay(now), currentMinute(now), at, tokens, at),
+        .bind(model.model, currentDay(now), currentMinute(now), at, answer.totalTokens, at),
     );
   }
 
-  async markQuotaExhausted(
-    model: ProviderConfig,
-    quotaLimitScope: QuotaLimitScope,
-    now: Date,
-  ): Promise<void> {
-    const cap = quotaLimitScope === "day" ? model.limits.rpd : model.limits.rpm;
-    if (cap === undefined) {
-      return;
-    }
-    const sql =
-      quotaLimitScope === "day"
-        ? MARK_GEMINI_DAY_EXHAUSTED
-        : MARK_GEMINI_MINUTE_EXHAUSTED;
-    await this.run(
-      this.db
-        .prepare(sql)
-        .bind(
-          model.model,
-          currentDay(now),
-          currentMinute(now),
-          dateTimeAest(now),
-          cap,
-        ),
-    );
-  }
-
-  async recordError(
-    model: ProviderConfig,
-    message: string,
-    now: Date,
-  ): Promise<void> {
+  // A 429 sets the model's count for that minute or day to its limit, so it is
+  // skipped until the window ends. Every failure is stored as the last error.
+  async recordFailure(model: ProviderConfig, failure: ProviderFailure, message: string, now: Date): Promise<void> {
     const at = dateTimeAest(now);
-    await this.run(
+    const statements = [
       this.db
         .prepare(RECORD_GEMINI_ERROR)
-        .bind(
-          model.model,
-          currentDay(now),
-          currentMinute(now),
-          at,
-          message,
-          at,
-        ),
-    );
+        .bind(model.model, currentDay(now), currentMinute(now), at, message, at),
+    ];
+    if (failure.kind === "rateLimited") {
+      const scope = failure.quotaLimitScope ?? "minute";
+      const cap = scope === "day" ? model.limits.rpd : model.limits.rpm;
+      if (cap !== undefined) {
+        const sql = scope === "day" ? MARK_GEMINI_DAY_EXHAUSTED : MARK_GEMINI_MINUTE_EXHAUSTED;
+        statements.unshift(
+          this.db.prepare(sql).bind(model.model, currentDay(now), currentMinute(now), at, cap),
+        );
+      }
+    }
+    await this.run(...statements);
   }
 
-  private async run<T = unknown>(statement: D1PreparedStatement): Promise<T[]> {
-    const results = await this.db.batch<T>([
-      geminiUsageTableStatement(this.db),
-      statement,
-    ]);
+  // Runs the statements in one batch, after creating the table if needed.
+  // Returns the first statement's rows.
+  private async run<T = unknown>(...statements: D1PreparedStatement[]): Promise<T[]> {
+    const results = await this.db.batch<T>([geminiUsageTableStatement(this.db), ...statements]);
     return results[1].results;
   }
 }

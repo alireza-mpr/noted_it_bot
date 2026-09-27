@@ -1,14 +1,7 @@
 import { UserUsageRepository } from "../repositories/userUsageRepository";
 import { UserQuotaPolicyLogger } from "./userQuotaPolicyLogger";
 
-export interface UserQuotaConsumeResult {
-  successful: boolean;
-  remainingQuota: number;
-  retryAt: number;
-  // Set when a unit was taken. So it can be given back if no model answers.
-  reservation?: QuotaReservation;
-}
-
+// Enough to undo one use of the quota exactly (see REFUND_USER_QUOTA).
 export interface QuotaReservation {
   userId: number;
   dailyQuota: number;
@@ -17,32 +10,27 @@ export interface QuotaReservation {
   previousLastUsedAt: number;
 }
 
+export type QuotaResult =
+  | { allowed: true; remaining: number; reservation: QuotaReservation }
+  | { allowed: false; retryAt: number };
+
+// The rules for a user's daily quota. Rules per user (for example tiers with
+// different quotas) belong here.
 export class UserQuotaPolicy {
   readonly logger = new UserQuotaPolicyLogger();
-  private repository: UserUsageRepository | undefined;
+  private readonly repository: UserUsageRepository;
 
-  init(usageDb: D1Database): void {
+  constructor(usageDb: D1Database) {
     this.repository = new UserUsageRepository(usageDb);
   }
 
-  async tryConsume(
-    userId: number,
-    dailyQuota: number,
-  ): Promise<UserQuotaConsumeResult> {
-    if (!this.repository) {
-      throw new Error("userQuotaPolicy: call init first");
-    }
-
+  // Uses one unit of the user's daily quota, if one is left.
+  async tryConsume(userId: number, dailyQuota: number): Promise<QuotaResult> {
     return this.repository.tryConsume(userId, new Date(), dailyQuota);
   }
 
+  // Gives back a unit, for a message that no model answered.
   async refund(reservation: QuotaReservation): Promise<void> {
-    if (!this.repository) {
-      throw new Error("userQuotaPolicy: call init first");
-    }
-
     await this.repository.refund(reservation);
   }
 }
-
-export const userQuotaPolicy = new UserQuotaPolicy();

@@ -1,69 +1,55 @@
+import {
+  addDays,
+  toUtcDate,
+  weekdayOf,
+  type DateOnly,
+  type TimeOfDay,
+  type Weekday,
+} from "../time/dateOnly";
+import { zonedTimeToUtc } from "../time/timezone";
+import { planEvent, type EventPlan, type EventZone } from "./eventPlan";
 import type { ExtractedEvent } from "./extractedEvent";
-import { isBeforeToday, resolveTimezone, weekdayOf, zonedTimeToUtc } from "../time/timezone";
-import { buildRrule, describeRecurrence, planRecurrence } from "./recurrence";
-import { toGregorianEvent } from "./toGregorianEvent";
+import { buildRrule, describeRecurrence } from "./recurrence";
+
+// The stated weekday does not match the date. The texts are in the reply
+// language, for the caption.
+export interface WeekdayMismatch {
+  stated: string;
+  date: string;
+  actual: string;
+}
 
 export interface BuiltCalendarEvent {
   icsFilename: string;
   icsContent: string;
   googleCalendarUrl: string;
-  // The IANA zone of the event's times. null means "floating" times: no zone
-  // is known, so every calendar shows the times as written, in its own zone.
-  timeZone: string | null;
-  // true for a one-off event whose date is before today (in its zone).
+  zone: EventZone;
   inPast: boolean;
-  // Set when the stated weekday does not match the date (for example "Monday
-  // 20 Jan" in a year where 20 Jan is a Tuesday). The texts are in the reply
-  // language, for the caption. Always null for repeats.
-  weekdayMismatch: { stated: string; date: string; actual: string } | null;
+  weekdayMismatch: WeekdayMismatch | null; // always null for repeats
   allDay: boolean;
   summaryLines: string[];
-  recurrence: string | null;
+  recurrence: string | null; // the English repeat sentence, or null for a one-off
 }
 
-function parseTime(time: string): { hour: number; minute: number } {
-  const [hour, minute] = time.split(":").map(Number);
-  return { hour, minute };
+const END_OF_DAY: TimeOfDay = { hour: 23, minute: 59 };
+
+function pad(n: number): string {
+  return n.toString().padStart(2, "0");
 }
 
-function pad(n: number, width = 2): string {
-  return n.toString().padStart(width, "0");
+function formatIcsDate(date: DateOnly): string {
+  return `${date.year}${pad(date.month)}${pad(date.day)}`;
 }
 
-function formatIcsUtc(date: Date): string {
-  return (
-    `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}` +
-    `T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`
-  );
+function formatIcsLocal(date: DateOnly, time: TimeOfDay): string {
+  return `${formatIcsDate(date)}T${pad(time.hour)}${pad(time.minute)}00`;
 }
 
-function formatIcsLocal(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-): string {
-  return `${year}${pad(month)}${pad(day)}T${pad(hour)}${pad(minute)}00`;
-}
-
-function formatIcsDate(year: number, month: number, day: number): string {
-  return `${year}${pad(month)}${pad(day)}`;
-}
-
-// For all-day events, DTEND is exclusive (RFC 5545 §3.6.1). So a one-day
-// event ends on the next day.
-function nextDay(
-  year: number,
-  month: number,
-  day: number,
-): { year: number; month: number; day: number } {
-  const d = new Date(Date.UTC(year, month - 1, day + 1));
-  return {
-    year: d.getUTCFullYear(),
-    month: d.getUTCMonth() + 1,
-    day: d.getUTCDate(),
-  };
+function formatIcsUtc(moment: Date): string {
+  return moment
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 }
 
 // RFC 5545 §3.3.11: in TEXT values, backslash, semicolon, comma and newline
@@ -109,199 +95,153 @@ function foldIcsLine(line: string): string {
   return parts.join("\r\n ");
 }
 
-// Days of January 2024, starting on Monday 1 Jan. So each weekday code maps
-// to a date on that weekday.
-const WEEKDAY_REFERENCE_DAY: Record<string, number> = { MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6, SU: 7 };
+// The zone name when the times are tied to a zone, or null for floating times.
+function zoneName(zone: EventZone): string | null {
+  return zone.kind === "floating" ? null : zone.name;
+}
 
-// When the stated weekday does not match the date: returns the stated
-// weekday, the date, and the real weekday, in the reply language. Otherwise
-// null. Always uses the Gregorian calendar, like the caption's date line.
-function describeWeekdayMismatch(
-  stated: string | null,
-  year: number,
-  month: number,
-  day: number,
-  lang: string | undefined,
-): { stated: string; date: string; actual: string } | null {
-  const actual = weekdayOf(year, month, day);
-  if (!stated || !actual || stated === actual || !(stated in WEEKDAY_REFERENCE_DAY)) {
-    return null;
+// The start and end, as DTSTART/DTEND values and as the Google link's "dates":
+// - all-day: plain dates. DTEND is exclusive (RFC 5545 §3.6.1), so a one-day
+//   event ends on the next day;
+// - floating: local times with no zone, so every calendar uses its own zone;
+// - in a zone: local times with TZID in the file, UTC times in the link.
+function startAndEnd(plan: EventPlan): {
+  dtStart: string;
+  dtEnd: string;
+  googleDates: string;
+} {
+  if (plan.times.kind === "all-day") {
+    const start = formatIcsDate(plan.date);
+    const end = formatIcsDate(addDays(plan.date, 1));
+    return {
+      dtStart: `;VALUE=DATE:${start}`,
+      dtEnd: `;VALUE=DATE:${end}`,
+      googleDates: `${start}/${end}`,
+    };
   }
-  const weekdayName = new Intl.DateTimeFormat(lang || "en", { weekday: "long", timeZone: "UTC", calendar: "gregory" });
-  const dateName = new Intl.DateTimeFormat(lang || "en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-    calendar: "gregory",
-  });
+  const start = formatIcsLocal(plan.date, plan.times.start);
+  const end = formatIcsLocal(plan.date, plan.times.end);
+  const zone = zoneName(plan.zone);
+  if (!zone) {
+    return {
+      dtStart: `:${start}`,
+      dtEnd: `:${end}`,
+      googleDates: `${start}/${end}`,
+    };
+  }
+  const utc = (time: TimeOfDay) =>
+    formatIcsUtc(zonedTimeToUtc(plan.date, time, zone));
   return {
-    stated: weekdayName.format(new Date(Date.UTC(2024, 0, WEEKDAY_REFERENCE_DAY[stated]))),
-    date: dateName.format(new Date(Date.UTC(year, month - 1, day))),
-    actual: weekdayName.format(new Date(Date.UTC(year, month - 1, day))),
+    dtStart: `;TZID=${zone}:${start}`,
+    dtEnd: `;TZID=${zone}:${end}`,
+    googleDates: `${utc(plan.times.start)}/${utc(plan.times.end)}`,
   };
 }
 
-// Builds the calendar event (the .ics file, the Google link and the caption
-// summary). Returns null when there is no usable date.
-//
-// A usable date is a full date, or (for a repeat with no start date) a weekday
-// pattern that starts from today. Relative dates like "tomorrow" are not
-// supported yet (see event_extract.txt).
-//
-// A date with no time becomes an all-day event. We never guess a time: a
-// guessed time would look like a real appointment.
-//
-// `now` can be set, so tests can control the date.
-export function buildCalendarEvent(
-  extracted: ExtractedEvent,
-  uid: string,
-  lang?: string,
-  now: Date = new Date(),
-): BuiltCalendarEvent | null {
-  const event = toGregorianEvent(extracted, now);
-  if (!event) {
+// The series ends at the end of its last day (23:59): a plain date for all-day
+// events, local time for floating times, and UTC for times in a zone (RFC 5545
+// requires each of these).
+function formatUntil(plan: EventPlan, until: DateOnly): string {
+  if (plan.times.kind === "all-day") {
+    return formatIcsDate(until);
+  }
+  const zone = zoneName(plan.zone);
+  return zone
+    ? formatIcsUtc(zonedTimeToUtc(until, END_OF_DAY, zone))
+    : formatIcsLocal(until, END_OF_DAY);
+}
+
+// Days of January 2024, starting on Monday 1 Jan. So each weekday code maps
+// to a date on that weekday.
+const WEEKDAY_REFERENCE_DAY: Record<Weekday, number> = {
+  MO: 1,
+  TU: 2,
+  WE: 3,
+  TH: 4,
+  FR: 5,
+  SA: 6,
+  SU: 7,
+};
+
+// Always use the Gregorian calendar. Some locales (for example "fa") use
+// another calendar by default (Jalali). That would show a date that does not
+// match the Gregorian event we create.
+function formatDate(
+  date: DateOnly,
+  lang: string,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  return new Intl.DateTimeFormat(lang, {
+    ...options,
+    timeZone: "UTC",
+    calendar: "gregory",
+  }).format(toUtcDate(date));
+}
+
+function formatClock(time: TimeOfDay, lang: string): string {
+  return new Intl.DateTimeFormat(lang, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(toUtcDate({ year: 2000, month: 1, day: 1 }, time));
+}
+
+// When the stated weekday does not match the date: the stated weekday, the
+// date, and the real weekday, in the reply language. Otherwise null.
+function weekdayMismatch(
+  plan: EventPlan,
+  lang: string,
+): WeekdayMismatch | null {
+  const actual = weekdayOf(plan.date);
+  if (plan.repeat || !plan.statedWeekday || plan.statedWeekday === actual) {
     return null;
   }
+  const weekdayName = (date: DateOnly) =>
+    formatDate(date, lang, { weekday: "long" });
+  return {
+    stated: weekdayName({
+      year: 2024,
+      month: 1,
+      day: WEEKDAY_REFERENCE_DAY[plan.statedWeekday],
+    }),
+    date: formatDate(plan.date, lang, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+    actual: weekdayName(plan.date),
+  };
+}
 
-  const recurrence = event.recurrence ?? null;
-  const dated =
-    event.date_kind === "absolute" &&
-    event.month !== null &&
-    event.day !== null;
-  const weekdayPattern = event.date_kind === "weekday" && recurrence !== null;
-  if (!dated && !weekdayPattern) {
-    return null;
-  }
-
-  const timeZone = resolveTimezone(event.timezone_hint);
-  if (!timeZone) {
-    return null;
-  }
-  // No zone from the message or the user: write "floating" times. Every
-  // calendar shows them as written, in its own zone (18:00 stays 18:00). In
-  // this case, timeZone (the default zone) is only used to decide "today".
-  const floating = !event.timezone_hint;
-
-  let year: number;
-  let month: number;
-  let day: number;
-  let until: { year: number; month: number; day: number } | null = null;
-
-  if (recurrence) {
-    const plan = planRecurrence(event, now);
-    if (!plan.ok) {
-      return null;
-    }
-    ({ year, month, day } = plan.first);
-    until = plan.until;
-  } else {
-    // toGregorianEvent has given every written date a year.
-    year = event.year!;
-    month = event.month!;
-    day = event.day!;
-  }
-
-  const summary = escapeIcsText(event.title ?? "Event");
-  const location = event.location ? escapeIcsText(event.location) : undefined;
-  const dtstamp = formatIcsUtc(now);
-  const allDay = !event.start_time;
-
-  const start = allDay ? null : parseTime(event.start_time!);
-  const end = allDay
-    ? null
-    : event.end_time
-      ? parseTime(event.end_time)
-      : { hour: (start!.hour + 1) % 24, minute: start!.minute };
-
-  let dtStartLine: string;
-  let dtEndLine: string;
-  let googleDates: string;
-  const googleParams = new URLSearchParams({
-    action: "TEMPLATE",
-    text: event.title ?? "Event",
+// 📌 title, then 🗓️ date and time.
+function summaryLines(plan: EventPlan, lang: string): string[] {
+  const date = formatDate(plan.date, lang, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
   });
+  const when =
+    plan.times.kind === "all-day"
+      ? date
+      : `${date} ${formatClock(plan.times.start, lang)}–${formatClock(plan.times.end, lang)}`;
+  return [...(plan.title ? [`📌 ${plan.title}`] : []), `🗓️ ${when}`];
+}
 
-  if (allDay) {
-    const startDate = formatIcsDate(year, month, day);
-    const nd = nextDay(year, month, day);
-    const endDate = formatIcsDate(nd.year, nd.month, nd.day);
-
-    dtStartLine = `DTSTART;VALUE=DATE:${startDate}`;
-    dtEndLine = `DTEND;VALUE=DATE:${endDate}`;
-    googleDates = `${startDate}/${endDate}`;
-  } else {
-    const startLocal = formatIcsLocal(
-      year,
-      month,
-      day,
-      start!.hour,
-      start!.minute,
-    );
-    const endLocal = formatIcsLocal(year, month, day, end!.hour, end!.minute);
-
-    if (floating) {
-      dtStartLine = `DTSTART:${startLocal}`;
-      dtEndLine = `DTEND:${endLocal}`;
-      // Local times with no Z and no ctz: Google uses the calendar's own zone.
-      googleDates = `${startLocal}/${endLocal}`;
-    } else {
-      dtStartLine = `DTSTART;TZID=${timeZone}:${startLocal}`;
-      dtEndLine = `DTEND;TZID=${timeZone}:${endLocal}`;
-
-      const startUtc = zonedTimeToUtc(
-        year,
-        month,
-        day,
-        start!.hour,
-        start!.minute,
-        timeZone,
-      );
-      const endUtc = zonedTimeToUtc(
-        year,
-        month,
-        day,
-        end!.hour,
-        end!.minute,
-        timeZone,
-      );
-      googleDates = `${formatIcsUtc(startUtc)}/${formatIcsUtc(endUtc)}`;
-      googleParams.set("ctz", timeZone);
-    }
-  }
-
-  googleParams.set("dates", googleDates);
-  if (event.location) {
-    googleParams.set("location", event.location);
-  }
-
-  let rrule: string | null = null;
-  if (recurrence) {
-    // The series ends at the end of its last day (23:59):
-    // - timed events: in the event's zone, written in UTC (RFC 5545 requires it);
-    // - floating times: in local time (RFC 5545 requires that too);
-    // - all-day events: a plain date.
-    const untilValue = until
-      ? allDay
-        ? formatIcsDate(until.year, until.month, until.day)
-        : floating
-          ? formatIcsLocal(until.year, until.month, until.day, 23, 59)
-          : formatIcsUtc(
-            zonedTimeToUtc(
-              until.year,
-              until.month,
-              until.day,
-              23,
-              59,
-              timeZone,
-            ),
-          )
-      : null;
-    rrule = buildRrule(recurrence, untilValue);
-    // Google's web calendar uses this. Its phone app ignores it and adds only
-    // one event. That is why the caption sends users to the file for repeats.
-    googleParams.set("recur", `RRULE:${rrule}`);
-  }
+// Renders a checked plan: the .ics file, the Google link and the caption parts.
+export function renderCalendarEvent(
+  plan: EventPlan,
+  uid: string,
+  lang: string,
+  now: Date,
+): BuiltCalendarEvent {
+  const title = plan.title ?? "Event";
+  const { dtStart, dtEnd, googleDates } = startAndEnd(plan);
+  const rrule = plan.repeat
+    ? buildRrule(
+        plan.repeat.rule,
+        plan.repeat.until ? formatUntil(plan, plan.repeat.until) : null,
+      )
+    : null;
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -309,68 +249,64 @@ export function buildCalendarEvent(
     "PRODID:-//noted_it//EN",
     "BEGIN:VEVENT",
     `UID:${uid}`,
-    `DTSTAMP:${dtstamp}`,
-    dtStartLine,
-    dtEndLine,
+    `DTSTAMP:${formatIcsUtc(now)}`,
+    `DTSTART${dtStart}`,
+    `DTEND${dtEnd}`,
     ...(rrule ? [`RRULE:${rrule}`] : []),
-    `SUMMARY:${summary}`,
-    ...(location ? [`LOCATION:${location}`] : []),
+    `SUMMARY:${escapeIcsText(title)}`,
+    ...(plan.location ? [`LOCATION:${escapeIcsText(plan.location)}`] : []),
     "END:VEVENT",
     "END:VCALENDAR",
   ].map(foldIcsLine);
 
-  // Always use the Gregorian calendar. Some locales (for example "fa") use
-  // another calendar by default (Jalali). That would show a date that does not
-  // match the Gregorian event we create.
-  const dateLabel = new Intl.DateTimeFormat(lang || "en", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-    calendar: "gregory",
-  }).format(new Date(Date.UTC(year, month - 1, day)));
-
-  const formatClock = (hour: number, minute: number) =>
-    new Intl.DateTimeFormat(lang || "en", {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: "UTC",
-    }).format(new Date(Date.UTC(2000, 0, 1, hour, minute)));
-
-  const summaryLines: string[] = [];
-  if (event.title) {
-    summaryLines.push(`📌 ${event.title}`);
+  const google = new URLSearchParams({ action: "TEMPLATE", text: title });
+  const zone = zoneName(plan.zone);
+  if (zone && plan.times.kind === "timed") {
+    google.set("ctz", zone);
   }
-  summaryLines.push(
-    allDay
-      ? `🗓️ ${dateLabel}`
-      : `🗓️ ${dateLabel} ${formatClock(start!.hour, start!.minute)}–${formatClock(end!.hour, end!.minute)}`,
-  );
+  google.set("dates", googleDates);
+  if (plan.location) {
+    google.set("location", plan.location);
+  }
+  if (rrule) {
+    // Google's web calendar uses this. Its phone app ignores it and adds only
+    // one event. That is why the caption sends users to the file for repeats.
+    google.set("recur", `RRULE:${rrule}`);
+  }
 
   return {
     icsFilename: "event.ics",
     icsContent: lines.join("\r\n"),
-    googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
-    timeZone: floating ? null : timeZone,
-    inPast: !recurrence && isBeforeToday(year, month, day, timeZone, now),
-    weekdayMismatch: recurrence ? null : describeWeekdayMismatch(event.weekday ?? null, year, month, day, lang),
-    allDay,
-    summaryLines,
-    recurrence: recurrence
+    googleCalendarUrl: `https://calendar.google.com/calendar/render?${google.toString()}`,
+    zone: plan.zone,
+    inPast: plan.inPast,
+    weekdayMismatch: weekdayMismatch(plan, lang),
+    allDay: plan.times.kind === "all-day",
+    summaryLines: summaryLines(plan, lang),
+    recurrence: plan.repeat
       ? describeRecurrence(
-          recurrence,
-          until
-            ? new Intl.DateTimeFormat("en", {
+          plan.repeat.rule,
+          plan.repeat.until
+            ? formatDate(plan.repeat.until, "en", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
-                timeZone: "UTC",
-                calendar: "gregory",
-              }).format(
-                new Date(Date.UTC(until.year, until.month - 1, until.day)),
-              )
+              })
             : null,
         )
       : null,
   };
+}
+
+// Plans and renders in one step. Returns null when there is no event.
+// `now` can be set, so tests can control the date.
+export function buildCalendarEvent(
+  extracted: ExtractedEvent,
+  uid: string,
+  lang = "en",
+  now: Date = new Date(),
+  userZone: string | null = null,
+): BuiltCalendarEvent | null {
+  const planned = planEvent(extracted, userZone, now);
+  return planned.ok ? renderCalendarEvent(planned.plan, uid, lang, now) : null;
 }

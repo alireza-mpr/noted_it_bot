@@ -47,8 +47,8 @@ describe("RouterLog", () => {
       log.attempted(MODEL);
       log.succeeded(MODEL, 812);
       log.rateLimited(MODEL, "day");
-      log.unavailable(MODEL, { kind: "unavailable", httpStatus: 503, detail: "high demand" });
-      log.failed(MODEL, { kind: "badRequest", detail: "bad schema" });
+      log.unavailable(MODEL, { ok: false, kind: "unavailable", httpStatus: 503, detail: "high demand" });
+      log.failed(MODEL, { ok: false, kind: "badRequest", detail: "bad schema" });
       log.noModelSucceeded();
     });
 
@@ -75,10 +75,10 @@ describe("RouterLog", () => {
   it("still returns the descriptive text the usage tables store as lastError", () => {
     const log = new RouterLog();
     expect(log.rateLimited(MODEL, "minute")).toBe("rate limited (minute quota)");
-    expect(log.unavailable(MODEL, { kind: "unavailable", httpStatus: 503, detail: "busy" })).toBe(
+    expect(log.unavailable(MODEL, { ok: false, kind: "unavailable", httpStatus: 503, detail: "busy" })).toBe(
       "unavailable (HTTP 503): busy",
     );
-    expect(log.failed(MODEL, { kind: "badRequest", detail: "nope" })).toBe(
+    expect(log.failed(MODEL, { ok: false, kind: "badRequest", detail: "nope" })).toBe(
       "failed with HTTP n/a: nope",
     );
   });

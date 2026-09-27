@@ -212,18 +212,18 @@ describe("extractEvent", () => {
     { timeout: 60_000 },
     async (message, expected) => {
       let notified = 0;
-      const downstream = await extractEvent(
+      const extraction = await extractEvent(
         createRouter(env as unknown as RouterEnv),
         message,
         async () => {
           notified++;
         },
       );
-      expect(downstream.result).toBe("ok");
+      expect(extraction.ok).toBe(true);
       // Once, right before the first model is tried, however many it takes.
       expect(notified).toBe(1);
 
-      const parsed = JSON.parse(downstream.message) as ExtractedEvent;
+      const parsed = (extraction as { event: ExtractedEvent }).event;
       const normalized = {
         ...parsed,
         // The calendar is a free string; the code lowercases it, so does the test.

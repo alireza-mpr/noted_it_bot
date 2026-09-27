@@ -6,10 +6,7 @@ import {
   REFUND_USER_QUOTA,
   SELECT_USER_USAGE,
 } from "../db/sql/userUsage";
-import type {
-  QuotaReservation,
-  UserQuotaConsumeResult,
-} from "../policy/userQuotaPolicy";
+import type { QuotaReservation, QuotaResult } from "../policy/userQuotaPolicy";
 
 export class UserUsageRepository {
   constructor(private readonly db: D1Database) {}
@@ -33,16 +30,12 @@ export class UserUsageRepository {
     userId: number,
     now: Date,
     dailyQuota: number,
-  ): Promise<UserQuotaConsumeResult> {
+  ): Promise<QuotaResult> {
     const nowMs = now.getTime();
     const previous = await this.find(userId, now, dailyQuota);
     const available = previous?.remainingQuota ?? dailyQuota;
     if (available <= 0) {
-      return {
-        successful: false,
-        remainingQuota: 0,
-        retryAt: (previous?.lastUsedAt ?? nowMs) + QUOTA_RESET_AFTER_MS,
-      };
+      return { allowed: false, retryAt: (previous?.lastUsedAt ?? nowMs) + QUOTA_RESET_AFTER_MS };
     }
 
     const consumed = await this.db
@@ -52,18 +45,12 @@ export class UserUsageRepository {
     if (consumed.meta.changes === 0) {
       // Another message from this user took the last unit between the read
       // and the write.
-      return {
-        successful: false,
-        remainingQuota: 0,
-        retryAt: nowMs + QUOTA_RESET_AFTER_MS,
-      };
+      return { allowed: false, retryAt: nowMs + QUOTA_RESET_AFTER_MS };
     }
 
-    const remainingQuota = available - 1;
     return {
-      successful: true,
-      remainingQuota,
-      retryAt: remainingQuota === 0 ? nowMs + QUOTA_RESET_AFTER_MS : 0,
+      allowed: true,
+      remaining: available - 1,
       reservation: {
         userId,
         dailyQuota,

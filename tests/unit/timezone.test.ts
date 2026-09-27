@@ -1,20 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
 import type { ExtractedEvent } from "../../src/extractedEvents/extractedEvent";
-import { resolveTimezone } from "../../src/time/timezone";
+import { ianaZone } from "../../src/time/timezone";
 
-describe("resolveTimezone", () => {
+describe("ianaZone", () => {
   it("canonicalises an alias or a differently cased name", () => {
-    expect(resolveTimezone("Iran")).toBe("Asia/Tehran");
-    expect(resolveTimezone("asia/tehran")).toBe("Asia/Tehran");
-  });
-
-  it("defaults to appConfig.defaultTimezone when there is no hint", () => {
-    expect(resolveTimezone(null)).toBe("UTC");
+    expect(ianaZone("Iran")).toBe("Asia/Tehran");
+    expect(ianaZone("asia/tehran")).toBe("Asia/Tehran");
   });
 
   it("returns null for a name that isn't a timezone", () => {
-    expect(resolveTimezone("Iran Standard Time")).toBeNull();
+    expect(ianaZone("Iran Standard Time")).toBeNull();
   });
 });
 

@@ -12,8 +12,8 @@ describe("parseGeminiResponse", () => {
     const { httpStatus, body } = GEMINI_503_UNAVAILABLE;
 
     expect(parseGeminiResponse(MODEL, httpStatus, body)).toEqual({
-      result: "failed",
-      failure: { kind: "unavailable", httpStatus: 503, detail: DETAIL },
+      ok: false,
+      kind: "unavailable", httpStatus: 503, detail: DETAIL,
     });
   });
 
@@ -21,8 +21,8 @@ describe("parseGeminiResponse", () => {
     expect(
       parseGeminiResponse(MODEL, 500, GEMINI_503_UNAVAILABLE.body),
     ).toMatchObject({
-      result: "failed",
-      failure: { kind: "unavailable", httpStatus: 500 },
+      ok: false,
+      kind: "unavailable", httpStatus: 500,
     });
   });
 
@@ -33,7 +33,7 @@ describe("parseGeminiResponse", () => {
     });
 
     expect(parseGeminiResponse(MODEL, 200, body)).toEqual({
-      result: "ok",
+      ok: true,
       model: MODEL,
       text: "Pong",
       totalTokens: 7,

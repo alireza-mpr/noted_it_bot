@@ -1,6 +1,5 @@
 import type { Env } from "../env";
 import { runLogSession } from "../logging/logger";
-import { userQuotaPolicy } from "../policy/userQuotaPolicy";
 import { createRouter } from "../router/router";
 import { updateHandler } from "./messageHandlers/updateHandler";
 import { handleTzPage, handleTzSave } from "../web/tzRoutes";
@@ -30,8 +29,6 @@ export default {
       if (secret !== env.WEBHOOK_SECRET) {
         return new Response("Unauthorized", { status: 401 });
       }
-
-      userQuotaPolicy.init(env.USAGE_DB);
 
       await updateHandler(
         request,

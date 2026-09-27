@@ -1,4 +1,6 @@
-export type Weekday = "MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU";
+import type { Weekday } from "../time/dateOnly";
+
+export type { Weekday };
 
 export interface Recurrence {
   frequency: "daily" | "weekly" | "monthly" | "yearly";
@@ -9,7 +11,7 @@ export interface Recurrence {
 
   // "never" is allowed: the series has no end, and we add no limit.
   end_kind: "never" | "until" | "count";
-  until_year: number | null; // null: toGregorianEvent picks the year
+  until_year: number | null; // null: toGregorianDates picks the year
   until_month: number | null;
   until_day: number | null;
   count: number | null; // "for 6 weeks" -> 6

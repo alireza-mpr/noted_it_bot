@@ -51,11 +51,9 @@ export class GroqClient implements ProviderClient {
     } catch (err) {
       if ((err as Error).name === "TimeoutError") {
         return {
-          result: "failed",
-          failure: {
-            kind: "unavailable",
-            detail: `no response within ${this.timeoutMs / 1000}s`,
-          },
+          ok: false,
+          kind: "unavailable",
+          detail: `no response within ${this.timeoutMs / 1000}s`,
         };
       }
       throw err;
