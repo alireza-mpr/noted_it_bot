@@ -2,6 +2,7 @@ import type { MessageId } from "../interactiveMessages/messages";
 import { translateStatic } from "../translation/translate";
 import TZ_PAGE_CSS from "./tzPage.css";
 import TZ_PAGE_HTML from "./tzPage.html";
+import { TZ_CITIES } from "./tzCities";
 
 const RTL_LANGUAGES = new Set(["fa", "ar"]);
 
@@ -69,6 +70,7 @@ export function renderTzPage({ lang, saveToken, nonce }: TzPageInput): string {
   const config = {
     token: saveToken,
     lang,
+    cities: TZ_CITIES,
     strings: {
       title: t("PAGE_TITLE"),
       detected: t("PAGE_DETECTED"),

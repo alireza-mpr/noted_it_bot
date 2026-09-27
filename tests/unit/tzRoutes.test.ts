@@ -46,6 +46,7 @@ describe("GET /tz", () => {
     const saved = await verifyTzToken(SECRET, config.token, "save", NOW);
     expect(saved).toEqual({ ok: true, payload: { uid: UID, username: null, firstName: null, lang: "fa", purpose: "save", exp: NOW + SAVE_TOKEN_TTL_MS } });
     expect((await verifyTzToken(SECRET, config.token, "open", NOW)).ok).toBe(false);
+    expect(config.cities.Washington).toBe("America/New_York");
     expect(html).not.toContain(await openToken());
   });
 

@@ -249,7 +249,10 @@ uses a small web page instead, served by the Worker itself, with no model involv
    the request Telegram made, so there is no URL to configure.
 2. The page (`src/web/tzPage.ts`, markup in `src/web/tzPage.html`) reads the device's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`)
    and shows it with the local time there and a **Yes, use this time zone** button, or a searchable list of every
-   zone (`Intl.supportedValuesOf('timeZone')`) to pick a different one. It's in the user's language, right-to-left
+   zone (`Intl.supportedValuesOf('timeZone')`) to pick a different one. Zone names only cover one city each, so the
+   search also matches each zone's plain-language name in the user's language ("Eastern Time", from `Intl`), and a
+   list of well-known cities in English (`src/web/tzCities.ts`: "Washington" finds America/New_York). It ignores
+   case and accents, and ranks exact matches first. It's in the user's language, right-to-left
    for Persian and Arabic.
 3. Saving `POST`s to `/tz/save`, which validates the zone with `Intl`, stores it in `user_preference.timezone`, and
    sends the confirmation to the chat.

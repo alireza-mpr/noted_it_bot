@@ -42,6 +42,20 @@
             };
             const local = (zone) => S.localTime.replace("{0}", timeIn(zone));
             const pretty = (zone) => zone.replace(/_/g, " ");
+            // Lower case, no accents, "_" as a space: "São_Paulo" and "sao paulo" match.
+            const fold = (text) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[_\s]+/g, " ").trim();
+            // The zone's plain-language name in the user's language ("Eastern Time"),
+            // or "" where the browser can't say.
+            const genericName = (zone) => {
+                for (const style of ["longGeneric", "long"]) {
+                    try {
+                        const parts = new Intl.DateTimeFormat(cfg.lang, { timeZone: zone, timeZoneName: style }).formatToParts(new Date());
+                        const name = parts.find((part) => part.type === "timeZoneName");
+                        if (name) return name.value;
+                    } catch (e) { /* try the next style */ }
+                }
+                return "";
+            };
 
             $("title").textContent = S.title;
             $("detected-label").textContent = S.detected;
@@ -82,22 +96,74 @@
             const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone").slice() : [];
             if (!zones.includes("UTC")) zones.push("UTC");
 
+            // A city's zone as this browser names it (an older browser may still
+            // call Europe/Kyiv "Europe/Kiev"), or null if the browser doesn't have it.
+            const inList = (zone) => {
+                if (zones.includes(zone)) return zone;
+                try {
+                    const canonical = new Intl.DateTimeFormat("en", { timeZone: zone }).resolvedOptions().timeZone;
+                    return zones.includes(canonical) ? canonical : null;
+                } catch (e) { return null; }
+            };
+
+            // Built on first search: each zone with its name, plain-language name and cities.
+            let index = null;
+            function buildIndex() {
+                const citiesByZone = new Map();
+                for (const [city, target] of Object.entries(cfg.cities || {})) {
+                    const zone = inList(target);
+                    if (!zone) continue;
+                    if (!citiesByZone.has(zone)) citiesByZone.set(zone, []);
+                    citiesByZone.get(zone).push(city);
+                }
+                index = zones.map((zone) => ({
+                    zone,
+                    name: fold(pretty(zone)),
+                    generic: genericName(zone),
+                    cities: citiesByZone.get(zone) || [],
+                }));
+            }
+
+            // How well text matches the query: 0 exact, 1 starts with it, 2 contains it.
+            const closeness = (text, q) => (text === q ? 0 : text.startsWith(q) ? 1 : text.includes(q) ? 2 : null);
+
+            // Best matches first: an exact city or zone ("washington" before
+            // "washington state"), then ones starting with the query, then ones
+            // containing it, then plain-language names ("pacific time").
+            function search(query) {
+                if (!index) buildIndex();
+                const q = fold(query);
+                if (!q) return index.map((entry) => ({ entry, city: null }));
+                const found = [];
+                for (const entry of index) {
+                    const place = entry.name.split("/").pop();
+                    let best = { rank: Math.min(closeness(place, q) ?? 9, closeness(entry.name, q) === null ? 9 : 2), city: null };
+                    for (const city of entry.cities) {
+                        const rank = closeness(fold(city), q);
+                        if (rank !== null && rank < best.rank) best = { rank, city };
+                    }
+                    if (best.rank === 9 && fold(entry.generic).includes(q)) best = { rank: 3, city: null };
+                    if (best.rank < 9) found.push({ entry, city: best.city, rank: best.rank });
+                }
+                // Ties go to zones with more listed cities, the main ones people know.
+                return found.sort((a, b) => a.rank - b.rank || b.entry.cities.length - a.entry.cities.length);
+            }
+
             let picked = null;
             function renderResults() {
-                const query = $("search").value.trim().toLowerCase();
                 const list = $("results");
                 list.textContent = "";
-                zones
-                    .filter((zone) => !query || pretty(zone).toLowerCase().includes(query))
+                search($("search").value)
                     .slice(0, 40)
-                    .forEach((zone) => {
+                    .forEach(({ entry, city }) => {
+                        const zone = entry.zone;
                         const item = document.createElement("li");
                         const button = document.createElement("button");
                         button.type = "button";
                         button.className = "secondary";
-                        button.textContent = pretty(zone);
+                        button.textContent = city ? `${city} (${pretty(zone)})` : pretty(zone);
                         const small = document.createElement("small");
-                        small.textContent = timeIn(zone);
+                        small.textContent = [entry.generic, timeIn(zone)].filter(Boolean).join(" · ");
                         button.appendChild(small);
                         button.addEventListener("click", () => {
                             picked = zone;
