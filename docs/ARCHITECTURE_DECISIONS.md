@@ -1,161 +1,208 @@
 # Architecture Decision Registry
 
-The decisions that shape how Noted is built, and why. Measured D1 costs are in
-[USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
+This file lists the main design decisions of Noted, and why we made them.
+The D1 costs we measured are in [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
 
 ## Requirements
 
 ### Functional
 
-- **FR1 — Message to calendar event.** Forward any message (text, or a caption
-  on media) and get a one-tap Google Calendar link plus an `.ics` file.
-- **FR2 — Messages in any language.** Events are extracted from messages in
-  any language the models understand, not only the 16 the bot replies in.
-- **FR3 — Recurring events.** Explicit repeats ("every Thursday", "first Friday
-  of the month") become a proper repeat rule.
-- **FR4 — Replies in the user's language.** 16 languages, detected from
-  Telegram and changeable with the `/lang` command.
-- **FR5 — Per-user time zone.** Set with the `/tz` command.
-- **FR6 — Visible daily quota.** `/start` tells users their daily quota, and
-  every answer says how much is left.
+- **FR1 — Message to calendar event.** The user forwards a message (text, or
+  a caption on a photo). The bot replies with a Google Calendar link and an
+  `.ics` file.
+- **FR2 — Messages in any language.** The bot reads events in any language
+  the models understand, not only in the 16 languages it replies in.
+- **FR3 — Recurring events.** Clear repeats ("every Thursday", "first Friday
+  of the month") become a real repeat rule.
+- **FR4 — Replies in the user's language.** 16 languages. The bot uses the
+  Telegram language. The user can change it with the `/lang` command.
+- **FR5 — Time zone per user.** The user sets it with the `/tz` command.
+- **FR6 — Visible daily quota.** `/start` shows the daily quota. Every answer
+  shows how many requests are left.
 
 ### Non-functional
 
-- **NFR1 — Zero cost.** Runs entirely on free tiers: Cloudflare Workers, D1,
+- **NFR1 — Zero cost.** Everything runs on free plans: Cloudflare Workers, D1,
   and free LLM models.
-- **NFR2 — Abuser resistance.** No user, or swarm of users, can exhaust the
-  capacity everyone shares: Cloudflare's free request and D1 read/write
-  budgets, and the free LLM models' per-minute and per-day quotas.
-- **NFR3 — Strong consistency.** User quota and model usage are updated
-  atomically, so parallel requests can't overspend them.
-- **NFR4 — Availability.** When a model or a whole provider is rate-limited,
-  overloaded or broken, the bot moves on to another; if none can answer, the
-  user gets a clear message instead of silence.
+- **NFR2 — Resistant to abuse.** No user, and no group of users, can use up
+  the shared capacity. Shared capacity means:
+  - Cloudflare's free requests, and D1 reads and writes.
+  - The free LLM quotas, per minute and per day.
+- **NFR3 — Strong consistency.** The user quota and the model usage are
+  updated atomically. Parallel requests cannot use more than the limit.
+- **NFR4 — Availability.** If a model or a provider fails, the bot tries the
+  next one. If none can answer, the user gets a clear message. The bot never
+  stays silent.
 
 ## Decisions
 
-| ADR | Decision                                            | Serves     |
-| --- | --------------------------------------------------- | ---------- |
-| 1   | Per-user daily quota in D1                          | NFR1, NFR2 |
-| 2   | Check the user quota before consuming it            | NFR1, NFR2 |
-| 3   | Reserve user quota, refund it when no model answers | FR6, NFR3  |
-| 4   | Cycle through free models across providers          | NFR1, NFR4 |
-| 5   | Find the user's time zone with a signed web page    | FR5        |
+| ADR | Decision                                            | Serves          |
+| --- | --------------------------------------------------- | --------------- |
+| 1   | Daily quota per user, stored in D1                  | NFR1, NFR2      |
+| 2   | Check the quota before using it                     | NFR1, NFR2      |
+| 3   | Reserve quota, give it back if no model answers     | FR6, NFR3       |
+| 4   | Try free models one after another                   | NFR1, NFR4      |
+| 5   | Get the user's time zone from a signed web page     | FR5             |
+| 6   | Translate the bot's messages once, ahead of time    | FR4, NFR1, NFR2 |
 
 ---
 
-### ADR-1 — Per-user daily quota in D1
+### ADR-1 — Daily quota per user, stored in D1
 
-**Problem.** An open bot lets a swarm of users spend the free budgets that
-every real user shares (Worker requests, D1 reads and writes, LLM calls).
-
-**Options**
-
-- In-memory counters: free, but Workers keep no reliable state between requests.
-- Cloudflare Rate Limiting binding: free and stateless, but windows are only
-  10 or 60 seconds (no daily quota).
-- Cache API "denied until" marker: free, no daily cap, but it doesn't work on
-  `workers.dev` (needs a paid domain) and can lose entries.
-- D1 row per user.
-
-**Decision.** D1, one row per user, reset 24 hours after last use.
-
-**Trade-offs.** Every Telegram update still counts as a Worker request
-(100k a day free); only a paid plan lifts that. Each new account gets a full
-quota.
-
-### ADR-2 — Check the quota before consuming it
-
-**Problem.** A refused message is what an abuser repeats, so it must be as
-cheap as possible. Consuming first and then reading the result cost 2 reads;
-`RETURNING` doesn't help, because D1 bills it as a read too.
-
-**Decision.** `SELECT` first and stop if nothing is left; only then run the
-consuming upsert.
-
-**Trade-offs.** A refused message costs 1 read and no writes. An allowed one
-takes two D1 round trips instead of one: a few milliseconds before an LLM
-call that takes seconds.
-
-### ADR-3 — Reserve quota, refund it when no model answers
-
-**Problem.** A message no model answers shouldn't use quota. But Telegram
-delivers updates in parallel (up to 40 at once), so charging only after an
-answer lets a burst of messages all pass before any charge lands.
+**Problem.** The bot is open to everyone. A large group of users could use up
+the free capacity that all users share: Worker requests, D1 reads and writes,
+and LLM calls.
 
 **Options**
 
-- Charge after a model answers: simple, but bursts get around it.
-- Reserve atomically first, refund if no model answered.
+| Option | Good | Bad |
+|---|---|---|
+| Counters in memory | Free | Workers do not keep memory between requests |
+| Cloudflare Rate Limiting binding | Free, no storage | Only 10- or 60-second windows, no daily quota |
+| Cache API "blocked until" marker | Free, no daily limit | Does not work on `workers.dev` (needs a paid domain). Can lose entries. |
+| One D1 row per user | Reliable, daily quota possible | Costs D1 reads and writes |
 
-**Decision.** Reserve with a conditional upsert (`WHERE remaining > 0`), and
-refund if no model answered, restoring `lastUsedAt` too, so the reset time
-doesn't move. Only a message that goes to a model reserves a unit: commands,
-empty messages and unknown `/commands` never touch the quota, so they can't be
-used to loop reserve-and-refund writes.
+**Decision.** One D1 row per user. The quota resets 24 hours after the last
+use.
 
-**Trade-offs.** A test sends 10 messages at once with a quota of 3; exactly 3
-get through. But while every model is down, every message is refunded, so the
-quota stops nobody. Each such message costs about 13 reads and 2 writes.
+**Trade-offs.**
+- Every Telegram message still counts as one Worker request (100k per day on
+  the free plan). Only a paid plan removes that limit.
+- Every new Telegram account gets a full quota.
 
-### ADR-4 — Cycle through free models across providers
+### ADR-2 — Check the quota before using it
 
-**Problem.** Free LLM tiers have small per-model limits (requests per minute
-and per day, tokens per minute), counted per project rather than per API key.
-One model runs out quickly, and any model can be overloaded or retired.
+**Problem.** An abuser sends many messages after the quota runs out. So a
+refused message must be as cheap as possible.
+- "Use first, then read the result" costs 2 reads.
+- `RETURNING` does not help. D1 counts it as a read too.
+
+**Decision.** First read the quota (`SELECT`). If nothing is left, stop. Only
+then use one unit (an upsert).
+
+**Trade-offs.**
+- A refused message costs 1 read and 0 writes.
+- An allowed message needs two D1 calls instead of one. This adds a few
+  milliseconds. The LLM call after it takes seconds anyway.
+
+### ADR-3 — Reserve quota, give it back if no model answers
+
+**Problem.**
+- If no model answers, the message should not use quota.
+- But Telegram sends messages in parallel (up to 40 at once). If we charge
+  only after an answer, a burst of messages can all pass before the first
+  charge.
 
 **Options**
 
-- One model: runs out within hours.
-- Retry the same model with backoff: slow, and it still runs out.
-- A paid tier: breaks NFR1.
-- Route across many free models and providers, tracking each one's usage.
+| Option | Good | Bad |
+|---|---|---|
+| Charge after a model answers | Simple | A burst of messages gets around the quota |
+| Reserve first, give back if no answer | Safe with parallel messages | One extra write when no model answers |
 
-**Decision.** A router tries Gemini's free models in registry order, then
+**Decision.**
+- Reserve one unit with a conditional upsert (`WHERE remaining > 0`).
+- If no model answers, give the unit back. `lastUsedAt` is also put back, so
+  the reset time does not move.
+- Only messages that go to a model reserve quota. Commands, empty messages
+  and unknown `/commands` never do. So they cannot be used to create endless
+  reserve-and-give-back writes.
+
+**Trade-offs.**
+- A test sends 10 messages at once with a quota of 3. Exactly 3 get through.
+- When all models are down, every message gets its unit back. So the quota
+  stops nobody during that time. Each such message costs about 13 reads and 2
+  writes.
+
+### ADR-4 — Try free models one after another
+
+**Problem.**
+- Free LLM plans have small limits per model: requests per minute, requests
+  per day, and tokens per minute.
+- The limits count per project, not per API key. More keys do not help.
+- One model runs out quickly. Any model can also be overloaded or removed.
+
+**Options**
+
+| Option | Bad |
+|---|---|
+| Use one model | Runs out within hours |
+| Retry the same model later | Slow, and it still runs out |
+| Pay for a model | Breaks NFR1 (zero cost) |
+| Try many free models, and count each model's usage | (chosen) |
+
+**Decision.** A router tries Gemini's free models in a fixed order, then
 Groq's.
+- It counts each model's usage in D1. It uses the same time windows as the
+  provider. For example, Gemini's daily limit resets at midnight Pacific time.
+- It skips a model that is already at its limit, without calling it.
+- A 429 error marks the model as used up, for the minute or the day. For
+  Groq: until its `retry-after` time.
+- A 503 error, a 12-second timeout, or any other error: skip only that model.
+- A 401 or 403 error means the API key is bad. The router skips the whole
+  provider.
 
-- Each model's usage is counted in D1, using the same windows as the provider
-  (Gemini's daily limits reset at midnight Pacific time). Models already at
-  their limits are skipped without being called.
-- A 429 marks that model exhausted for the minute or the day (Groq: until its
-  `retry-after`).
-- A 503, a 12-second timeout or any other failure skips just that model.
-- A 401/403 means the key itself is bad, so the router abandons that provider.
+**Trade-offs.**
+- Each usage write is atomic. But nothing is reserved before a call. So
+  parallel requests can go slightly over a model's limit, until its 429
+  corrects the count.
+- Answer quality is different for each model.
+- The worst case (all models but the last are rate-limited) costs 29 reads
+  and 18 writes.
 
-**Trade-offs.** Each usage write is atomic, but nothing is reserved before a
-call, so parallel requests can overshoot a model's limit until its 429
-corrects the count. Answer quality varies from model to model. The worst case
-(every model but the last rate-limited) costs 29 reads and 18 writes.
-
-### ADR-5 — Find the user's time zone with a signed web page
+### ADR-5 — Get the user's time zone from a signed web page
 
 **Problem.** Telegram never tells a bot the user's time zone or location.
 
 **Options**
 
-- Ask for a place name and guess its zone: unreliable, since a country can
-  span several zones.
-- Ask the user to share their location: mobile-only, too much to ask for, and
-  it needs a location-to-zone lookup.
-- Infer it from the language: wrong for most people.
-- Let the user's own device report it.
+| Option | Bad |
+|---|---|
+| Ask for a place name and guess the zone | Not reliable: one country can have many zones |
+| Ask the user to share their location | Only on phones, too much to ask, needs a location-to-zone lookup |
+| Guess from the language | Wrong for most people |
+| Let the user's device report its zone | (chosen) |
 
-**Decision.** `/tz` replies with a button to a small page served by the
-Worker. The page reads the device's zone
-(`Intl.DateTimeFormat().resolvedOptions().timeZone`) and asks for a one-tap
-confirmation, or offers a searchable list of every zone. The page knows the
-user only from a signed token (HMAC, 1-minute link, 10-minute save token), not
-from anything the browser sends. Typing an exact zone (`/tz Australia/Melbourne`)
-skips the page. Separately, the model reads a zone from the message itself
-when the message states one or names a place.
+**Decision.**
+- `/tz` replies with a button. It opens a small page on the Worker.
+- The page reads the device's time zone and asks the user to confirm with
+  one tap. The user can also search a list of all zones.
+- The page knows the user only from a signed token (HMAC). The link works for
+  1 minute. The save token works for 10 minutes. The page never trusts
+  anything the browser sends.
+- `/tz Australia/Melbourne` (an exact zone name) skips the page.
+- Separately, the model reads a time zone from the message itself, when the
+  message states one or names a place.
 
-**Trade-offs.** It costs the user a tap and a page load. The device's zone can
-be wrong when travelling, which the list covers. Events use, in order: a zone
-the message gives, the user's `/tz` choice, then no zone at all ("floating"
-times, shown as written in the calendar's own zone). A default zone like UTC
-was tried first and put a 6pm Melbourne event at 4am the next day. In the
-last two cases the caption says so and points to `/tz`.
+**Trade-offs.**
+- The user needs one tap and one page load.
+- The device's zone can be wrong when the user is travelling. The search list
+  covers that.
+- Events use, in this order: the zone from the message, then the user's `/tz`
+  zone, then no zone at all ("floating" time: the time as written, in the
+  calendar's own zone). We first tried UTC as a default. It moved a 6pm
+  Melbourne event to 4am the next day. In the last two cases, the caption
+  tells the user and points to `/tz`.
 
-- translation:
-  dynamic --> llm usage, open for abuse
-  static --> one time transaltion, limited number of languages no llm cost
+### ADR-6 — Translate the bot's messages once, ahead of time
+
+**Problem.** The bot replies in 16 languages. Its messages must be translated
+somehow.
+
+**Options**
+
+| Option | Good | Bad |
+|---|---|---|
+| Dynamic: translate each reply with an LLM | Any language | Uses LLM quota on every reply. Open to abuse: a user can switch languages to spend the quota. |
+| Static: translate once, ship the translations with the bot | No LLM cost, fast, same text every time | Only a fixed list of languages. Every new message needs 16 translations. |
+
+**Decision.** Static. Every message is translated ahead of time and stored in
+`src/translation/translations/*.json`. Choosing a language never calls a
+model. Other languages fall back to English. A unit test checks that every
+translation keeps the same placeholders, HTML tags, emoji and commands as the
+English text.
+
+**Trade-offs.**
+- Only 16 languages.
+- The translations were written by an AI assistant. Native speakers have not
+  reviewed them yet.
