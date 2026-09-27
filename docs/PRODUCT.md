@@ -75,6 +75,11 @@ Groq) read the events.
   shows the current one (in its own name, for example "فارسی").
 - Dates and times in the summary follow the reply language. They are always
   Gregorian.
+- **A reply is fully in the reply language** (in the new code, from the
+  rewrite on): numbers, dates, times and the 🔁 repeat line too. Only the
+  event's own content (the title, the location) and time zone IDs (e.g.
+  "Australia/Melbourne") stay as they are. The old code wrote the repeat line
+  in English and the quota number in Latin digits.
 - `/tz` sets the time zone on a web page that the bot links to:
   - The page detects the device's zone and asks the user to confirm with one
     tap.

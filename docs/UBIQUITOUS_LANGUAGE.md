@@ -54,7 +54,8 @@ this list is called the "ubiquitous language".
 | Calendar file | The `.ics` file the bot sends. | `CalendarFile`, `calendarFileOf` |
 | RRULE | iCalendar's name for the repeat line in a calendar file. An outside term, so "rule" is allowed here. | `rruleOf` |
 | Google Calendar link | A link that opens Google Calendar with the event filled in. | `googleCalendarLinkOf` |
-| Caption | The text sent with the calendar file: the summary, the link and the notes. | `output/` |
+| Caption | The text sent with the calendar file: the summary, the link and the notes. | `captionOf` |
+| Repeat sentence | The 🔁 line in the caption that says how the event repeats, in the reply language. | `repeatSentenceOf` |
 
 ## Time zones
 
@@ -90,6 +91,9 @@ this list is called the "ubiquitous language".
 | User | A Telegram user who talks to the bot. | `userId` |
 | User settings | The language and time zone the user chose. `null` means not chosen. | `UserSettings` |
 | Reply language | The language of the bot's messages: the user's choice, else Telegram's language, else English. | — |
+| Supported language | A language the bot replies in (16 of them). | `SupportedLanguage`, `parseLanguageCode` |
+| Bot message | A text the bot sends, with an id, e.g. `NO_TEXT_MESSAGE`. | `BOT_MESSAGES`, `BotMessageId` |
+| Translation | A bot message in a supported language, written ahead of time (ADR-6). | `TRANSLATIONS`, `translate` |
 
 ## Quota
 

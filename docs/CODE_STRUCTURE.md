@@ -85,7 +85,9 @@ src/
                format text
     date-time/        dates, times of day, time zones, calendar conversion
     hash/             hashing a text
+    html/             escaping text for HTML
     icalendar/        RFC 5545 text and date formats
+    text/             filling {0}, {1}, … in a text
   domain/      pure rules, no input or output
     calendar-event/   CalendarEventDraft → a CalendarEvent, the calendars we
                       accept, the year rule, repeats
@@ -204,12 +206,14 @@ code, together with that area.
 | the user's language and time zone (`repositories/userPreferenceRepository.ts`) | `domain/user/user-settings.ts` (type) | ✅ |
 | `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/calendar-file.ts`, `generic/icalendar/` | ✅ |
 | `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ✅ |
-| `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts` | ⏳ |
+| `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts`, `output/localized-number.ts`; `telegramHtml.ts` → `generic/html/escape-html.ts` | ✅ |
 | `extractedEvents/recurrence.ts` (RRULE) | `output/rrule.ts` | ✅ |
 | `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/repeat-sentence.ts` | ✅ |
 | date formatting in a language (in `calendarEvent.ts`) | `output/localized-date-time.ts` | ✅ |
 | `time/formatWait.ts` | not decided yet (the quota refusal message) | ⏳ |
-| `interactiveMessages/messages.ts`, `translation/*` | `i18n/` | ⏳ |
+| `interactiveMessages/messages.ts`, `translation/translate.ts`, `translation/translations/*` | `i18n/bot-message.ts`, `i18n/translation.ts`, `i18n/translations/*` | ✅ |
+| `translation/language.ts` | `i18n/supported-language.ts` (the list, `parseLanguageCode`); the `/lang` name parsing and language names → with `/lang` in step 5 | ✅ (`/lang` part ⏳) |
+| `translation/placeholders.ts` | `generic/text/fill-placeholders.ts` | ✅ |
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts` | `app/create-event-from-message.ts` | ⏳ |
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
@@ -239,9 +243,9 @@ after each commit.
 | 3b | Output: the Google Calendar link | ✅ |
 | 3c-1 | Output: dates and times in the reply language | ✅ |
 | 3c-2 | Output: the repeat sentence, in English (as in the old code) | ✅ |
-| 3c-3 | i18n: the message texts, the translations, and the lookup | ⏳ |
-| 3c-4 | Output: the repeat sentence in the reply language, with stored templates (a bug fix: no English inside a non-English reply) | ⏳ |
-| 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ⏳ |
+| 3c-3 | i18n: the message texts, the translations, and the lookup | ✅ |
+| 3c-4 | Output: the repeat sentence in the reply language, with stored templates (a bug fix: no English inside a non-English reply) | ✅ |
+| 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ✅ |
 | 4 | Adapters: Telegram, the database, the models, logging, the web pages | ⏳ |
 | 5 | App: one use case per file (create an event, set a language, set a time zone, …) | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
