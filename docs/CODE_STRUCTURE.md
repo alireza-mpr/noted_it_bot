@@ -207,7 +207,8 @@ code, together with that area.
 | `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts` | ⏳ |
 | `extractedEvents/recurrence.ts` (RRULE) | `output/rrule.ts` | ✅ |
 | `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/caption.ts` | ⏳ |
-| date formatting in a language (in `calendarEvent.ts`), `time/formatWait.ts` | `output/localized-dates.ts` | ⏳ |
+| date formatting in a language (in `calendarEvent.ts`) | `output/localized-date-time.ts` | ✅ |
+| `time/formatWait.ts` | not decided yet (the quota refusal message) | ⏳ |
 | `interactiveMessages/messages.ts`, `translation/*` | `i18n/` | ⏳ |
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts` | `app/create-event-from-message.ts` | ⏳ |
