@@ -6,6 +6,7 @@ export interface TelegramUpdate {
     from: {
       id: number;
       username?: string;
+      first_name?: string;
       language_code?: string;
     };
   };
@@ -16,7 +17,7 @@ export interface TelegramUpdate {
 // is the user blocking (kicked) or unblocking (member) the bot.
 export interface TelegramChatMemberUpdate {
   chat: { id: number; type: string };
-  from: { id: number; username?: string };
+  from: { id: number; username?: string; first_name?: string };
   new_chat_member: { status: string };
 }
 

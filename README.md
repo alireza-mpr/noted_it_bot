@@ -246,7 +246,7 @@ just gets the link. `/tz` doesn't use up daily quota (there's no model call).
 
 **Who is asking.** The page and endpoint learn the user from a signed token, never from anything the browser
 sends (`src/web/tzToken.ts`): `base64url(payload).base64url(HMAC-SHA256)`, keyed by `WEBHOOK_SECRET` with a domain
-prefix, so no new secret is needed. The payload is `{uid, username, lang, purpose, exp}`; `username` is only there so the page's logs name the user. There are two tokens: the **link**
+prefix, so no new secret is needed. The payload is `{uid, username, firstName, lang, purpose, exp}`; `username` and `firstName` are only there so the page's logs name the user. There are two tokens: the **link**
 (`purpose: "open"`) is valid for **1 minute**; opening it returns the page with a separate **save** token
 (`purpose: "save"`, **10 minutes**), so a leaked link is useless after a minute, but someone searching the list isn't cut
 off. Neither can be used for the other's job, tampering is detected, and a token must be spelled exactly as it was
@@ -285,13 +285,13 @@ npx wrangler d1 execute noted-it-dev-usage --remote --file user_preference.sql  
 Per the `/start` disclosure ("I may keep your messages to fix bugs"), every message that goes through event
 extraction is logged to Axiom as a `provider response received` event: the text as received
 (`receivedMessage`), the model's answer (`providerResponse`) and the `model` that gave it (null when no model
-answered), plus the request's `userId` and `username`. There is no separate store for messages; they are kept
+answered), plus the request's `userId`, `username` and `firstName`. There is no separate store for messages; they are kept
 as long as the Axiom dataset keeps its data.
 
 ### User activity
 
 What a user does is logged as one `user activity` event with an `activity` field
-(`src/logging/activityLog.ts`), next to the request's `userId`, `username` and `chatId`:
+(`src/logging/activityLog.ts`), next to the request's `userId`, `username`, `firstName` and `chatId`:
 
 | `activity` | extra fields | when |
 |---|---|---|
@@ -312,7 +312,7 @@ deletes the chat without blocking sends nothing, so that can't be seen.
 ['app-logs'] | where activity == "bot_blocked" | summarize count() by bin(_time, 1d)
 ```
 
-The `/tz` page and `/tz/save` are separate web requests; their events get `userId` and `username` from the
+The `/tz` page and `/tz/save` are separate web requests; their events get `userId`, `username` and `firstName` from the
 signed token (see [Setting the time zone](#setting-the-time-zone-tz)).
 
 ### Axiom logging
@@ -338,7 +338,7 @@ the same event for Axiom.
 **One request = one `correlation_id`.** `runLogSession` (called from the webhook's `fetch`)
 generates a UUID per incoming update and keeps it in `AsyncLocalStorage` (the `nodejs_als`
 flag in [wrangler.toml](wrangler.toml)), so concurrent requests can't mix ids. Every event of
-that request carries it, plus `userId`, `username` (`null` when the user has none) and `chatId` once the update is parsed. Filter one
+that request carries it, plus `userId`, `username` (`null` when the user has none; Telegram usernames are optional), `firstName` (every account has one) and `chatId` once the update is parsed. Filter one
 request's whole story with APL:
 
 ```
@@ -353,7 +353,7 @@ breaks those ties, so always sort by both.
 Events are buffered during the request and sent as one batch after the response
 (`ctx.waitUntil`), so logging adds one subrequest per request and no latency. Each event has
 `_time`, `seq`, `level`, `source`, `message`, `correlation_id`, `service`, `version` plus any fields
-passed to the logger (`model`, `tokens`, `userId`, `username`, …). Strings longer than 10,000 characters
+passed to the logger (`model`, `tokens`, `userId`, `username`, `firstName`, …). Strings longer than 10,000 characters
 are truncated. Without an `AXIOM_TOKEN` (local runs, tests) nothing is sent; an Axiom
 failure is only printed to the console and never affects the reply. Message text
 (what users send and what the models return) is included in these logs.

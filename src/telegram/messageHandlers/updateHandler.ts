@@ -147,6 +147,7 @@ async function handleMessage(
 function handleMembershipChange(change: TelegramChatMemberUpdate): void {
   setLogField("userId", change.from.id);
   setLogField("username", change.from.username ?? null);
+  setLogField("firstName", change.from.first_name ?? null);
   setLogField("chatId", change.chat.id);
 
   const status = change.new_chat_member.status;
@@ -204,6 +205,7 @@ export async function updateHandler(
 
   setLogField("userId", message.from.id);
   setLogField("username", message.from.username ?? null);
+  setLogField("firstName", message.from.first_name ?? null);
   setLogField("chatId", message.chat.id);
 
   const lang = await readUserLanguage(env, message);

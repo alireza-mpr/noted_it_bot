@@ -82,7 +82,7 @@ appear in the `/` autocomplete menu.
 ### Reliability & observability
 - Always acknowledges Telegram updates (so one failure can never block the
   update queue); users see a generic error, details go to logs.
-- Workers Logs enabled, and every event also sent to Axiom with the user's id and username.
+- Workers Logs enabled, and every event also sent to Axiom with the user's id, username and first name.
 - Message log (message, model answer, model) kept in Axiom, as disclosed in `/start`.
 - User activity (commands, language and time zone changes, event requests, quota refusals, blocking and
   unblocking the bot) logged as `user activity` events.

@@ -33,6 +33,7 @@ export async function tzCommandHandler(
   const token = await signTzToken(env.WEBHOOK_SECRET, {
     uid: message.from.id,
     username: message.from.username ?? null,
+    firstName: message.from.first_name ?? null,
     lang: replier.lang,
     purpose: "open",
     exp: nowMs + OPEN_TOKEN_TTL_MS,

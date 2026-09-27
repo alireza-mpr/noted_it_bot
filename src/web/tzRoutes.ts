@@ -56,12 +56,14 @@ export async function handleTzPage(request: Request, env: TzRouteEnv, nowMs: num
     return expiredPage(request);
   }
 
-  const { uid, username, lang } = result.payload;
+  const { uid, username, firstName, lang } = result.payload;
   setLogField("userId", uid);
   setLogField("username", username ?? null);
+  setLogField("firstName", firstName ?? null);
   const saveToken = await signTzToken(env.WEBHOOK_SECRET, {
     uid,
     username: username ?? null,
+    firstName: firstName ?? null,
     lang,
     purpose: "save",
     exp: nowMs + SAVE_TOKEN_TTL_MS,
@@ -101,9 +103,10 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
     return json(403, { ok: false, error: "expired" });
   }
 
-  const { uid, username, lang } = result.payload;
+  const { uid, username, firstName, lang } = result.payload;
   setLogField("userId", uid);
   setLogField("username", username ?? null);
+  setLogField("firstName", firstName ?? null);
 
   const timezone = canonicalTimezone(body.timezone);
   if (!timezone) {

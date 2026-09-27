@@ -2,7 +2,9 @@ export type TzTokenPurpose = "open" | "save";
 
 export interface TzTokenPayload {
   uid: number;
+  // username and firstName are only for the logs; everything else goes by uid.
   username?: string | null;
+  firstName?: string | null;
   lang: string;
   purpose: TzTokenPurpose;
   exp: number;
@@ -67,6 +69,11 @@ export async function signTzToken(
   return `${body}.${toBase64Url(new Uint8Array(signature))}`;
 }
 
+// Absent in links issued before the field existed, null when the user has none.
+function isOptionalName(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === "string" && value.length <= 64);
+}
+
 function isPayload(value: unknown): value is TzTokenPayload {
   const candidate = value as Partial<TzTokenPayload> | null;
   return (
@@ -74,10 +81,8 @@ function isPayload(value: unknown): value is TzTokenPayload {
     candidate !== null &&
     Number.isSafeInteger(candidate.uid) &&
     (candidate.uid as number) > 0 &&
-    (candidate.username === undefined ||
-      candidate.username === null ||
-      (typeof candidate.username === "string" &&
-        candidate.username.length <= 64)) &&
+    isOptionalName(candidate.username) &&
+    isOptionalName(candidate.firstName) &&
     typeof candidate.lang === "string" &&
     (candidate.purpose === "open" || candidate.purpose === "save") &&
     typeof candidate.exp === "number" &&

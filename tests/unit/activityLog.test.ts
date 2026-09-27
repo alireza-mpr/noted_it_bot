@@ -50,7 +50,7 @@ function membershipUpdate(status: string, username?: string): Request {
       update_id: 1,
       my_chat_member: {
         chat: { id: 42, type: "private" },
-        from: { id: 42, ...(username && { username }) },
+        from: { id: 42, first_name: "Alice", ...(username && { username }) },
         new_chat_member: { status },
       },
     }),
@@ -71,17 +71,24 @@ afterEach(() => {
 });
 
 describe("user activity", () => {
-  it("logs a block with the user's id and username", async () => {
+  it("logs a block with the user's id, username and first name", async () => {
     const events = await axiomEvents(() => handle(membershipUpdate("kicked", "alice")));
     expect(activities(events)).toEqual([
-      expect.objectContaining({ activity: "bot_blocked", via: "membership", userId: 42, username: "alice", chatId: 42 }),
+      expect.objectContaining({
+        activity: "bot_blocked",
+        via: "membership",
+        userId: 42,
+        username: "alice",
+        firstName: "Alice",
+        chatId: 42,
+      }),
     ]);
   });
 
   it("logs an unblock, with a null username when the user has none", async () => {
     const events = await axiomEvents(() => handle(membershipUpdate("member")));
     expect(activities(events)).toEqual([
-      expect.objectContaining({ activity: "bot_unblocked", userId: 42, username: null }),
+      expect.objectContaining({ activity: "bot_unblocked", userId: 42, username: null, firstName: "Alice" }),
     ]);
   });
 
@@ -104,10 +111,11 @@ describe("user activity", () => {
     ]);
   });
 
-  it("carries the username from the /tz token into the page's logs", async () => {
+  it("carries the username and first name from the /tz token into the page's logs", async () => {
     const token = await signTzToken(SECRET, {
       uid: 42,
       username: "alice",
+      firstName: "Alice",
       lang: "en",
       purpose: "open",
       exp: NOW + OPEN_TOKEN_TTL_MS,
@@ -120,7 +128,7 @@ describe("user activity", () => {
       ),
     );
     expect(activities(events)).toEqual([
-      expect.objectContaining({ activity: "tz_page_opened", userId: 42, username: "alice" }),
+      expect.objectContaining({ activity: "tz_page_opened", userId: 42, username: "alice", firstName: "Alice" }),
     ]);
   });
 });
