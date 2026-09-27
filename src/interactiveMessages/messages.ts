@@ -15,11 +15,10 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 🔁 Repeating events work too ("every Thursday, 7:30pm"). The link adds today's session everywhere; open it on a computer to get the whole series, or set the repeat yourself on a phone using the pattern I send.
 
 🌎 I reply in your Telegram language by default. To change it, send the /lang command, e.g. /lang fa to get my replies in Farsi.
-
-🤓 Beta.`,
+`,
 
   // Appended to START_MESSAGE when the daily quota is on; {0} is appConfig.dailyQuota.
-  START_QUOTA_NOTE: "🎁 On the free plan, you can send up to {0} requests a day.",
+  START_QUOTA_NOTE: `🎁 On the free plan, you can send up to {0} requests a day.`,
 
   // {0} gets wrapped in literal { } after substitution (the surrounding braces
   // here are intentional, not a typo) — that's how the clickable link itself
@@ -46,7 +45,8 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
   NO_TEXT_MESSAGE: "⚠️ Sorry! I couldn't find any text in your message.",
 
-  EXTRACTING_EVENT_MESSAGE: "⏳ On it — extracting the event from your message…",
+  EXTRACTING_EVENT_MESSAGE:
+    "⏳ On it — extracting the event from your message…",
 
   NO_AVAILABLE_MODEL_MESSAGE:
     "Sorry! All the AI providers are busy right now. Please try again in a minute.",
