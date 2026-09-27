@@ -9,34 +9,38 @@ The decisions that shape how Noted is built, and why. Measured D1 costs are in
 
 - **FR1 — Message to calendar event.** Forward any message (text, or a caption
   on media) and get a one-tap Google Calendar link plus an `.ics` file.
-- **FR2 — Recurring events.** Explicit repeats ("every Thursday", "first Friday
+- **FR2 — Messages in any language.** Events are extracted from messages in
+  any language the models understand, not only the 16 the bot replies in.
+- **FR3 — Recurring events.** Explicit repeats ("every Thursday", "first Friday
   of the month") become a proper repeat rule.
-- **FR3 — Replies in the user's language.** 16 languages, detected from
-  Telegram and changeable with `/lang`.
-- **FR4 — Per-user time zone.** Set with `/tz`.
-- **FR5 — Visible daily quota.** Users see their quota in `/start` and how much
-  is left after each request.
+- **FR4 — Replies in the user's language.** 16 languages, detected from
+  Telegram and changeable with the `/lang` command.
+- **FR5 — Per-user time zone.** Set with the `/tz` command.
+- **FR6 — Visible daily quota.** `/start` tells users their daily quota, and
+  every answer says how much is left.
 
 ### Non-functional
 
-- **NFR1 — Abuser resistance.** No user, or swarm of users, can exhaust
-  capacity that everyone else shares.
-- **NFR2 — Zero cost.** Runs entirely on free tiers: Cloudflare Workers, D1,
+- **NFR1 — Zero cost.** Runs entirely on free tiers: Cloudflare Workers, D1,
   and free LLM models.
+- **NFR2 — Abuser resistance.** No user, or swarm of users, can exhaust the
+  capacity everyone shares: Cloudflare's free request and D1 read/write
+  budgets, and the free LLM models' per-minute and per-day quotas.
 - **NFR3 — Strong consistency.** User quota and model usage are updated
   atomically, so parallel requests can't overspend them.
-- **NFR4 — Availability.** The bot keeps answering when a model or a whole
-  provider is rate-limited, overloaded or broken.
+- **NFR4 — Availability.** When a model or a whole provider is rate-limited,
+  overloaded or broken, the bot moves on to another; if none can answer, the
+  user gets a clear message instead of silence.
 
 ## Decisions
 
-| ADR | Decision | Serves |
-|---|---|---|
-| 1 | Per-user daily quota in D1 | NFR1, NFR2 |
-| 2 | Check the quota before consuming it | NFR1, NFR2 |
-| 3 | Reserve quota, refund it when no model answers | NFR3, FR5 |
-| 4 | Cycle through free models across providers | NFR2, NFR4 |
-| 5 | Find the user's time zone with a signed web page | FR4 |
+| ADR | Decision                                            | Serves     |
+| --- | --------------------------------------------------- | ---------- |
+| 1   | Per-user daily quota in D1                          | NFR1, NFR2 |
+| 2   | Check the user quota before consuming it            | NFR1, NFR2 |
+| 3   | Reserve user quota, refund it when no model answers | FR6, NFR3  |
+| 4   | Cycle through free models across providers          | NFR1, NFR4 |
+| 5   | Find the user's time zone with a signed web page    | FR5        |
 
 ---
 
@@ -46,6 +50,7 @@ The decisions that shape how Noted is built, and why. Measured D1 costs are in
 every real user shares (Worker requests, D1 reads and writes, LLM calls).
 
 **Options**
+
 - In-memory counters: free, but Workers keep no reliable state between requests.
 - Cloudflare Rate Limiting binding: free and stateless, but windows are only
   10 or 60 seconds (no daily quota).
@@ -79,6 +84,7 @@ delivers updates in parallel (up to 40 at once), so charging only after an
 answer lets a burst of messages all pass before any charge lands.
 
 **Options**
+
 - Charge after a model answers: simple, but bursts get around it.
 - Reserve atomically first, refund if no model answered.
 
@@ -99,13 +105,15 @@ and per day, tokens per minute), counted per project rather than per API key.
 One model runs out quickly, and any model can be overloaded or retired.
 
 **Options**
+
 - One model: runs out within hours.
 - Retry the same model with backoff: slow, and it still runs out.
-- A paid tier: breaks NFR2.
+- A paid tier: breaks NFR1.
 - Route across many free models and providers, tracking each one's usage.
 
 **Decision.** A router tries Gemini's free models in registry order, then
 Groq's.
+
 - Each model's usage is counted in D1, using the same windows as the provider
   (Gemini's daily limits reset at midnight Pacific time). Models already at
   their limits are skipped without being called.
@@ -124,6 +132,7 @@ corrects the count. Answer quality varies from model to model. The worst case
 **Problem.** Telegram never tells a bot the user's time zone or location.
 
 **Options**
+
 - Ask for a place name and guess its zone: unreliable, since a country can
   span several zones.
 - Ask the user to share their location: mobile-only, too much to ask for, and
@@ -136,7 +145,7 @@ Worker. The page reads the device's zone
 (`Intl.DateTimeFormat().resolvedOptions().timeZone`) and asks for a one-tap
 confirmation, or offers a searchable list of every zone. The page knows the
 user only from a signed token (HMAC, 1-minute link, 10-minute save token), not
-from anything the browser sends. Typing an exact zone (`/tz Asia/Tehran`)
+from anything the browser sends. Typing an exact zone (`/tz Australia/Melbourne`)
 skips the page. Separately, the model reads a zone from the message itself
 when the message states one or names a place.
 
@@ -145,3 +154,7 @@ be wrong when travelling, which the list covers. Events use, in order: a zone
 the message gives, the user's `/tz` choice, then UTC. In the last two cases
 the caption says which zone was used and points to `/tz`, so a wrong guess is
 visible.
+
+- translation:
+  dynamic --> llm usage, open for abuse
+  static --> one time transaltion, limited number of languages no llm cost
