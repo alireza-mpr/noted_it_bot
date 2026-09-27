@@ -26,10 +26,10 @@
   "START_MESSAGE": "Hoi! Ik ben de bot {0} 👋.\n\n📆 Stuur me elk bericht door waarin een evenement staat. Ik haal de details eruit en stuur je een link waarmee je het met één tik aan Google Calendar toevoegt, plus een bestand voor Apple Calendar, Outlook of een andere app.\n\n🕙 Voorlopig lees ik alleen expliciete datums\n(\"19 sep - 20:00\"), niet \"morgen\".\nDe tijdzone leid ik af uit het bericht. Staat die er niet in, stel dan de jouwe in met het commando /tz.\n\n🔁 Terugkerende evenementen werken ook (\"elke donderdag, 19:30\"). De link voegt de sessie van vandaag overal toe; open hem op een computer voor de hele reeks, of stel de herhaling op je telefoon zelf in met het patroon dat ik stuur.\n\n🌎 Standaard antwoord ik in de taal van je Telegram. Om dat te wijzigen, stuur je het commando /lang, bijvoorbeeld /lang fa om mijn antwoorden in het Perzisch te ontvangen.",
   "START_QUOTA_NOTE": "🎁 Met het gratis abonnement kun je tot {0} verzoeken per dag sturen.",
   "TZ_BUTTON_LABEL": "Mijn tijdzone instellen",
-  "TZ_DEFAULT_NOTE": "<i>🌐 Het bericht noemde geen tijdzone, dus ik heb {0} gebruikt. Stuur /tz om die van jou in te stellen.</i>",
+  "TZ_DEFAULT_NOTE": "<i>🌎 Het bericht noemde geen tijdzone, dus ik heb {0} gebruikt. Stuur /tz om die van jou in te stellen.</i>",
   "TZ_LINK_MESSAGE": "Tik op de knop hieronder om je tijdzone in te stellen. De link werkt 1 minuut.",
   "TZ_SET_CONFIRMATION": "Begrepen — vanaf nu gebruik ik de tijdzone {0} voor je.",
-  "TZ_USER_NOTE": "<i>🌐 Het bericht noemde geen tijdzone, dus ik heb die van jou gebruikt: {0}. Stuur /tz om hem te wijzigen.</i>",
+  "TZ_USER_NOTE": "<i>🌎 Het bericht noemde geen tijdzone, dus ik heb die van jou gebruikt: {0}. Stuur /tz om hem te wijzigen.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ Je hebt niet genoeg dagelijks tegoed meer voor vandaag. Probeer het over {0} opnieuw.",
   "USER_DAILY_QUOTA_REMAINING": "🔢 Je hebt voor vandaag nog {0} verzoek(en) over."
 }

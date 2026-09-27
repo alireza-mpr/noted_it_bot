@@ -52,7 +52,7 @@ describe("event time zone", () => {
   it("uses the zone the message gives, over the user's, with no note", async () => {
     const { content, caption } = await send(event({ timezone_hint: "Asia/Tehran" }), "Europe/London");
     expect(content).toContain("DTSTART;TZID=Asia/Tehran:20300923T200000");
-    expect(caption).not.toContain("🌐");
+    expect(caption).not.toContain("🌎");
   });
 
   it("uses the user's /tz zone when the message gives none, and says so", async () => {
@@ -69,6 +69,6 @@ describe("event time zone", () => {
 
   it("adds no note to an all-day event, whose date doesn't depend on a zone", async () => {
     const { caption } = await send(event({ start_time: null }), null);
-    expect(caption).not.toContain("🌐");
+    expect(caption).not.toContain("🌎");
   });
 });

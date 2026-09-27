@@ -26,10 +26,10 @@
   "START_MESSAGE": "Salut ! Je suis le bot {0} 👋.\n\n📆 Transférez-moi n'importe quel message contenant un événement. J'en extrairai les détails et je vous enverrai un lien en un clic pour l'ajouter à Google Calendar, ainsi qu'un fichier pour Apple Calendar, Outlook ou toute autre application.\n\n🕙 Pour l'instant, je ne lis que les dates explicites\n(« 19 sept. - 20 h »), pas « demain ».\nJe déduis le fuseau horaire du message. S'il n'est pas indiqué, définissez le vôtre avec la commande /tz.\n\n🔁 Les événements récurrents fonctionnent aussi (« tous les jeudis, 19 h 30 »). Le lien ajoute la séance d'aujourd'hui partout ; ouvrez-le sur un ordinateur pour obtenir toute la série, ou réglez vous-même la répétition sur un téléphone avec le modèle que j'envoie.\n\n🌎 Je réponds par défaut dans la langue de votre Telegram. Pour la changer, envoyez la commande /lang, par exemple /lang fa pour recevoir mes réponses en persan.",
   "START_QUOTA_NOTE": "🎁 Avec l'offre gratuite, vous pouvez envoyer jusqu'à {0} requêtes par jour.",
   "TZ_BUTTON_LABEL": "Définir mon fuseau horaire",
-  "TZ_DEFAULT_NOTE": "<i>🌐 Le message n'indiquait pas de fuseau horaire, j'ai donc utilisé {0}. Pour définir le vôtre, envoyez /tz.</i>",
+  "TZ_DEFAULT_NOTE": "<i>🌎 Le message n'indiquait pas de fuseau horaire, j'ai donc utilisé {0}. Pour définir le vôtre, envoyez /tz.</i>",
   "TZ_LINK_MESSAGE": "Appuyez sur le bouton ci-dessous pour définir votre fuseau horaire. Le lien fonctionne pendant 1 minute.",
   "TZ_SET_CONFIRMATION": "C'est noté — j'utiliserai désormais le fuseau horaire {0} pour vous.",
-  "TZ_USER_NOTE": "<i>🌐 Le message n'indiquait pas de fuseau horaire, j'ai donc utilisé le vôtre, {0}. Pour le changer, envoyez /tz.</i>",
+  "TZ_USER_NOTE": "<i>🌎 Le message n'indiquait pas de fuseau horaire, j'ai donc utilisé le vôtre, {0}. Pour le changer, envoyez /tz.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ Il ne vous reste pas assez de quota quotidien pour aujourd'hui. Réessayez dans {0}.",
   "USER_DAILY_QUOTA_REMAINING": "🔢 Il vous reste {0} requête(s) pour aujourd'hui."
 }
