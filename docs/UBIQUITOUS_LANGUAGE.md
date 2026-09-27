@@ -51,7 +51,8 @@ this list is called the "ubiquitous language".
 | Written-in calendar | The calendar that a message writes its dates in (e.g. Persian for "9 Mehr"). | `draft.writtenInCalendar` |
 | Gregorian | The only calendar that calendar apps accept. Creating a calendar event turns every date into a Gregorian date. | `"gregory"` |
 | Calendar app | Google Calendar, Apple Calendar, Outlook, and others. | — |
-| Calendar file | The `.ics` file the bot sends. | `output/` |
+| Calendar file | The `.ics` file the bot sends. | `CalendarFile`, `calendarFileOf` |
+| RRULE | iCalendar's name for the repeat line in a calendar file. An outside term, so "rule" is allowed here. | `rruleOf` |
 | Google Calendar link | A link that opens Google Calendar with the event filled in. | `output/` |
 | Caption | The text sent with the calendar file: the summary, the link and the notes. | `output/` |
 
@@ -118,7 +119,7 @@ this list is called the "ubiquitous language".
 | Word | Meaning | In code |
 |---|---|---|
 | Domain | The pure rules of this bot: no network, no database. | `src/domain/` |
-| Generic subdomain | Pure code any app could use, not our business (e.g. date math). | `src/generic/` |
+| Generic subdomain | Generic helpers any app could use, not our business: e.g. do date math, convert data, format text. They are pure, and know nothing about this bot. | `src/generic/` |
 | Output | Pure formats made from domain values: the calendar file, the link, the caption. | `src/output/` |
 | Use case | One thing a user can do, e.g. create an event from a message. | `src/app/` |
 | Rule | A product rule: a decision about how the bot behaves. It is written in [EDGE_CASES.md](EDGE_CASES.md) and coded in the domain. "Rule" never names data. | e.g. `pickYear` |

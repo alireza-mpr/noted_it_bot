@@ -20,8 +20,9 @@
 Follow [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md) for every change:
 - pure rules in `domain/` and `output/`; input and output only in `adapters/`;
   `app/` connects them;
-- pure code any app could use (e.g. date math) in `generic/`, which imports
-  nothing of ours; decisions about this bot stay in `domain/`;
+- generic helpers any app could use (e.g. do date math, convert data, format
+  text) in `generic/`, which imports nothing of ours; decisions about this bot
+  stay in `domain/`;
 - `domain/` and `output/` never import from `app/` or `adapters/`;
 - separation of concerns: one idea per module, from
   docs/UBIQUITOUS_LANGUAGE.md; check every new export belongs to the file's

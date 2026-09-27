@@ -80,10 +80,12 @@ adapters".
 
 ```
 src/
-  generic/     pure code any app could use, not our business (DDD: a
-               "generic subdomain")
+  generic/     generic helpers any app could use, not our business (DDD: a
+               "generic subdomain"): e.g. do date math, convert data,
+               format text
     date-time/        dates, times of day, time zones, calendar conversion
     hash/             hashing a text
+    icalendar/        RFC 5545 text and date formats
   domain/      pure rules, no input or output
     calendar-event/   CalendarEventDraft → a CalendarEvent, the calendars we
                       accept, the year rule, repeats
@@ -200,10 +202,11 @@ code, together with that area.
 | `policy/userQuotaPolicy.ts` | `domain/quota/user-quota-policy.ts`, with the `UsageStore` port in `domain/quota/usage-store.ts` | ✅ |
 | `policy/userQuotaPolicyLogger.ts` | `adapters/logging/` | ⏳ |
 | the user's language and time zone (`repositories/userPreferenceRepository.ts`) | `domain/user/user-settings.ts` (type) | ✅ |
-| `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/ics-file.ts` | ⏳ |
+| `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/calendar-file.ts`, `generic/icalendar/` | ✅ |
 | `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ⏳ |
 | `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts` | ⏳ |
-| `extractedEvents/recurrence.ts` (RRULE, sentence) | `output/ics-file.ts`, `output/caption.ts` | ⏳ |
+| `extractedEvents/recurrence.ts` (RRULE) | `output/rrule.ts` | ✅ |
+| `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/caption.ts` | ⏳ |
 | date formatting in a language (in `calendarEvent.ts`), `time/formatWait.ts` | `output/localized-dates.ts` | ⏳ |
 | `interactiveMessages/messages.ts`, `translation/*` | `i18n/` | ⏳ |
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
