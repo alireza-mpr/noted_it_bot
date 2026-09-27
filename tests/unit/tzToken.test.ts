@@ -5,7 +5,7 @@ import {
   signTzToken,
   verifyTzToken,
   type TzTokenPayload,
-} from "../../src/web/tzToken";
+} from "../../src/legacy/web/tzToken";
 
 const SECRET = "test-secret-value";
 const NOW = 1_800_000_000_000;

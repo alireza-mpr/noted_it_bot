@@ -1,8 +1,8 @@
 import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
-import { QUOTA_RESET_AFTER_MS } from "../../src/db/sql/userUsage";
-import type { QuotaReservation, QuotaResult } from "../../src/policy/userQuotaPolicy";
-import { UserUsageRepository } from "../../src/repositories/userUsageRepository";
+import { QUOTA_RESET_AFTER_MS } from "../../src/legacy/db/sql/userUsage";
+import type { QuotaReservation, QuotaResult } from "../../src/legacy/policy/userQuotaPolicy";
+import { UserUsageRepository } from "../../src/legacy/repositories/userUsageRepository";
 
 const db = (env as unknown as { TEST_DB: D1Database }).TEST_DB;
 const QUOTA = 3;

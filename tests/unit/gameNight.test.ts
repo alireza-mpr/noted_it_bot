@@ -1,9 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { Router } from "../../src/router/router";
-import { eventMessageHandler } from "../../src/telegram/messageHandlers/eventMessageHandler";
-import { Replier } from "../../src/telegram/replier";
-import type { TelegramClient } from "../../src/telegram/telegramClient";
-import { translateStatic } from "../../src/translation/translate";
+import type { Router } from "../../src/legacy/router/router";
+import { eventMessageHandler } from "../../src/legacy/telegram/messageHandlers/eventMessageHandler";
+import { Replier } from "../../src/legacy/telegram/replier";
+import type { TelegramClient } from "../../src/legacy/telegram/telegramClient";
+import { translateStatic } from "../../src/legacy/translation/translate";
 
 // The message as a user forwarded it on Sunday 27 September 2026.
 const MESSAGE =

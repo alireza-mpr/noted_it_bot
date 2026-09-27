@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGeminiResponse } from "../../src/providers/gemini/geminiResponse";
+import { parseGeminiResponse } from "../../src/legacy/providers/gemini/geminiResponse";
 import { GEMINI_503_UNAVAILABLE } from "./fixtures/gemini503Unavailable";
 
 const MODEL = "gemini-3.1-flash-lite";

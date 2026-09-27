@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
-import type { ExtractedEvent } from "../../src/extractedEvents/extractedEvent";
+import { buildCalendarEvent } from "../../src/legacy/extractedEvents/calendarEvent";
+import type { ExtractedEvent } from "../../src/legacy/extractedEvents/extractedEvent";
 
 const NOW = new Date("2026-09-21T02:00:00Z");
 

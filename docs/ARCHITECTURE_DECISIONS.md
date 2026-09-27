@@ -199,7 +199,7 @@ somehow.
 | Static: translate once, ship the translations with the bot | No LLM cost, fast, same text every time | Only a fixed list of languages. Every new message needs 16 translations. |
 
 **Decision.** Static. Every message is translated ahead of time and stored in
-`src/translation/translations/*.json`. Choosing a language never calls a
+`src/legacy/translation/translations/*.json`. Choosing a language never calls a
 model. Other languages fall back to English. A unit test checks that every
 translation keeps the same placeholders, HTML tags, emoji and commands as the
 English text.

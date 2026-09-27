@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
-import type { ExtractedEvent } from "../../src/extractedEvents/extractedEvent";
+import { buildCalendarEvent } from "../../src/legacy/extractedEvents/calendarEvent";
+import type { ExtractedEvent } from "../../src/legacy/extractedEvents/extractedEvent";
 
 // Sunday 27 September 2026. 26 Sep 2026 is a Saturday, 2027 a Sunday, 2025 a Friday.
 const NOW = new Date("2026-09-27T02:00:00Z");

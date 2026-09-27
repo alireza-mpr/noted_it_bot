@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
-import type { ExtractedEvent } from "../../src/extractedEvents/extractedEvent";
-import { ianaZone } from "../../src/time/timezone";
+import { buildCalendarEvent } from "../../src/legacy/extractedEvents/calendarEvent";
+import type { ExtractedEvent } from "../../src/legacy/extractedEvents/extractedEvent";
+import { ianaZone } from "../../src/legacy/time/timezone";
 
 describe("ianaZone", () => {
   it("canonicalises an alias or a differently cased name", () => {

@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { appConfig } from "../../src/appConfig/appConfig";
-import { startCommandHandler } from "../../src/telegram/commands/startCommandHandler";
-import { Replier } from "../../src/telegram/replier";
-import type { TelegramClient } from "../../src/telegram/telegramClient";
+import { appConfig } from "../../src/legacy/appConfig/appConfig";
+import { startCommandHandler } from "../../src/legacy/telegram/commands/startCommandHandler";
+import { Replier } from "../../src/legacy/telegram/replier";
+import type { TelegramClient } from "../../src/legacy/telegram/telegramClient";
 
 beforeAll(() => {
   vi.spyOn(console, "info").mockImplementation(() => {});

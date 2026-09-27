@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { MESSAGES, type MessageId } from "../../src/interactiveMessages/messages";
-import { SUPPORTED_LANGUAGES } from "../../src/translation/language";
-import { translateStatic } from "../../src/translation/translate";
-import { TRANSLATIONS } from "../../src/translation/translations";
+import { MESSAGES, type MessageId } from "../../src/legacy/interactiveMessages/messages";
+import { SUPPORTED_LANGUAGES } from "../../src/legacy/translation/language";
+import { translateStatic } from "../../src/legacy/translation/translate";
+import { TRANSLATIONS } from "../../src/legacy/translation/translations";
 
 const IDS = Object.keys(MESSAGES) as MessageId[];
 const LANGUAGES = SUPPORTED_LANGUAGES.filter((lang) => lang !== "en");

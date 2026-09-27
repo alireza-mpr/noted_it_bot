@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { MESSAGES } from "../../src/interactiveMessages/messages";
-import { TRANSLATIONS } from "../../src/translation/translations";
-import { handleTzPage, handleTzSave } from "../../src/web/tzRoutes";
-import { OPEN_TOKEN_TTL_MS, SAVE_TOKEN_TTL_MS, signTzToken, verifyTzToken } from "../../src/web/tzToken";
+import { MESSAGES } from "../../src/legacy/interactiveMessages/messages";
+import { TRANSLATIONS } from "../../src/legacy/translation/translations";
+import { handleTzPage, handleTzSave } from "../../src/legacy/web/tzRoutes";
+import { OPEN_TOKEN_TTL_MS, SAVE_TOKEN_TTL_MS, signTzToken, verifyTzToken } from "../../src/legacy/web/tzToken";
 import { fakeD1 } from "./fakeD1";
 
 const SECRET = "test-secret-value";

@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { runLogSession } from "../../src/logging/logger";
-import { UserQuotaPolicyLogger } from "../../src/policy/userQuotaPolicyLogger";
-import type { ProviderConfig } from "../../src/providers/ProviderConfig";
-import { RouterLog } from "../../src/router/routerLog";
+import { runLogSession } from "../../src/legacy/logging/logger";
+import { UserQuotaPolicyLogger } from "../../src/legacy/policy/userQuotaPolicyLogger";
+import type { ProviderConfig } from "../../src/legacy/providers/ProviderConfig";
+import { RouterLog } from "../../src/legacy/router/routerLog";
 
 type Event = Record<string, unknown>;
 

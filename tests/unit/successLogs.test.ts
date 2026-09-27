@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { runLogSession } from "../../src/logging/logger";
-import { Replier } from "../../src/telegram/replier";
-import type { TelegramClient } from "../../src/telegram/telegramClient";
+import { runLogSession } from "../../src/legacy/logging/logger";
+import { Replier } from "../../src/legacy/telegram/replier";
+import type { TelegramClient } from "../../src/legacy/telegram/telegramClient";
 
 type Event = Record<string, unknown>;
 

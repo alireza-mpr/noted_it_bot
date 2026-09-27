@@ -1,11 +1,11 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { extractEvent } from "../../src/extractedEvents/extractEvent";
-import { createRouter, type RouterEnv } from "../../src/router/router";
+import { extractEvent } from "../../src/legacy/extractedEvents/extractEvent";
+import { createRouter, type RouterEnv } from "../../src/legacy/router/router";
 import type {
   ExtractedEvent,
   Recurrence,
-} from "../../src/extractedEvents/extractedEvent";
+} from "../../src/legacy/extractedEvents/extractedEvent";
 
 // Partial is shallow, so allow a partial recurrence object too.
 type Expected = Omit<Partial<ExtractedEvent>, "recurrence"> & {

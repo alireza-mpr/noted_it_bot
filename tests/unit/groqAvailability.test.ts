@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isGroqModelAvailable } from "../../src/repositories/groqUsageRepository";
+import { isGroqModelAvailable } from "../../src/legacy/repositories/groqUsageRepository";
 
 const NOW = 1_000_000;
 

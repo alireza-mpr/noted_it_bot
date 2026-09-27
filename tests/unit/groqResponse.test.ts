@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGroqResponse } from "../../src/providers/groq/groqResponse";
+import { parseGroqResponse } from "../../src/legacy/providers/groq/groqResponse";
 
 const MODEL = "groq-gpt-oss-120b";
 

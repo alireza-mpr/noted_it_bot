@@ -1,11 +1,11 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { Env } from "../../src/env";
-import { runLogSession } from "../../src/logging/logger";
-import type { Router } from "../../src/router/router";
-import { updateHandler } from "../../src/telegram/messageHandlers/updateHandler";
-import { TelegramClient } from "../../src/telegram/telegramClient";
-import { handleTzPage } from "../../src/web/tzRoutes";
-import { OPEN_TOKEN_TTL_MS, signTzToken } from "../../src/web/tzToken";
+import type { Env } from "../../src/legacy/env";
+import { runLogSession } from "../../src/legacy/logging/logger";
+import type { Router } from "../../src/legacy/router/router";
+import { updateHandler } from "../../src/legacy/telegram/messageHandlers/updateHandler";
+import { TelegramClient } from "../../src/legacy/telegram/telegramClient";
+import { handleTzPage } from "../../src/legacy/web/tzRoutes";
+import { OPEN_TOKEN_TTL_MS, signTzToken } from "../../src/legacy/web/tzToken";
 
 type Event = Record<string, unknown>;
 

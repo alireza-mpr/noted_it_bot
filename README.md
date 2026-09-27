@@ -37,13 +37,13 @@ Any other message is treated as an event and sent to the model.
 Telegram calls the Worker's URL (a webhook) for every message. There is no
 polling and no server that runs all the time.
 
-**The entry point** is [src/telegram/telegramWebhook.ts](src/telegram/telegramWebhook.ts)
+**The entry point** is [src/legacy/telegram/telegramWebhook.ts](src/legacy/telegram/telegramWebhook.ts)
 (`main` in `wrangler.toml`). It is small on purpose. It:
 1. checks that the request comes from Telegram (a shared secret token),
 2. prepares the shared parts (the quota policy, the router, the Telegram client),
 3. passes the message to `updateHandler`.
 
-**The rest of the Telegram code** is in `src/telegram/`:
+**The rest of the Telegram code** is in `src/legacy/telegram/`:
 
 | File | What it does |
 |------|--------------|
@@ -53,7 +53,7 @@ polling and no server that runs all the time.
 | `replier.ts` | The one place that translates a message, fills its `{0}` placeholders, and sends it. Every reply uses it. |
 | `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts` | The Telegram API: `sendMessage`, `sendDocument`, types, HTML escaping. |
 
-`Env` is in `src/env.ts`. `extractEvent` is in `src/extractedEvents/extractEvent.ts`.
+`Env` is in `src/legacy/env.ts`. `extractEvent` is in `src/legacy/extractedEvents/extractEvent.ts`.
 
 ## Local dev
 
@@ -189,7 +189,7 @@ committed).
 
 **The list.** The bot replies in 16 languages: English and
 `fa ar es fr de it pt ru tr zh ja ko hi nl pl` (`SUPPORTED_LANGUAGES` in
-`src/translation/language.ts`). Other languages fall back to English.
+`src/legacy/translation/language.ts`). Other languages fall back to English.
 
 **Which language.** The user's `/lang` choice, if any. Otherwise Telegram's
 `message.from.language_code` (`pt-BR` becomes `pt`, and so on).
@@ -197,18 +197,18 @@ committed).
 **Translations are made ahead of time** (see ADR-6 in the
 [decision registry](docs/ARCHITECTURE_DECISIONS.md)):
 - The English text is the `MESSAGES` object in
-  `src/interactiveMessages/messages.ts`.
-- Each language has one file, `src/translation/translations/<lang>.json`. It
+  `src/legacy/interactiveMessages/messages.ts`.
+- Each language has one file, `src/legacy/translation/translations/<lang>.json`. It
   maps each message id (`START_MESSAGE`, `TZ_LINK_MESSAGE`, …) to its
   translation.
 - Code uses messages only by id (type `MessageId`). So a message that is not
   in the catalog does not compile.
-- `translateStatic` (`src/translation/translate.ts`) looks up the id. No reply
+- `translateStatic` (`src/legacy/translation/translate.ts`) looks up the id. No reply
   calls a model to translate. So nobody can spend the LLM quota by switching
   languages.
 - The repeat sentence under an event ("Repeats every 2 weeks on Monday and
   Wednesday, until Jan 5, 2027") is **not translated**. It is part of the event,
-  like the title. `describeRecurrence` (`src/extractedEvents/recurrence.ts`)
+  like the title. `describeRecurrence` (`src/legacy/extractedEvents/recurrence.ts`)
   always writes it in English.
 
 **To change a message:** edit the English in `messages.ts`. Then update the same
@@ -223,7 +223,7 @@ translations stay until you change them.
   `/lang` / `/tz` command names as the English.
 
 **To add a language:** add its code to `SUPPORTED_LANGUAGES`, add a JSON file,
-and import it in `src/translation/translations/index.ts`.
+and import it in `src/legacy/translation/translations/index.ts`.
 
 The translations were written by an AI assistant. Native speakers have not
 reviewed them yet.
@@ -237,7 +237,7 @@ It is matched in code, with no model (see `resolveLanguage`). An unsupported
 language gets a reply that lists the supported ones.
 
 **Storage.** The `user_preference` table in the `USAGE_DB` D1 database
-(`src/db/sql/userPreference.ts`, `src/repositories/userPreferenceRepository.ts`):
+(`src/legacy/db/sql/userPreference.ts`, `src/legacy/repositories/userPreferenceRepository.ts`):
 
 | Column     | Meaning |
 |------------|---------|
@@ -263,7 +263,7 @@ does not depend on a zone.
 
 **"Today"** (used to pick a missing year and for the past-date note) still
 needs a zone: the one above, or `appConfig.defaultTimezone` (`UTC`, in
-[appConfig.ts](src/appConfig/appConfig.ts)) for floating times.
+[appConfig.ts](src/legacy/appConfig/appConfig.ts)) for floating times.
 
 See [docs/EDGE_CASES.md](docs/EDGE_CASES.md) for why there is no default zone.
 
@@ -275,13 +275,13 @@ used.
 
 1. `/tz` replies with a button that links to `https://<worker>/tz?token=…`. The
    link uses the address of Telegram's request, so there is no URL to set up.
-2. The page (`src/web/tzPage.ts`, markup in `src/web/tzPage.html`):
+2. The page (`src/legacy/web/tzPage.ts`, markup in `src/legacy/web/tzPage.html`):
    - reads the device's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`),
    - shows it with the local time and a **Yes, use this time zone** button,
    - or lets the user search all zones (`Intl.supportedValuesOf('timeZone')`).
 3. **The search** also finds:
    - each zone's plain name in the user's language ("Eastern Time", from `Intl`),
-   - well-known cities in English (`src/web/tzCities.ts`: "Washington" finds
+   - well-known cities in English (`src/legacy/web/tzCities.ts`: "Washington" finds
      America/New_York).
 
    It ignores case and accents, and shows exact matches first. The page is in
@@ -293,7 +293,7 @@ used.
 other text after `/tz` just gets the link.
 
 **How the page knows the user.** Only from a signed token, never from anything
-the browser sends (`src/web/tzToken.ts`):
+the browser sends (`src/legacy/web/tzToken.ts`):
 - Format: `base64url(payload).base64url(HMAC-SHA256)`, signed with
   `WEBHOOK_SECRET` plus a domain prefix. No new secret is needed.
 - Payload: `{uid, username, firstName, lang, purpose, exp}`. `username` and
@@ -319,25 +319,25 @@ to the bot, and open the link.
 ### Dates, calendars and repeats
 
 **From the model's answer to the calendar file**, in two steps:
-1. `planEvent` (`src/extractedEvents/eventPlan.ts`) checks the model's answer
+1. `planEvent` (`src/legacy/extractedEvents/eventPlan.ts`) checks the model's answer
    once. It returns an `EventPlan` (Gregorian dates with years, the times, the
    time zone, the repeat), or the reason why there is no event.
    - Dates in any calendar are converted by `toGregorianDates`
-     (`src/extractedEvents/toGregorian.ts`). A missing year is picked by one
+     (`src/legacy/extractedEvents/toGregorian.ts`). A missing year is picked by one
      rule (`pickYear`, in the same file). The full rules are in
      [docs/EDGE_CASES.md](docs/EDGE_CASES.md).
-2. `renderCalendarEvent` (`src/extractedEvents/calendarEvent.ts`) turns the plan
+2. `renderCalendarEvent` (`src/legacy/extractedEvents/calendarEvent.ts`) turns the plan
    into the `.ics` file, the Google link and the caption parts. It checks
    nothing: the plan is already checked.
 
-Dates use one type everywhere: `DateOnly` (`src/time/dateOnly.ts`).
+Dates use one type everywhere: `DateOnly` (`src/legacy/time/dateOnly.ts`).
 
 **Repeats** ("every Thursday 7:30pm", "every 2 weeks until 29 Nov", "first
 Friday of the month"):
 - The model returns a `recurrence` object (see
-  `src/extractedEvents/event_schema.ts`). It only describes the pattern.
+  `src/legacy/extractedEvents/event_schema.ts`). It only describes the pattern.
 - Our code does all the date work: the first date, the end date, and the
-  checks (`src/extractedEvents/recurrence.ts`). The result is an `RRULE` in the
+  checks (`src/legacy/extractedEvents/recurrence.ts`). The result is an `RRULE` in the
   `.ics` file.
 - A repeat with no end date has no end.
 - A repeat that is invalid, or has low confidence (`RECURRENCE_MIN_CONFIDENCE`,
@@ -363,7 +363,7 @@ and picks the next model that still has room. Today, event extraction and
 `/diag` use the models.
 
 **The router.** The bot never calls Gemini directly. It calls the `Router`
-(`src/router/router.ts`):
+(`src/legacy/router/router.ts`):
 - Its one public method is
   `generate({systemPrompt?, userPrompt, temperature?, responseSchema?})`.
 - `telegramWebhook.ts` builds it once with `createRouter(env)`, and passes it to
@@ -372,7 +372,7 @@ and picks the next model that still has room. Today, event extraction and
 - The router has a list of **providers**. Each provider is a pair:
   - a **provider client** (`GeminiClient`, `GroqClient`) that makes one call to
     one model;
-  - a **usage repository** (`src/repositories/geminiUsageRepository.ts`,
+  - a **usage repository** (`src/legacy/repositories/geminiUsageRepository.ts`,
     `groqUsageRepository.ts`) that says which models are available, and stores
     usage and errors in D1.
 - The router tries a provider's available models in order, then the next
@@ -396,13 +396,13 @@ and picks the next model that still has room. Today, event extraction and
 **Gemini's limits:**
 - **The day ends at midnight Pacific time.** Google's docs say: "Requests per
   day (RPD) quotas reset at midnight Pacific time." So the day key is the
-  `America/Los_Angeles` date (`src/quotaLimit/quotaWindows.ts`). Do not change
+  `America/Los_Angeles` date (`src/legacy/quotaLimit/quotaWindows.ts`). Do not change
   it to UTC or local time.
 - **Limits count per project, not per key.** More keys in the same project add
   nothing. Limits are per model, so each model is counted on its own.
 - **The minute window is assumed to be fixed** (Google does not say). Counters
   use the UTC minute. A 429 corrects any drift.
-- **The limits** (`limits`) are in `src/providers/registry.ts`, copied from the
+- **The limits** (`limits`) are in `src/legacy/providers/registry.ts`, copied from the
   AI Studio free-plan table. The try order is the order in that file.
 
 **Storage.** One row per model in the `gemini_usage` table (D1, binding
@@ -419,8 +419,8 @@ and picks the next model that still has room. Today, event extraction and
 
 - Old windows reset on the next write. A model with no row counts as unused.
 - The table is created on first use (each query runs with
-  `CREATE TABLE IF NOT EXISTS`, `src/db/schema/geminiUsageTable.ts`). All SQL is
-  in `src/db/sql/geminiUsage.ts`.
+  `CREATE TABLE IF NOT EXISTS`, `src/legacy/db/schema/geminiUsageTable.ts`). All SQL is
+  in `src/legacy/db/sql/geminiUsage.ts`.
 - To create the databases, then paste their ids into `wrangler.toml`:
   ```bash
   npx wrangler d1 create noted-it-dev-usage
@@ -457,8 +457,8 @@ passes the failure on and logs it. `/diag` shows it (for example
 ### Axiom
 
 Every log line goes to the **`app-logs`** dataset in [Axiom](https://axiom.co).
-- The `Logger` in `src/logging/logger.ts` does this. The dataset, region and
-  service name are in `src/logging/axiomConfig.ts`. The region is `us-east-1`:
+- The `Logger` in `src/legacy/logging/logger.ts` does this. The dataset, region and
+  service name are in `src/legacy/logging/axiomConfig.ts`. The region is `us-east-1`:
   change it if your Axiom org is somewhere else.
 - There are no direct `console.*` calls in `src/`. Everything uses a `Logger`.
   It prints one JSON line to the console (so Workers Logs still has it), and
@@ -544,7 +544,7 @@ keeps its data.
 ### User activity
 
 Every user action is one `user activity` event, with an `activity` field
-(`src/logging/activityLog.ts`). It also has the request's `userId`, `username`,
+(`src/legacy/logging/activityLog.ts`). It also has the request's `userId`, `username`,
 `firstName` and `chatId`.
 
 | `activity` | Extra fields | When |

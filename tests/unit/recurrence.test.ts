@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
-import { recurrenceProblem } from "../../src/extractedEvents/eventPlan";
-import { describeRecurrence } from "../../src/extractedEvents/recurrence";
+import { buildCalendarEvent } from "../../src/legacy/extractedEvents/calendarEvent";
+import { recurrenceProblem } from "../../src/legacy/extractedEvents/eventPlan";
+import { describeRecurrence } from "../../src/legacy/extractedEvents/recurrence";
 import type {
   ExtractedEvent,
   Recurrence,
-} from "../../src/extractedEvents/extractedEvent";
-import { SUPPORTED_LANGUAGES } from "../../src/translation/language";
+} from "../../src/legacy/extractedEvents/extractedEvent";
+import { SUPPORTED_LANGUAGES } from "../../src/legacy/translation/language";
 
 // Fixed "now": Monday 21 Sep 2026, 12:00 Melbourne (AEST, UTC+10).
 const MON_NOON = new Date("2026-09-21T02:00:00Z");

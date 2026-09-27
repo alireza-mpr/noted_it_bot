@@ -1,4 +1,4 @@
-import type { ExtractedEvent } from "../../../src/extractedEvents/extractedEvent";
+import type { ExtractedEvent } from "../../../src/legacy/extractedEvents/extractedEvent";
 
 // A forwarded Persian message: a radio programme on Wednesday 1 Mehr 1405
 // (= 23 Sep 2026), "every night at 20:00 Iran time", with a rerun at 21:30.

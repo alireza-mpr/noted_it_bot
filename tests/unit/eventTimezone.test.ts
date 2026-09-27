@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { ExtractedEvent } from "../../src/extractedEvents/extractedEvent";
-import type { Router } from "../../src/router/router";
-import { eventMessageHandler } from "../../src/telegram/messageHandlers/eventMessageHandler";
-import { Replier } from "../../src/telegram/replier";
-import type { TelegramClient } from "../../src/telegram/telegramClient";
+import type { ExtractedEvent } from "../../src/legacy/extractedEvents/extractedEvent";
+import type { Router } from "../../src/legacy/router/router";
+import { eventMessageHandler } from "../../src/legacy/telegram/messageHandlers/eventMessageHandler";
+import { Replier } from "../../src/legacy/telegram/replier";
+import type { TelegramClient } from "../../src/legacy/telegram/telegramClient";
 
 const event = (overrides: Partial<ExtractedEvent> = {}): ExtractedEvent => ({
   title: "Event",

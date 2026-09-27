@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
-import type { ExtractedEvent, Recurrence } from "../../src/extractedEvents/extractedEvent";
-import { recurrenceProblem } from "../../src/extractedEvents/eventPlan";
+import { buildCalendarEvent } from "../../src/legacy/extractedEvents/calendarEvent";
+import type { ExtractedEvent, Recurrence } from "../../src/legacy/extractedEvents/extractedEvent";
+import { recurrenceProblem } from "../../src/legacy/extractedEvents/eventPlan";
 
 // Monday 21 Sep 2026, 12:00 Melbourne.
 const NOW = new Date("2026-09-21T02:00:00Z");

@@ -5,7 +5,7 @@ import {
   resolveLanguage,
   supportedLanguageNames,
   toSupportedLanguage,
-} from "../../src/translation/language";
+} from "../../src/legacy/translation/language";
 
 describe("toSupportedLanguage", () => {
   it("reduces regional and differently cased tags to a supported language", () => {

@@ -27,7 +27,7 @@ This file explains:
 
 ## Flow
 
-In `src/telegram/messageHandlers/updateHandler.ts` → `handleMessage`:
+In `src/legacy/telegram/messageHandlers/updateHandler.ts` → `handleMessage`:
 
 1. Read the user's language and time zone (`user_preference`). This happens
    for every message.
@@ -129,7 +129,7 @@ about 1,100 users per day who each use all 5 requests.
 
 - We used a local D1 (wrangler's `getPlatformProxy`). It uses the same SQLite
   engine as the Workers runtime.
-- We ran the real SQL from `src/db/sql/*` on tables with one row per model.
+- We ran the real SQL from `src/legacy/db/sql/*` on tables with one row per model.
 - For each path, we added up `meta.rows_read` and `meta.rows_written` of each
   result.
 

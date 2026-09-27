@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent } from "../../src/extractedEvents/calendarEvent";
+import { buildCalendarEvent } from "../../src/legacy/extractedEvents/calendarEvent";
 import {
   GEMINI_3_1_FLASH_LITE_RADIO_EVENT,
   GEMINI_3_5_FLASH_LITE_JALALI_RADIO_EVENT,

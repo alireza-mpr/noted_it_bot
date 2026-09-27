@@ -5,7 +5,7 @@ import {
   Logger,
   runLogSession,
   setLogField,
-} from "../../src/logging/logger";
+} from "../../src/legacy/logging/logger";
 
 interface Sent {
   url: string;

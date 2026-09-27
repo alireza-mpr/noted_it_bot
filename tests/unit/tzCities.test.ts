@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canonicalTimezone } from "../../src/time/canonicalTimezone";
-import { TZ_CITIES } from "../../src/web/tzCities";
+import { canonicalTimezone } from "../../src/legacy/time/canonicalTimezone";
+import { TZ_CITIES } from "../../src/legacy/web/tzCities";
 
 describe("time zone page cities", () => {
   it("maps every city to a real zone", () => {

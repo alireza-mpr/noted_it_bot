@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { isTzCommand, tzCommandHandler } from "../../src/telegram/commands/tzCommandHandler";
-import type { Replier } from "../../src/telegram/replier";
-import type { TelegramMessage } from "../../src/telegram/telegramTypes";
-import { canonicalTimezone } from "../../src/time/canonicalTimezone";
-import { OPEN_TOKEN_TTL_MS, verifyTzToken } from "../../src/web/tzToken";
+import { isTzCommand, tzCommandHandler } from "../../src/legacy/telegram/commands/tzCommandHandler";
+import type { Replier } from "../../src/legacy/telegram/replier";
+import type { TelegramMessage } from "../../src/legacy/telegram/telegramTypes";
+import { canonicalTimezone } from "../../src/legacy/time/canonicalTimezone";
+import { OPEN_TOKEN_TTL_MS, verifyTzToken } from "../../src/legacy/web/tzToken";
 import { fakeD1 } from "./fakeD1";
 
 const SECRET = "test-secret-value";

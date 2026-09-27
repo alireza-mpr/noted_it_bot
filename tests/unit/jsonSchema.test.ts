@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EVENT_SCHEMA } from "../../src/extractedEvents/event_schema";
-import { toJsonSchema } from "../../src/providers/groq/jsonSchema";
+import { EVENT_SCHEMA } from "../../src/legacy/extractedEvents/event_schema";
+import { toJsonSchema } from "../../src/legacy/providers/groq/jsonSchema";
 
 describe("toJsonSchema", () => {
   const schema = toJsonSchema(EVENT_SCHEMA as never) as {

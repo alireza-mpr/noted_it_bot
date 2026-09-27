@@ -1,15 +1,15 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { GeminiClient } from "../../src/providers/gemini/geminiClient";
-import type { ProviderConfig } from "../../src/providers/ProviderConfig";
+import { GeminiClient } from "../../src/legacy/providers/gemini/geminiClient";
+import type { ProviderConfig } from "../../src/legacy/providers/ProviderConfig";
 import type {
   ProviderClient,
   ProviderRequest,
   ProviderResult,
-} from "../../src/providers/providerClient";
-import { GeminiUsageRepository } from "../../src/repositories/geminiUsageRepository";
-import { Router, type RouterEnv } from "../../src/router/router";
-import { RouterLog } from "../../src/router/routerLog";
+} from "../../src/legacy/providers/providerClient";
+import { GeminiUsageRepository } from "../../src/legacy/repositories/geminiUsageRepository";
+import { Router, type RouterEnv } from "../../src/legacy/router/router";
+import { RouterLog } from "../../src/legacy/router/routerLog";
 
 // Not part of `npm test` or CI: it deliberately burns through quota.
 // Run it on demand with `npm run test:quota-fill`.
