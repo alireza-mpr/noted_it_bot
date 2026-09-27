@@ -15,7 +15,7 @@ this list is called the "ubiquitous language".
 | Word | Meaning | In code |
 |---|---|---|
 | Message | What a user sends or forwards to the bot: text, or a photo or file with a caption. | `messageText` |
-| Model answer | What a model returns for a message. Raw data, not parsed yet. | `adapters/models/` |
+| Model answer | What a model returns for a message. Raw data, not parsed yet. | `ModelAnswer` |
 | Draft | An event as the message describes it. Its dates are still in the message's calendar, and the year can be missing. | `CalendarEventDraft` |
 | Create a calendar event | Turns a draft into a calendar event, or gives the reason why there is none. | `createCalendarEvent` → `CalendarEventResult` |
 | Event creation context | What creating a calendar event needs besides the draft and its UID: the user time zone, now, and the floating time zone. | `EventCreationContext` |
@@ -114,9 +114,10 @@ this list is called the "ubiquitous language".
 
 | Word | Meaning | In code |
 |---|---|---|
-| Provider | A company that runs models behind an API: Gemini (Google) and Groq. | `adapters/models/` |
-| Model | One model of a provider, e.g. `gemini-3.5-flash-lite`. | `adapters/models/` |
-| Model limits | A model's free limits (per minute and per day). A model at its limit is "used up". | `adapters/models/` |
+| Provider | A company that runs models behind an API: Gemini (Google) and Groq. | `Provider`, `ProviderClient` |
+| Model | One model of a provider, e.g. `gemini-3.5-flash-lite`. | `Model`, `GEMINI_MODELS`, `GROQ_MODELS` |
+| Model limits | A model's free limits (per minute and per day). A model at its limit is "used up". | `ModelLimits`, `LimitWindow` |
+| Model failure | Why a model gave no answer, e.g. rate limited or unavailable. | `ModelFailure` |
 | Router | Tries the models in order: Gemini first, then Groq. | `adapters/models/` |
 | Extraction | Sends a message to a model, and turns the model answer into a draft. | — |
 

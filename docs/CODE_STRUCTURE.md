@@ -102,7 +102,9 @@ src/
   adapters/    the edges
     telegram/  webhook, Telegram client, sending replies
     database/  SQL, table definitions, repositories (D1 today)
-    models/    Gemini, Groq, the router, model limits
+    models/    the model types, the router, extraction; no product names
+      providers/  the only place that knows Gemini and Groq: their clients,
+                  answer parsers and model lists
     logging/   the logger and Axiom
     web/       web pages the Worker serves: the /tz page and its routes
   config/      APP_CONFIG and Env
@@ -247,11 +249,13 @@ code, together with that area.
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts` | `app/create-event-from-message.ts` | ⏳ |
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
-| `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `app/extraction/` | ⏳ |
+| `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/`, with the answer → draft parser (step 4d-3) | ⏳ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
 | `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | `adapters/database/d1-usage-store.ts`, `adapters/database/d1-user-settings-store.ts`, `adapters/database/batch-with-table.ts`; the port `domain/user/user-settings-store.ts`; `QUOTA_RESET_AFTER_MS` → `domain/quota/user-quota-policy.ts` | ✅ |
 | `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/`, with the models (step 4d) | ⏳ |
-| `providers/*`, `router/*`, `quotaLimit/*`, `prompts/diag_ping.txt` | `adapters/models/` | ⏳ |
+| `providers/*` | `adapters/models/model.ts` (`ProviderConfig` → `Model`, `ProviderLimits` → `ModelLimits`), `model-result.ts`, `provider-client.ts`; `adapters/models/providers/` (`registry.ts` → `model-list.ts`, the clients, the answer parsers, `jsonSchema.ts` → `groq-json-schema.ts`) | ✅ |
+| `router/*`, `quotaLimit/*` | `adapters/models/` (step 4d-2) | ⏳ |
+| `prompts/diag_ping.txt` | with `/diag` in `app/commands/` (step 5) | ⏳ |
 | `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
 | `web/*` | `adapters/web/` | ⏳ |
 | `appConfig/appConfig.ts`, `env.ts` | `config/app-config.ts` (`appConfig` → `APP_CONFIG`, `defaultTimezone` → `floatingTimeZoneName`), `config/env.ts` | ✅ |
@@ -280,7 +284,9 @@ after each commit.
 | 4a | Config: `APP_CONFIG` and `Env` | ✅ |
 | 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ✅ |
 | 4c | Adapters: the database for users (the quota usage and the user settings) | ✅ |
-| 4d | Adapters: the models (Gemini, Groq, model limits, the router, and their usage tables) | ⏳ |
+| 4d-1 | Adapters: the provider clients (Gemini, Groq), the model list and limits, the model result types | ✅ |
+| 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ⏳ |
+| 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`) | ⏳ |
 | 4e | Adapters: Telegram (the client, update types, the webhook, replies) | ⏳ |
 | 4f | Adapters: the web pages (the /tz page and its routes) | ⏳ |
 | 5 | App: one use case per file (create an event, set a language, set a time zone, …). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ⏳ |
