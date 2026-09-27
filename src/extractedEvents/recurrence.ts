@@ -1,5 +1,6 @@
 import type { ExtractedEvent, Recurrence, Weekday } from "./extractedEvent";
-import { resolveTimezone, resolveYear } from "../time/timezone";
+import { resolveTimezone } from "../time/timezone";
+import { toGregorianEvent } from "./toGregorianEvent";
 
 // Below this, a message that reads as recurring is declined rather than
 // guessed at — a wrong repeat rule silently fills someone's calendar.
@@ -207,11 +208,11 @@ export function planRecurrence(
 
   let from: YMD;
   if (hasStartDate) {
-    from = {
-      year: resolveYear(event.year, event.month!, event.day!, timeZone, now, event.weekday ?? null),
-      month: event.month!,
-      day: event.day!,
-    };
+    // Years come from toGregorianEvent; a start date without one wasn't converted.
+    if (event.year === null) {
+      return { ok: false, reason: "start date has no year" };
+    }
+    from = { year: event.year, month: event.month!, day: event.day! };
   } else {
     from = today;
     // Today only counts if the event hasn't already started.
@@ -230,12 +231,10 @@ export function planRecurrence(
     if (r.until_month == null || r.until_day == null) {
       return { ok: false, reason: "until date incomplete" };
     }
-    let untilYear = r.until_year ?? first.year;
-    until = { year: untilYear, month: r.until_month, day: r.until_day };
-    if (r.until_year == null && compare(until, first) < 0) {
-      untilYear += 1;
-      until = { year: untilYear, month: r.until_month, day: r.until_day };
+    if (r.until_year == null) {
+      return { ok: false, reason: "end date has no year" };
     }
+    until = { year: r.until_year, month: r.until_month, day: r.until_day };
     if (compare(until, first) < 0) {
       return { ok: false, reason: "end date is before the first occurrence" };
     }
@@ -251,13 +250,16 @@ export function recurrenceProblem(
   event: ExtractedEvent,
   now: Date = new Date(),
 ): string | null {
-  if (!event.recurrence || (event.calendar !== null && event.calendar !== "gregorian")) {
+  // Dates that can't be converted aren't a recurrence problem: building the
+  // event declines them.
+  const converted = toGregorianEvent(event, now);
+  if (!converted?.recurrence) {
     return null;
   }
-  if (event.date_kind !== "absolute" && event.date_kind !== "weekday") {
+  if (converted.date_kind !== "absolute" && converted.date_kind !== "weekday") {
     return null;
   }
-  const plan = planRecurrence(event, now);
+  const plan = planRecurrence(converted, now);
   return plan.ok ? null : plan.reason;
 }
 

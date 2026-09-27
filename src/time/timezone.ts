@@ -39,7 +39,8 @@ export function resolveTimezone(timezoneHint: string | null): string | null {
 
 const WEEKDAY_BY_INDEX = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
 
-function todayIn(timeZone: string, now: Date): Date {
+// Today's calendar date in the given timezone, as a local-midnight Date.
+export function todayIn(timeZone: string, now: Date): Date {
   const nowInZone = new Date(now.toLocaleString("en-US", { timeZone }));
   return new Date(nowInZone.getFullYear(), nowInZone.getMonth(), nowInZone.getDate());
 }
@@ -51,40 +52,41 @@ export function weekdayOf(year: number, month: number, day: number): string | nu
   return date.getUTCMonth() === month - 1 ? WEEKDAY_BY_INDEX[date.getUTCDay()] : null;
 }
 
-// The extracted year can be null (the model isn't told to guess a year that
-// wasn't stated). When the message states the weekday ("Saturday 26 Sep"),
-// use the year that puts the date on it: this year or next year, or last
-// year only when that date is within the last two months ("Saturday 26 Dec"
-// forwarded in early January). Otherwise, with no weekday or none that fits,
-// the current year, even if the date has passed; the caption then says so.
-export function resolveYear(
-  year: number | null,
-  month: number,
-  day: number,
-  timeZone: string,
-  now: Date = new Date(),
-  weekday: string | null = null,
+export interface CalendarDay {
+  year: number;
+  month: number;
+  day: number;
+}
+
+// Picks the year for a date written without one, in any calendar. currentYear
+// is today's year in the message's calendar, and toGregorian maps a candidate
+// year to that date in Gregorian (null if it doesn't exist that year). When
+// the message states the weekday ("Saturday 26 Sep"), use the year that puts
+// the date on it: this year or next year, or last year only when that date is
+// within the last two months ("Saturday 26 Dec" forwarded in early January).
+// Otherwise, with no weekday or none that fits, the current year, even if the
+// date has passed; the caption then says so.
+export function pickYear(
+  currentYear: number,
+  toGregorian: (year: number) => CalendarDay | null,
+  today: Date,
+  weekday: string | null,
 ): number {
-  if (year !== null) {
-    return year;
+  if (!weekday) {
+    return currentYear;
   }
-
-  const today = todayIn(timeZone, now);
-  const currentYear = today.getFullYear();
-
-  if (weekday) {
-    const twoMonthsAgo = new Date(today);
-    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-    const candidates = [currentYear, currentYear + 1];
-    if (new Date(currentYear - 1, month - 1, day) >= twoMonthsAgo) {
-      candidates.push(currentYear - 1);
+  const twoMonthsAgo = new Date(today);
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+  const fits = (candidate: number, recentOnly: boolean) => {
+    const date = toGregorian(candidate);
+    if (!date || weekdayOf(date.year, date.month, date.day) !== weekday) {
+      return false;
     }
-    const fitting = candidates.find((candidate) => weekdayOf(candidate, month, day) === weekday);
-    if (fitting !== undefined) {
-      return fitting;
-    }
-  }
-
+    return !recentOnly || new Date(date.year, date.month - 1, date.day) >= twoMonthsAgo;
+  };
+  if (fits(currentYear, false)) return currentYear;
+  if (fits(currentYear + 1, false)) return currentYear + 1;
+  if (fits(currentYear - 1, true)) return currentYear - 1;
   return currentYear;
 }
 

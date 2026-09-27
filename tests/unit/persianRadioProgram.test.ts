@@ -73,15 +73,18 @@ describe("Persian radio programme, with the date left in the Persian calendar", 
     expect(jalali!.googleCalendarUrl).toBe(gregorian!.googleCalendarUrl);
   });
 
-  it("declines a Persian-calendar date with no stated year", () => {
-    expect(
-      buildCalendarEvent(
-        { ...GEMINI_3_5_FLASH_LITE_JALALI_RADIO_EVENT, year: null },
-        "uid@test",
-        "en",
-        NOW,
-      ),
-    ).toBeNull();
+  it("gives a Persian-calendar date with no year the current Persian year", () => {
+    const withYear = buildCalendarEvent(GEMINI_3_5_FLASH_LITE_JALALI_RADIO_EVENT, "uid@test", "en", NOW)!;
+    const withoutYear = buildCalendarEvent(
+      { ...GEMINI_3_5_FLASH_LITE_JALALI_RADIO_EVENT, year: null },
+      "uid@test",
+      "en",
+      NOW,
+    )!;
+    // NOW is in 1405, the year the fixture states, so both land on the same day.
+    expect(withoutYear.icsContent.match(/DTSTART[^\r\n]*/)![0]).toBe(
+      withYear.icsContent.match(/DTSTART[^\r\n]*/)![0],
+    );
   });
 
   it("declines a monthly repeat in the Persian calendar", () => {

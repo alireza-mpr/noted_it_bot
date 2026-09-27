@@ -98,7 +98,7 @@ describe("recurrenceProblem with a null calendar", () => {
     }
   });
 
-  it("keeps skipping validation for a named non-Gregorian calendar, whose dates aren't converted yet", () => {
-    expect(recurrenceProblem(event({ calendar: "persian", confidence: 0.1 }), NOW)).toBeNull();
+  it("validates a repeat in any named calendar, once its dates are converted", () => {
+    expect(recurrenceProblem(event({ calendar: "persian", confidence: 0.1 }), NOW)).toBe("low confidence (0.1)");
   });
 });
