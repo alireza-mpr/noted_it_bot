@@ -1,8 +1,11 @@
 # Code Structure
 
-This file sets the rules for how the code is organised. All new and changed
-code must follow it. Where the code does not follow it yet, the table in
-[Where each file goes](#where-each-file-goes) says so.
+This file sets the rules for how the code is organised. All new code must
+follow it.
+
+**The code is being rewritten.** The old code is in `src/legacy/`. It keeps
+running the bot until the new code replaces it. Then `src/legacy/` is deleted.
+The table in [What replaces what](#what-replaces-what) shows the progress.
 
 The decision and the other options are in ADR-7 of
 [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md).
@@ -38,21 +41,17 @@ adapters".
    2. exported types;
    3. exported functions, the main one first;
    4. private functions and types.
-7. **Avoid `null` and `undefined`.**
-   - A field that means "one of several cases" becomes a union with a `kind`,
-     not a nullable field. Example: `{ kind: "floating" } | { kind: "user";
-     name: string }`, not `timeZone: string | null`.
-   - A field or parameter that is almost always set is required. Give it a
-     default when it is created, instead of making it optional.
-   - A list is never `null`. Use an empty list `[]`.
-   - Use a real default when one makes sense (a missing title becomes
-     `"Event"`).
-   - Never use both `null` and `undefined` for "missing".
-   - **Exception, at the edges only:** raw outside data (the model's answer,
-     Telegram updates, database rows, HTTP bodies) can be nullable. Convert it
-     once, at the edge, into types without nulls.
-   - `null` is OK only when "nothing" is a normal answer (for example "no
-     location"). Even then, prefer a union when it reads more clearly.
+7. **Use `null` for things that are optional by nature, and name modes.**
+   - Optional by nature → `T | null` (e.g. an event's location, a year the
+     message leaves out). The type's comment says what `null` means.
+   - If `null` would always fall back to one case, name that case instead
+     (e.g. no time zone = `{ kind: "floating" }`, not `zone: null`).
+   - Several cases with different data → a union with `kind`.
+   - `?` and `undefined` are fine for optional parameters and options, usually
+     with a default (e.g. `now: Date = new Date()`). Don't use both `null` and
+     `undefined` for the same thing.
+   - Raw outside data (the model's answer, Telegram updates, database rows) is
+     converted once, at the edge.
 
 ## Folders
 
@@ -60,8 +59,9 @@ adapters".
 src/
   domain/      pure rules, no input or output
     dates/     dates, times, time zones, other calendars, picking a year
-    event/     the model's answer → a checked EventPlan, repeat rules
+    event/     CalendarEventDraft → a checked CalendarEvent, repeat rules
     quota/     the daily quota rules (user tiers later)
+    user/      the user's settings: language and time zone
   output/      pure formats made from domain values
                (.ics file, Google Calendar link, caption texts, dates in a language)
   i18n/        the bot's messages and their translations (data and lookup only)
@@ -69,12 +69,17 @@ src/
                output and adapters
   adapters/    the edges
     telegram/  webhook, Telegram client, sending replies
-    d1/        SQL, table definitions, repositories
+    database/  SQL, table definitions, repositories (D1 today)
     models/    Gemini, Groq, the router, model limits
     logging/   the logger and Axiom
-    tzPage/    the /tz web page and its routes
+    web/       web pages the Worker serves: the /tz page and its routes
   config/      appConfig and Env
 ```
+
+**Adapter folders are named by their job, not by the product:** `database/`,
+not `d1/`. Then only that folder knows which product is used, and a switch
+later changes one folder. The one exception is `telegram/`: the bot is a
+Telegram bot, so the product is the job.
 
 **Who may import whom:**
 
@@ -97,76 +102,79 @@ implements it, and `app/` connects the two.
 |---|---|
 | Results are a union with an `ok` field | `{ ok: true; … } \| { ok: false; … }` |
 | A failure carries its own details | `ProviderFailure` has `ok: false`, `kind`, `detail` |
-| Parse once, then use typed values | `planEvent` turns `ExtractedEvent` into `EventPlan` |
+| Parse once, then use typed values | `checkEvent` turns a `CalendarEventDraft` into a `CalendarEvent` |
 | One type per idea | `DateOnly` for every date, not three look-alike types |
 | No test-only code in `src/` | helpers only tests use go in `tests/` |
 | Comments: MSDN wording, `//` style | `// Represents a date in a message where …` |
 | Every name explains itself: types, functions, variables, fields, files | rename instead of explaining with a comment (`statedWeekday`, not `stated` + a comment) |
 | No comments on fields | the field's name explains it |
+| Variable names follow their type, in camelCase | `checkResult: CheckResult`, not `checked` or `result` |
+| Several values of one type: the role comes first | `startDate`, `untilDate` (both `DateOnly`) |
+| No generic or one-letter names (a loop index is fine) | not `data`, `answer`, `r` |
 | Simple English everywhere | short sentences, common words |
+| Mark every example with "e.g." | `// e.g. "tomorrow": not supported yet` |
 
-## Where each file goes
+## What replaces what
 
-Status: ✅ done, ⏳ planned.
+Paths are under `src/`. Status: ✅ done, ⏳ to do.
 
-| Now | Target | Status |
+The old tests are the specification. Each area's tests are ported to the new
+code, together with that area.
+
+| Old code (`legacy/`) | New code | Status |
 |---|---|---|
-| `time/dateOnly.ts` | `domain/dates/dateOnly.ts` | ⏳ |
-| `time/timezone.ts`, `time/canonicalTimezone.ts` | `domain/dates/timeZones.ts` | ⏳ |
-| `extractedEvents/toGregorian.ts` | `domain/dates/calendars.ts` | ⏳ |
-| `extractedEvents/extractedEvent.ts` | `domain/event/extractedEvent.ts` | ⏳ |
-| `extractedEvents/eventPlan.ts` | `domain/event/eventPlan.ts` | ⏳ |
-| `extractedEvents/recurrence.ts` (rules) | `domain/event/repeatRules.ts` | ⏳ |
+| `time/dateOnly.ts` | `domain/dates/dateOnly.ts` (types) | ✅ |
+| `time/timezone.ts`, `time/canonicalTimezone.ts` | `domain/dates/timeZone.ts` | ⏳ (type ✅) |
+| `extractedEvents/toGregorian.ts` | `domain/dates/calendar.ts` | ⏳ (type ✅) |
+| `extractedEvents/extractedEvent.ts` | `domain/event/calendarEventDraft.ts` | ⏳ (type ✅) |
+| `extractedEvents/eventPlan.ts` | `domain/event/calendarEvent.ts` (type ✅), `domain/event/checkEvent.ts` | ⏳ |
+| `extractedEvents/recurrence.ts` (rules) | `domain/event/repeatRule.ts` | ⏳ (type ✅) |
 | `extractedEvents/eventUid.ts` | `domain/event/eventUid.ts` | ⏳ |
-| `policy/userQuotaPolicy.ts` | `domain/quota/userQuotaPolicy.ts` (uses a usage port) | ⏳ |
-| `policy/userQuotaPolicyLogger.ts` | `adapters/logging/userQuotaPolicyLogger.ts` | ⏳ |
+| `policy/userQuotaPolicy.ts` | `domain/quota/quota.ts` (uses the `UsageStore` port) | ⏳ (types ✅) |
+| `policy/userQuotaPolicyLogger.ts` | `adapters/logging/` | ⏳ |
+| the user's language and time zone (`repositories/userPreferenceRepository.ts`) | `domain/user/userSettings.ts` (type) | ✅ |
 | `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/icsFile.ts` | ⏳ |
 | `extractedEvents/calendarEvent.ts` (link part) | `output/googleCalendarLink.ts` | ⏳ |
-| `extractedEvents/calendarEvent.ts` (caption texts) + the caption in `eventMessageHandler.ts` | `output/caption.ts` | ⏳ |
+| `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts` | ⏳ |
 | `extractedEvents/recurrence.ts` (RRULE, sentence) | `output/icsFile.ts`, `output/caption.ts` | ⏳ |
-| date formatting in a language (now in `calendarEvent.ts`), `time/formatWait.ts` | `output/localizedDates.ts` | ⏳ |
+| date formatting in a language (in `calendarEvent.ts`), `time/formatWait.ts` | `output/localizedDates.ts` | ⏳ |
 | `interactiveMessages/messages.ts`, `translation/*` | `i18n/` | ⏳ |
 | `telegram/messageHandlers/updateHandler.ts` | `app/handleUpdate.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts` | `app/createEventFromMessage.ts` | ⏳ |
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
 | `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `app/extraction/` | ⏳ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
-| `db/schema/*`, `db/sql/*`, `repositories/*`, `time/dateTimeAest.ts` | `adapters/d1/` | ⏳ |
+| `db/schema/*`, `db/sql/*`, `repositories/*`, `time/dateTimeAest.ts` | `adapters/database/` | ⏳ |
 | `providers/*`, `router/*`, `quotaLimit/*`, `prompts/diag_ping.txt` | `adapters/models/` | ⏳ |
 | `logging/*` | `adapters/logging/` | ⏳ |
-| `web/*` | `adapters/tzPage/` | ⏳ |
+| `web/*` | `adapters/web/` | ⏳ |
 | `appConfig/appConfig.ts`, `env.ts` | `config/` | ⏳ |
 | `buildCalendarEvent` (used only by tests) | a helper in `tests/` | ⏳ |
 | `text-modules.d.ts`, `node-modules.d.ts` | stay in `src/` | ✅ |
 
 ## Order of the work
 
-Each step is its own commit. All tests pass after each step. **Moving files
-and changing logic are never in the same commit**, so every diff stays easy to
-read.
+The new code is built **beside** the old code. The old code keeps running
+until the last step, so the bot is never half broken, and the work can stop
+after any step. Rewrite one area per commit, with its tests. All tests pass
+after each commit.
 
-1. Write this plan and the project `CLAUDE.md`. ✅
-2. Split `calendarEvent.ts` into `output/icsFile.ts`,
-   `output/googleCalendarLink.ts`, `output/caption.ts` and
-   `output/localizedDates.ts`. Remove `BuiltCalendarEvent`: the caption reads
-   the `EventPlan` directly. Move `buildCalendarEvent` into `tests/`. (logic)
-3. Move the pure date and event code into `domain/`. (moves only)
-4. Add the import-rule test (see below). From here on, CI checks the rule.
-5. Quota: `UserQuotaPolicy` gets a usage port and moves to `domain/quota/`.
-   (logic, then a move)
-6. Move the edges into `adapters/`, and point `wrangler.toml` `main` at the new
-   webhook path. (moves only)
-7. Move the use cases into `app/`: split `updateHandler.ts` into routing and one
-   file per use case. (logic, then moves)
-8. Move `translation/` and `messages.ts` into `i18n/`, and config into
-   `config/`. (moves only)
-9. Update the README "How it works" section to the new layout.
+| Step | What | Status |
+|---|---|---|
+| 0 | The folder skeleton, and the import-rule test | ✅ |
+| 1 | The domain model: the types for dates, time zones, events, repeats, the quota and user settings. `null` only where a value is optional by nature (principle 7). | ✅ |
+| 2 | The domain rules, as pure functions: checking a draft into a calendar event, calendars, the year rule, repeats, the quota | ⏳ |
+| 3 | Output: the `.ics` file, the Google Calendar link, the caption | ⏳ |
+| 4 | Adapters: Telegram, the database, the models, logging, the web pages | ⏳ |
+| 5 | App: one use case per file (create an event, set a language, set a time zone, …) | ⏳ |
+| 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
 
 ## How the rules are checked
 
-- **Import rule:** a unit test (`tests/unit/codeStructure.test.ts`, added in
-  step 4) reads every file in `domain/` and `output/`. It fails if one of them
-  imports from `app/` or `adapters/`.
+- **Import rule:** a unit test (`tests/unit/codeStructure.test.ts`) reads every
+  source file. It fails if a file in `domain/`, `output/`, `i18n/`, `config/`
+  or `adapters/` imports from a folder that the "Who may import whom" table
+  does not allow.
 - **Types:** `npm run typecheck` in CI.
 - **Behaviour:** every step keeps all unit and live tests passing.
 - **Review:** the project `CLAUDE.md` tells Claude Code to follow this file for
