@@ -25,6 +25,9 @@ export interface ExtractedEvent {
   year: number | null;
   month: number | null; // 1-12
   day: number | null; // 1-31
+  // The weekday the message states for that date, used to pick the year when
+  // none is stated. Optional so events built before the field existed still work.
+  weekday?: Weekday | null;
   start_time: string | null; // "HH:MM", 24h
   end_time: string | null;
   timezone_hint: string | null; // IANA name, or null

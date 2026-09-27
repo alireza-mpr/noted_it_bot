@@ -67,6 +67,22 @@ describe("event time zone", () => {
     expect(caption).toContain("so I used UTC. To set yours, send /tz.");
   });
 
+  it("says so when the date has already passed", async () => {
+    const { caption } = await send(event({ year: 2020, timezone_hint: "UTC" }), null);
+    expect(caption).toContain("this date has already passed");
+  });
+
+  it("says when the stated weekday doesn't match the date", async () => {
+    // 20 Jan 2030 is a Sunday.
+    const { caption } = await send(event({ month: 1, day: 20, weekday: "MO", timezone_hint: "UTC" }), null);
+    expect(caption).toContain("The message says Monday, but Jan 20, 2030 is a Sunday. Check the date.");
+  });
+
+  it("adds no past-date note to a future event", async () => {
+    const { caption } = await send(event({ timezone_hint: "UTC" }), null);
+    expect(caption).not.toContain("ℹ️");
+  });
+
   it("adds no note to an all-day event, whose date doesn't depend on a zone", async () => {
     const { caption } = await send(event({ start_time: null }), null);
     expect(caption).not.toContain("🌎");

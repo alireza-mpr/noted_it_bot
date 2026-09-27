@@ -37,25 +37,64 @@ export function resolveTimezone(timezoneHint: string | null): string | null {
   }
 }
 
+const WEEKDAY_BY_INDEX = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
+
+function todayIn(timeZone: string, now: Date): Date {
+  const nowInZone = new Date(now.toLocaleString("en-US", { timeZone }));
+  return new Date(nowInZone.getFullYear(), nowInZone.getMonth(), nowInZone.getDate());
+}
+
+// The weekday ("MO".."SU") a date falls on, or null if the date doesn't exist
+// (29 Feb in a common year).
+export function weekdayOf(year: number, month: number, day: number): string | null {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCMonth() === month - 1 ? WEEKDAY_BY_INDEX[date.getUTCDay()] : null;
+}
+
 // The extracted year can be null (the model isn't told to guess a year that
-// wasn't stated). Assume the next upcoming occurrence: this year, unless that
-// date has already passed in the event's timezone, in which case next year.
+// wasn't stated). When the message states the weekday ("Saturday 26 Sep"),
+// use the year that puts the date on it: this year or next year, or last
+// year only when that date is within the last two months ("Saturday 26 Dec"
+// forwarded in early January). Otherwise, with no weekday or none that fits,
+// the current year, even if the date has passed; the caption then says so.
 export function resolveYear(
   year: number | null,
   month: number,
   day: number,
   timeZone: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  weekday: string | null = null,
 ): number {
   if (year !== null) {
     return year;
   }
 
-  const nowInZone = new Date(now.toLocaleString("en-US", { timeZone }));
-  const currentYear = nowInZone.getFullYear();
+  const today = todayIn(timeZone, now);
+  const currentYear = today.getFullYear();
 
-  const candidate = new Date(currentYear, month - 1, day);
-  const today = new Date(nowInZone.getFullYear(), nowInZone.getMonth(), nowInZone.getDate());
+  if (weekday) {
+    const twoMonthsAgo = new Date(today);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    const candidates = [currentYear, currentYear + 1];
+    if (new Date(currentYear - 1, month - 1, day) >= twoMonthsAgo) {
+      candidates.push(currentYear - 1);
+    }
+    const fitting = candidates.find((candidate) => weekdayOf(candidate, month, day) === weekday);
+    if (fitting !== undefined) {
+      return fitting;
+    }
+  }
 
-  return candidate < today ? currentYear + 1 : currentYear;
+  return currentYear;
+}
+
+// Whether a calendar date is before today in the given timezone.
+export function isBeforeToday(
+  year: number,
+  month: number,
+  day: number,
+  timeZone: string,
+  now: Date = new Date(),
+): boolean {
+  return new Date(year, month - 1, day) < todayIn(timeZone, now);
 }

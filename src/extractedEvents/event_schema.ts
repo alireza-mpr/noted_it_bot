@@ -11,6 +11,8 @@ export const EVENT_SCHEMA = {
     year:          { type: "INTEGER", nullable: true },
     month:         { type: "INTEGER", nullable: true },
     day:           { type: "INTEGER", nullable: true },
+    // The day of the week the message states for that date ("Saturday 26 Sep").
+    weekday:       { type: "STRING",  nullable: true, enum: WEEKDAYS },
 
     start_time:    { type: "STRING",  nullable: true },
     end_time:      { type: "STRING",  nullable: true },
@@ -47,7 +49,7 @@ export const EVENT_SCHEMA = {
   required: ["calendar", "date_kind", "confidence"],
   propertyOrdering: [
     "title", "calendar", "date_kind",
-    "year", "month", "day",
+    "year", "month", "day", "weekday",
     "start_time", "end_time",
     "timezone_hint", "location", "recurrence", "confidence",
   ],

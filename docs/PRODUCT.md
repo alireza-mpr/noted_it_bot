@@ -13,6 +13,10 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
   timezone hint, location, confidence.
 - Explicit dates only for now ("19 Sep, 8pm"); relative dates ("tomorrow") are
   deliberately not guessed.
+- A date with no year takes the year its stated weekday fits ("Saturday 26
+  Sep": this year or next, or last year if within two months), otherwise the
+  current year. The caption says when a one-off event's date has passed, and
+  when the stated weekday doesn't match the date. See [EDGE_CASES.md](EDGE_CASES.md).
 - Time zone: the one the message states or implies; otherwise the user's
   `/tz` choice; otherwise UTC. When the message gave none, the caption says
   which zone was used and how to change it with `/tz`.

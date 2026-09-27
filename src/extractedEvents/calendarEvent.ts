@@ -6,7 +6,7 @@ import {
   toCalendar,
   type CalendarIdentifier,
 } from "@internationalized/date";
-import { resolveTimezone, resolveYear, zonedTimeToUtc } from "../time/timezone";
+import { isBeforeToday, resolveTimezone, resolveYear, weekdayOf, zonedTimeToUtc } from "../time/timezone";
 import { buildRrule, describeRecurrence, planRecurrence } from "./recurrence";
 
 export interface BuiltCalendarEvent {
@@ -15,6 +15,11 @@ export interface BuiltCalendarEvent {
   googleCalendarUrl: string;
   // The canonical IANA zone the event's times are in.
   timeZone: string;
+  // A one-off event whose date is before today in its zone.
+  inPast: boolean;
+  // A one-off event whose stated weekday doesn't match its date ("Monday 20
+  // Jan" in a year where that's a Tuesday), in the reply language, for the caption.
+  weekdayMismatch: { stated: string; date: string; actual: string } | null;
   allDay: boolean;
   summaryLines: string[];
   recurrence: string | null;
@@ -209,6 +214,38 @@ function toGregorian(event: ExtractedEvent): ExtractedEvent | null {
 // than guessing a time — a guessed time would look like a real, specific
 // appointment on the calendar when none was actually given.
 //
+// Monday 1 Jan 2024 onwards, so a weekday code maps to a date that has it.
+const WEEKDAY_REFERENCE_DAY: Record<string, number> = { MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6, SU: 7 };
+
+// The stated weekday, the date and its actual weekday in the reply language,
+// when the message's weekday doesn't match the date; otherwise null. Always
+// the Gregorian calendar, like the caption's date line.
+function describeWeekdayMismatch(
+  stated: string | null,
+  year: number,
+  month: number,
+  day: number,
+  lang: string | undefined,
+): { stated: string; date: string; actual: string } | null {
+  const actual = weekdayOf(year, month, day);
+  if (!stated || !actual || stated === actual || !(stated in WEEKDAY_REFERENCE_DAY)) {
+    return null;
+  }
+  const weekdayName = new Intl.DateTimeFormat(lang || "en", { weekday: "long", timeZone: "UTC", calendar: "gregory" });
+  const dateName = new Intl.DateTimeFormat(lang || "en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+    calendar: "gregory",
+  });
+  return {
+    stated: weekdayName.format(new Date(Date.UTC(2024, 0, WEEKDAY_REFERENCE_DAY[stated]))),
+    date: dateName.format(new Date(Date.UTC(year, month - 1, day))),
+    actual: weekdayName.format(new Date(Date.UTC(year, month - 1, day))),
+  };
+}
+
 // `now` is injectable so date arithmetic is testable.
 export function buildCalendarEvent(
   extracted: ExtractedEvent,
@@ -249,7 +286,7 @@ export function buildCalendarEvent(
     ({ year, month, day } = plan.first);
     until = plan.until;
   } else {
-    year = resolveYear(event.year, event.month!, event.day!, timeZone, now);
+    year = resolveYear(event.year, event.month!, event.day!, timeZone, now, event.weekday ?? null);
     month = event.month!;
     day = event.day!;
   }
@@ -394,6 +431,8 @@ export function buildCalendarEvent(
     icsContent: lines.join("\r\n"),
     googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
     timeZone,
+    inPast: !recurrence && isBeforeToday(year, month, day, timeZone, now),
+    weekdayMismatch: recurrence ? null : describeWeekdayMismatch(event.weekday ?? null, year, month, day, lang),
     allDay,
     summaryLines,
     recurrence: recurrence

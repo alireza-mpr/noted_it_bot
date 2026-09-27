@@ -21,6 +21,7 @@
   "PAGE_SAVED": "Salvo. Você pode fechar esta página e voltar ao Telegram.",
   "PAGE_SEARCH": "Pesquise uma cidade ou região",
   "PAGE_TITLE": "Defina seu fuso horário",
+  "PAST_EVENT_NOTE": "<i>ℹ️ Atenção: essa data já passou. Se a mensagem se referia a uma data futura, envie de novo com o ano.</i>",
   "RECURRENCE_DECLINED_MESSAGE": "⚠️ Parece um evento recorrente, mas não consegui saber ao certo com que frequência ele se repete, então não o criei. Envie novamente com uma redação mais clara, por exemplo \"toda quinta-feira às 19:30\".",
   "RECURRING_NOTE": "<i>🔁 Este evento se repete. O link acima adiciona a sessão de hoje; no celular, normalmente ele não adiciona a repetição, então abra-o em um computador para obter a série completa ou configure você mesmo a repetição usando o padrão acima.</i>",
   "START_MESSAGE": "Olá! Eu sou o bot {0} 👋.\n\n📆 Encaminhe para mim qualquer mensagem que tenha um evento. Vou extrair os detalhes e enviar um link de um toque para adicioná-lo ao Google Calendar, além de um arquivo para o Apple Calendar, o Outlook ou qualquer outro app.\n\n🕙 Por enquanto, só leio datas explícitas\n(\"19 set - 20h\"), não \"amanhã\".\nDescubro o fuso horário pela mensagem. Se ela não disser, defina o seu com o comando /tz.\n\n🔁 Eventos recorrentes também funcionam (\"toda quinta, 19h30\"). O link adiciona a sessão de hoje em qualquer lugar; abra-o em um computador para obter a série completa ou configure a repetição você mesmo no celular usando o padrão que eu envio.\n\n🌎 Respondo, por padrão, no idioma do seu Telegram. Para mudá-lo, envie o comando /lang, por exemplo /lang fa para receber minhas respostas em persa.",
@@ -31,5 +32,6 @@
   "TZ_SET_CONFIRMATION": "Entendido — a partir de agora vou usar o fuso horário {0} para você.",
   "TZ_USER_NOTE": "<i>🌎 A mensagem não informava um fuso horário, então usei o seu, {0}. Para mudar, envie /tz.</i>",
   "USER_DAILY_QUOTA_EXCEEDED": "🙅🏻‍♂️ Você não tem mais cota diária suficiente para hoje. Tente novamente em {0}.",
-  "USER_DAILY_QUOTA_REMAINING": "🔢 Você ainda tem {0} solicitação(ões) para hoje."
+  "USER_DAILY_QUOTA_REMAINING": "🔢 Você ainda tem {0} solicitação(ões) para hoje.",
+  "WEEKDAY_MISMATCH_NOTE": "<i>🤔 A mensagem diz {0}, mas {1} é {2}. Confira a data.</i>"
 }

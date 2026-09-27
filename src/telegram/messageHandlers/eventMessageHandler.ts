@@ -7,7 +7,7 @@ import { extractEvent } from "../../extractedEvents/extractEvent";
 import type { ExtractedEvent } from "../../extractedEvents/extractedEvent";
 import { recurrenceProblem } from "../../extractedEvents/recurrence";
 import type { MessageId } from "../../interactiveMessages/messages";
-import { fillPlaceholder } from "../../translation/placeholders";
+import { fillPlaceholder, fillPlaceholders } from "../../translation/placeholders";
 import { appConfig } from "../../appConfig/appConfig";
 import { logActivity } from "../../logging/activityLog";
 import type { Router } from "../../router/router";
@@ -37,7 +37,16 @@ async function buildCaption(
   const summaryBlock = summaryLines.map(escapeHtmlAttribute).join("\n");
   let caption = `${summaryBlock}\n\n🔔 ${fillPlaceholder(captionTemplate, link)}`;
 
+  const mismatch = calendarEvent.weekdayMismatch;
+  if (mismatch) {
+    caption += `\n\n${fillPlaceholders(
+      replier.translate("WEEKDAY_MISMATCH_NOTE"),
+      [mismatch.stated, mismatch.date, mismatch.actual].map(escapeHtmlAttribute),
+    )}`;
+  }
+
   const notes: (MessageId | null)[] = [
+    calendarEvent.inPast ? "PAST_EVENT_NOTE" : null,
     calendarEvent.recurrence ? "RECURRING_NOTE" : null,
     calendarEvent.allDay ? "ALL_DAY_NOTE" : null,
   ];

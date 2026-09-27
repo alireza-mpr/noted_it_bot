@@ -208,7 +208,7 @@ export function planRecurrence(
   let from: YMD;
   if (hasStartDate) {
     from = {
-      year: resolveYear(event.year, event.month!, event.day!, timeZone, now),
+      year: resolveYear(event.year, event.month!, event.day!, timeZone, now, event.weekday ?? null),
       month: event.month!,
       day: event.day!,
     };

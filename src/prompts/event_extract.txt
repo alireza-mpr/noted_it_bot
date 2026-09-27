@@ -7,6 +7,7 @@ Rules for the title:
 
 Rules for the date and time:
 - Only extract explicit, unambiguous dates (e.g. "19 Sep"). Do not infer relative dates such as "tomorrow" or "next Friday" — for those, set date_kind accordingly and leave year/month/day null.
+- Set weekday to the day of the week the message states next to the date ("Saturday 26 September" -> "SA"), exactly as written, even if it doesn't match the date. If the message states no weekday for the date, leave it null; never work it out from the date.
 - start_time and end_time are the times the message states for the event, in 24-hour HH:MM. If it states none, leave them null; do not guess.
 - Set timezone_hint to the IANA timezone the message indicates, from a timezone it states or a place it mentions. If it indicates none, leave it null.
 - Set calendar (eg Gregorian, Solar Hijri) to the calendar an explicit date in the message is written in: the start date or, for a repeating event, its end date. If the message writes no explicit date at all (a relative date such as "tomorrow", a weekday pattern with no start or end date, or no date), set calendar to null; the language the message is written in says nothing about the calendar. If a date is written and you are unsure which calendar it uses, make your best guess. Copy the year, month and day exactly as written (turn a month name into its number) and never convert them to Gregorian.

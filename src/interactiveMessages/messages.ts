@@ -42,6 +42,16 @@ I work out the time zone from the message. If it doesn't say, set yours with the
   TZ_DEFAULT_NOTE:
     "<i>🌎 The message didn't mention a time zone, so I used {0}. To set yours, send /tz.</i>",
 
+  // Added to an event's caption when its date is already before today, so a
+  // wrongly guessed year is easy to spot.
+  PAST_EVENT_NOTE:
+    "<i>ℹ️ Heads up: this date has already passed. If the message meant a future date, send it again with the year.</i>",
+
+  // Added when the weekday a message states doesn't match its date:
+  // {0} the stated weekday, {1} the date, {2} the weekday it really falls on.
+  WEEKDAY_MISMATCH_NOTE:
+    "<i>🤔 The message says {0}, but {1} is a {2}. Check the date.</i>",
+
   RECURRING_NOTE:
     "<i>🔁 This event repeats. The link above adds today's session; on a phone it usually won't add the repeat, so open it on a computer for the full series, or set it to repeat yourself using the pattern above.</i>",
 

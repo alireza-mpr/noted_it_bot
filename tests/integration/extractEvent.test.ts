@@ -68,10 +68,27 @@ const cases: [message: string, expected: Expected][] = [
       year: null,
       month: 9,
       day: 27,
+      weekday: "SU",
       start_time: "17:00",
       end_time: "19:00",
       timezone_hint: "Australia/Melbourne",
       location: "Nunawading Community Hub | اتاق شماره دو",
+    },
+  ],
+  [
+    // No year, but the stated weekday ("شنبه", Saturday) pins it. The place
+    // names no city, so the time zone isn't checked.
+    "🎲 گیم‌نایت شنبه ۲۶ سپتامبر\n\n در\n Notting Hill Neighbourhood House \n\nبا بوردگیم، بازی‌های گروهی و فضای بازی برای بچه‌ها.\n\n🕕 ساعت ۶:۰۰ تا ۹:۳۰ شب\n\nبرای این برنامه فعلاً فقط سالن اصلی با ظرفیت حدود ۴۰ نفر رزرو شده.\n\nتا سه‌شنبه ۲۲ سپتامبر بر اساس تعداد ثبت‌نام‌های قطعی تصمیم می‌گیریم که برنامه فقط در سالن اصلی برگزار بشه یا در صورت بیشتر بودن تعداد شرکت‌کننده‌ها، دو اتاق جانبی رو هم به رزرو اضافه کنیم.\n\n💰 هزینه ثبت‌نام:\n برای افراد بالای ۵ سال، ۸ دلار",
+    {
+      calendar: "gregorian",
+      date_kind: "absolute",
+      year: null,
+      month: 9,
+      day: 26,
+      weekday: "SA",
+      start_time: "18:00",
+      end_time: "21:30",
+      location: "Notting Hill Neighbourhood House",
     },
   ],
 
