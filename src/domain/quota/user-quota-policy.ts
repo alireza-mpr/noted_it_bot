@@ -1,5 +1,9 @@
 import type { QuotaReservation, QuotaResult, UsageStore } from "./usage-store";
 
+// The time after the last use when a user's daily quota is full again. See
+// ADR-1 in ARCHITECTURE_DECISIONS.md.
+export const QUOTA_RESET_AFTER_MS = 24 * 60 * 60 * 1000;
+
 // Represents the quota rules for a user (e.g. tiers, later). Create one per
 // request.
 export class UserQuotaPolicy {

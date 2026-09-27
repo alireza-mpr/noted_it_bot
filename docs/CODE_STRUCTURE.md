@@ -249,7 +249,8 @@ code, together with that area.
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
 | `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `app/extraction/` | ⏳ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
-| `db/schema/*`, `db/sql/*`, `repositories/*`, `time/dateTimeAest.ts` | `adapters/database/` | ⏳ |
+| `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | `adapters/database/d1-usage-store.ts`, `adapters/database/d1-user-settings-store.ts`, `adapters/database/batch-with-table.ts`; the port `domain/user/user-settings-store.ts`; `QUOTA_RESET_AFTER_MS` → `domain/quota/user-quota-policy.ts` | ✅ |
+| `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/`, with the models (step 4d) | ⏳ |
 | `providers/*`, `router/*`, `quotaLimit/*`, `prompts/diag_ping.txt` | `adapters/models/` | ⏳ |
 | `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
 | `web/*` | `adapters/web/` | ⏳ |
@@ -278,11 +279,11 @@ after each commit.
 | 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ✅ |
 | 4a | Config: `APP_CONFIG` and `Env` | ✅ |
 | 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ✅ |
-| 4c | Adapters: the database (tables, SQL, repositories) | ⏳ |
-| 4d | Adapters: the models (Gemini, Groq, model limits, the router) | ⏳ |
+| 4c | Adapters: the database for users (the quota usage and the user settings) | ✅ |
+| 4d | Adapters: the models (Gemini, Groq, model limits, the router, and their usage tables) | ⏳ |
 | 4e | Adapters: Telegram (the client, update types, the webhook, replies) | ⏳ |
 | 4f | Adapters: the web pages (the /tz page and its routes) | ⏳ |
-| 5 | App: one use case per file (create an event, set a language, set a time zone, …) | ⏳ |
+| 5 | App: one use case per file (create an event, set a language, set a time zone, …). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
 
 ## How the rules are checked

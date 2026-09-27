@@ -90,6 +90,7 @@ this list is called the "ubiquitous language".
 |---|---|---|
 | User | A Telegram user who talks to the bot. | `userId` |
 | User settings | The language and time zone the user chose. `null` means not chosen. | `UserSettings` |
+| User settings store | Where the user settings are saved. A port. | `UserSettingsStore` |
 | Reply language | The language of the bot's messages: the user's choice, else Telegram's language, else English. | — |
 | Supported language | A language the bot replies in (16 of them). | `SupportedLanguage`, `parseLanguageCode` |
 | Bot message | A text the bot sends, with an id, e.g. `NO_TEXT_MESSAGE`. | `BOT_MESSAGES`, `BotMessageId` |
@@ -104,6 +105,7 @@ this list is called the "ubiquitous language".
 | Consume | Take a unit before calling a model. In docs for readers: "use". | `tryConsume` |
 | Refund | Give a unit back, when no model answered. In docs for readers: "give back". | `refund` |
 | Reservation | What is needed to refund a unit exactly. | `QuotaReservation` |
+| Quota reset | The daily quota is full again 24 hours after the last use. | `QUOTA_RESET_AFTER_MS` |
 | Retry time | When a user with no quota left can try again. | `retryAt` |
 | Quota policy | The quota rules for a user (tiers later). | `UserQuotaPolicy` |
 | Usage store | Where the quota usage is saved. A port. | `UsageStore` |
@@ -144,6 +146,7 @@ this list is called the "ubiquitous language".
 | Value object | A small value with no identity, only its content (e.g. a date, a time zone). Its parse function is its only constructor, and lives next to it. | e.g. `IanaTimeZone` |
 | Factory | Creates a complex object from several inputs, using rules. | `createCalendarEvent` |
 | Port | An interface that the inside declares for something it needs from outside. | e.g. `UsageStore` |
+| Store | A port where the domain saves data. Not a DDD repository: it runs atomic commands (e.g. consume a unit), not "load, change, save". | e.g. `UsageStore`, `UserSettingsStore` |
 | Adapter | Code that talks to the outside world. It implements a port, turns raw data into typed values, or writes output (e.g. the logger). | `src/adapters/` |
 | Edge | Where raw data comes in or goes out. The adapters are the edge. | `src/adapters/` |
 
@@ -164,3 +167,4 @@ this list is called the "ubiquitous language".
 | calendar (for an event) | calendar event | The same reason. |
 | default time zone | floating time zone | Says what the time zone is for. |
 | zone (alone) | time zone | A short form hides what it is. |
+| repository | store | Our ports run atomic commands. A DDD repository loads and saves whole aggregates. |
