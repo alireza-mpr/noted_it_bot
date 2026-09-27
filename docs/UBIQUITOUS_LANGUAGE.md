@@ -53,7 +53,7 @@ this list is called the "ubiquitous language".
 | Calendar app | Google Calendar, Apple Calendar, Outlook, and others. | — |
 | Calendar file | The `.ics` file the bot sends. | `CalendarFile`, `calendarFileOf` |
 | RRULE | iCalendar's name for the repeat line in a calendar file. An outside term, so "rule" is allowed here. | `rruleOf` |
-| Google Calendar link | A link that opens Google Calendar with the event filled in. | `output/` |
+| Google Calendar link | A link that opens Google Calendar with the event filled in. | `googleCalendarLinkOf` |
 | Caption | The text sent with the calendar file: the summary, the link and the notes. | `output/` |
 
 ## Time zones

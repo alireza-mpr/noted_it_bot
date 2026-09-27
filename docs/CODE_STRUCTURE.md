@@ -203,7 +203,7 @@ code, together with that area.
 | `policy/userQuotaPolicyLogger.ts` | `adapters/logging/` | ⏳ |
 | the user's language and time zone (`repositories/userPreferenceRepository.ts`) | `domain/user/user-settings.ts` (type) | ✅ |
 | `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/calendar-file.ts`, `generic/icalendar/` | ✅ |
-| `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ⏳ |
+| `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ✅ |
 | `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts` | ⏳ |
 | `extractedEvents/recurrence.ts` (RRULE) | `output/rrule.ts` | ✅ |
 | `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/caption.ts` | ⏳ |
