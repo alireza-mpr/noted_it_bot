@@ -44,6 +44,8 @@ The D1 costs we measured are in [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
 | 4   | Try free models one after another                   | NFR1, NFR4      |
 | 5   | Get the user's time zone from a signed web page     | FR5             |
 | 6   | Translate the bot's messages once, ahead of time    | FR4, NFR1, NFR2 |
+| 7   | Pure rules in the middle, input and output at the edges | all        |
+| 8   | Always answer Telegram with 200 after the auth check | NFR4, NFR2 |
 
 ---
 
@@ -206,3 +208,57 @@ English text.
 - Only 16 languages.
 - The translations were written by an AI assistant. Native speakers have not
   reviewed them yet.
+
+### ADR-7 — Pure rules in the middle, input and output at the edges
+
+**Problem.** The code had no single structure. Some folders were grouped by
+technical layer (`repositories/`, `providers/`), others by feature
+(`extractedEvents/`, `telegram/`). Some files mixed several jobs: for example,
+`calendarEvent.ts` held the `.ics` rules, the Google link, and the Telegram
+caption texts. So the core logic was hard to find.
+
+**Options**
+
+| Option | Good | Bad |
+|---|---|---|
+| OOP as the main style (classes with behaviour, inheritance) | Familiar | Not the usual style in TypeScript. Adds classes where plain functions are enough. |
+| Full DDD (aggregates, bounded contexts, domain events) | Strong model for large systems | Far too heavy for a bot of about 5,000 lines |
+| Keep the current mix | No work | The problem stays and grows |
+| Functional core, imperative shell, with separation of concerns and light "ports and adapters" | Fits the problem: the hard parts are pure rules. Easy to test. Usual style in TypeScript. | Needs a one-time move of many files |
+
+**Decision.** Pure rules in `domain/` and `output/`. Input and output only in
+`adapters/`. `app/` connects them. `domain/` and `output/` never import from
+`app/` or `adapters/`. Two ideas are taken from DDD: shared words across code
+and docs, and a domain model made of types. The full rules, the target place of
+every file, and the order of the work are in
+[CODE_STRUCTURE.md](CODE_STRUCTURE.md).
+
+**Trade-offs.**
+- The move touches many files. It is done in small steps, and file moves are
+  never mixed with logic changes.
+- A unit test checks the import rule, so the structure cannot drift silently.
+
+### ADR-8 — Always answer Telegram with 200 after the auth check
+
+**Problem.** Telegram sends messages to the bot in order. If the bot answers
+with an error (or times out), Telegram sends the same message again and again,
+and every message behind it waits. One broken message can stop the bot for all
+users. This happened once: a failure inside the bot returned a 500, and the
+queue stayed stuck until it was cleared by hand.
+
+**Options**
+
+| Option | Bad |
+|---|---|
+| Return an error when something fails | One broken message blocks the queue for everyone |
+| Always answer 200 after the auth check, and handle errors inside | (chosen) |
+
+**Decision.**
+- Once the webhook secret is correct, the bot always answers 200, even when
+  something fails inside.
+- Failures are logged, and the user gets a general error message.
+- A wrong webhook secret still gets a real 401.
+
+**Trade-offs.**
+- A failed message is not retried. The user has to send it again.
+- The logs show what failed.
