@@ -61,10 +61,31 @@ describe("event time zone", () => {
     expect(caption).toContain("so I used yours, Europe/London. To change it, send /tz.");
   });
 
-  it("falls back to UTC when neither says, and points to /tz", async () => {
+  it("writes floating times when neither says, and points to /tz", async () => {
     const { content, caption } = await send(event(), null);
-    expect(content).toContain("DTSTART;TZID=UTC:20300923T200000");
-    expect(caption).toContain("so I used UTC. To set yours, send /tz.");
+    // No TZID and no Z: every calendar shows 20:00 in its own zone.
+    expect(content).toContain("DTSTART:20300923T200000");
+    expect(content).toContain("DTEND:20300923T210000");
+    expect(content).not.toContain("TZID");
+    // The Google link carries local times and no ctz, so Google uses the calendar's zone.
+    const link = new URL(caption.match(/href="([^"]+)"/)![1].replace(/&amp;/g, "&"));
+    expect(link.searchParams.get("dates")).toBe("20300923T200000/20300923T210000");
+    expect(link.searchParams.has("ctz")).toBe(false);
+    expect(caption).toContain("so the time is as written, in your calendar's own time zone. To set yours, send /tz.");
+  });
+
+  it("ends a floating repeat in local time too", async () => {
+    const { content } = await send(
+      event({
+        recurrence: {
+          frequency: "weekly", interval: 1, weekdays: ["MO"], ordinal: null, month_day: null,
+          end_kind: "until", until_year: 2030, until_month: 11, until_day: 25, count: null,
+        },
+      }),
+      null,
+    );
+    expect(content).toContain("UNTIL=20301125T235900");
+    expect(content).not.toContain("UNTIL=20301125T235900Z");
   });
 
   it("says so when the date has already passed", async () => {
@@ -80,7 +101,7 @@ describe("event time zone", () => {
 
   it("adds no past-date note to a future event", async () => {
     const { caption } = await send(event({ timezone_hint: "UTC" }), null);
-    expect(caption).not.toContain("ℹ️");
+    expect(caption).not.toContain("💡");
   });
 
   it("adds no note to an all-day event, whose date doesn't depend on a zone", async () => {

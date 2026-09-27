@@ -3,7 +3,6 @@ import type { Router } from "../../src/router/router";
 import { eventMessageHandler } from "../../src/telegram/messageHandlers/eventMessageHandler";
 import { Replier } from "../../src/telegram/replier";
 import type { TelegramClient } from "../../src/telegram/telegramClient";
-import { fillPlaceholder } from "../../src/translation/placeholders";
 import { translateStatic } from "../../src/translation/translate";
 
 // The message as a user forwarded it on Sunday 27 September 2026.
@@ -53,11 +52,13 @@ describe("the game night message, forwarded on 27 September 2026", () => {
     vi.useFakeTimers({ now: new Date("2026-09-27T02:00:00Z") });
     const { content, caption } = await send(PROVIDER_RESPONSE);
 
-    // No zone in the message and none set with /tz, so UTC; no year, no weekday, so this year.
-    expect(content).toContain("DTSTART;TZID=UTC:20260926T180000");
-    expect(content).toContain("DTEND;TZID=UTC:20260926T213000");
+    // No zone in the message and none set with /tz, so floating 18:00, which a
+    // Melbourne calendar shows as 18:00 on the 26th (not 04:00 on the 27th).
+    // No year, no weekday, so this year.
+    expect(content).toContain("DTSTART:20260926T180000");
+    expect(content).toContain("DTEND:20260926T213000");
     expect(caption).toContain(fa("PAST_EVENT_NOTE"));
-    expect(caption).toContain(fillPlaceholder(fa("TZ_DEFAULT_NOTE"), "UTC"));
+    expect(caption).toContain(fa("TZ_FLOATING_NOTE"));
     expect(caption).not.toContain("🤔 ");
   });
 
@@ -66,7 +67,7 @@ describe("the game night message, forwarded on 27 September 2026", () => {
     const withWeekday = PROVIDER_RESPONSE.replace('"day":26,', '"day":26,"weekday":"SA",');
     const { content, caption } = await send(withWeekday);
 
-    expect(content).toContain("DTSTART;TZID=UTC:20260926T180000");
+    expect(content).toContain("DTSTART:20260926T180000");
     expect(caption).toContain(fa("PAST_EVENT_NOTE"));
     expect(caption).not.toContain("🤔 ");
   });
@@ -75,7 +76,7 @@ describe("the game night message, forwarded on 27 September 2026", () => {
     vi.useFakeTimers({ now: new Date("2026-09-19T02:00:00Z") });
     const { content, caption } = await send(PROVIDER_RESPONSE);
 
-    expect(content).toContain("DTSTART;TZID=UTC:20260926T180000");
+    expect(content).toContain("DTSTART:20260926T180000");
     expect(caption).not.toContain(fa("PAST_EVENT_NOTE"));
   });
 });

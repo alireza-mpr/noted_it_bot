@@ -151,9 +151,10 @@ when the message states one or names a place.
 
 **Trade-offs.** It costs the user a tap and a page load. The device's zone can
 be wrong when travelling, which the list covers. Events use, in order: a zone
-the message gives, the user's `/tz` choice, then UTC. In the last two cases
-the caption says which zone was used and points to `/tz`, so a wrong guess is
-visible.
+the message gives, the user's `/tz` choice, then no zone at all ("floating"
+times, shown as written in the calendar's own zone). A default zone like UTC
+was tried first and put a 6pm Melbourne event at 4am the next day. In the
+last two cases the caption says so and points to `/tz`.
 
 - translation:
   dynamic --> llm usage, open for abuse

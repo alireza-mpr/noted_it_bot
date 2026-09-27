@@ -8,7 +8,6 @@ import type { ExtractedEvent } from "../../extractedEvents/extractedEvent";
 import { recurrenceProblem } from "../../extractedEvents/recurrence";
 import type { MessageId } from "../../interactiveMessages/messages";
 import { fillPlaceholder, fillPlaceholders } from "../../translation/placeholders";
-import { appConfig } from "../../appConfig/appConfig";
 import { logActivity } from "../../logging/activityLog";
 import type { Router } from "../../router/router";
 import { escapeHtmlAttribute } from "../telegramHtml";
@@ -73,17 +72,17 @@ async function buildCaption(
 // Says which zone was assumed when the message gave none, and how to change it.
 // An all-day event has no time, so its zone doesn't matter.
 function timezoneNote(
-  source: "message" | "user" | "default",
+  source: "message" | "user" | "floating",
   calendarEvent: BuiltCalendarEvent,
   replier: Replier,
 ): string | null {
   if (source === "message" || calendarEvent.allDay) {
     return null;
   }
-  return replier.translate(
-    source === "user" ? "TZ_USER_NOTE" : "TZ_DEFAULT_NOTE",
-    calendarEvent.timeZone,
-  );
+  if (source === "user" && calendarEvent.timeZone) {
+    return replier.translate("TZ_USER_NOTE", calendarEvent.timeZone);
+  }
+  return replier.translate("TZ_FLOATING_NOTE");
 }
 
 // Tells the user extraction has started. A failed send must not stop the extraction.
@@ -125,10 +124,11 @@ export async function eventMessageHandler(
   }
 
   const event: ExtractedEvent = JSON.parse(downstream.message);
-  // A zone the message states or implies wins; otherwise the user's /tz choice,
-  // otherwise appConfig.defaultTimezone. The last two are pointed out in the caption.
-  const timezoneSource = event.timezone_hint ? "message" : userTimezone ? "user" : "default";
-  event.timezone_hint ??= userTimezone ?? appConfig.defaultTimezone;
+  // A zone the message states or implies wins; otherwise the user's /tz choice;
+  // otherwise none, and the times stay "floating" (as written, in the
+  // calendar's own zone). The last two are pointed out in the caption.
+  const timezoneSource = event.timezone_hint ? "message" : userTimezone ? "user" : "floating";
+  event.timezone_hint ??= userTimezone;
   const problem = recurrenceProblem(event);
   if (problem) {
     logger.error("declined recurring event", {

@@ -34,18 +34,18 @@ I work out the time zone from the message. If it doesn't say, set yours with the
   ALL_DAY_NOTE:
     "<i>🤔 By the way, no specific time was mentioned, so this was added as an all-day event.</i>",
 
-  // Added to an event's caption when the message gave no time zone; {0} is the
-  // zone used: the user's /tz choice, or appConfig.defaultTimezone.
+  // Added to an event's caption when the message gave no time zone. With a /tz
+  // choice, the event uses it ({0}); without one, the times are "floating".
   TZ_USER_NOTE:
     "<i>🌎 The message didn't mention a time zone, so I used yours, {0}. To change it, send /tz.</i>",
 
-  TZ_DEFAULT_NOTE:
-    "<i>🌎 The message didn't mention a time zone, so I used {0}. To set yours, send /tz.</i>",
+  TZ_FLOATING_NOTE:
+    "<i>🌎 The message didn't mention a time zone, so the time is as written, in your calendar's own time zone. To set yours, send /tz.</i>",
 
   // Added to an event's caption when its date is already before today, so a
   // wrongly guessed year is easy to spot.
   PAST_EVENT_NOTE:
-    "<i>ℹ️ Heads up: this date has already passed. If the message meant a future date, send it again with the year.</i>",
+    "<i>💡 Heads up: this date has already passed. If the message meant a future date, send it again with the year.</i>",
 
   // Added when the weekday a message states doesn't match its date:
   // {0} the stated weekday, {1} the date, {2} the weekday it really falls on.

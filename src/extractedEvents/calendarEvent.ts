@@ -13,8 +13,9 @@ export interface BuiltCalendarEvent {
   icsFilename: string;
   icsContent: string;
   googleCalendarUrl: string;
-  // The canonical IANA zone the event's times are in.
-  timeZone: string;
+  // The canonical IANA zone the event's times are in, or null for "floating"
+  // times (no zone known): the times as written, in the calendar's own zone.
+  timeZone: string | null;
   // A one-off event whose date is before today in its zone.
   inPast: boolean;
   // A one-off event whose stated weekday doesn't match its date ("Monday 20
@@ -272,6 +273,10 @@ export function buildCalendarEvent(
   if (!timeZone) {
     return null;
   }
+  // No zone from the message or the user: write "floating" times, which every
+  // calendar shows as written in its own zone (18:00 stays 18:00). timeZone,
+  // the default then, only decides what "today" is.
+  const floating = !event.timezone_hint;
 
   let year: number;
   let month: number;
@@ -329,27 +334,34 @@ export function buildCalendarEvent(
     );
     const endLocal = formatIcsLocal(year, month, day, end!.hour, end!.minute);
 
-    dtStartLine = `DTSTART;TZID=${timeZone}:${startLocal}`;
-    dtEndLine = `DTEND;TZID=${timeZone}:${endLocal}`;
+    if (floating) {
+      dtStartLine = `DTSTART:${startLocal}`;
+      dtEndLine = `DTEND:${endLocal}`;
+      // Local times without a Z or ctz: Google uses the calendar's own zone.
+      googleDates = `${startLocal}/${endLocal}`;
+    } else {
+      dtStartLine = `DTSTART;TZID=${timeZone}:${startLocal}`;
+      dtEndLine = `DTEND;TZID=${timeZone}:${endLocal}`;
 
-    const startUtc = zonedTimeToUtc(
-      year,
-      month,
-      day,
-      start!.hour,
-      start!.minute,
-      timeZone,
-    );
-    const endUtc = zonedTimeToUtc(
-      year,
-      month,
-      day,
-      end!.hour,
-      end!.minute,
-      timeZone,
-    );
-    googleDates = `${formatIcsUtc(startUtc)}/${formatIcsUtc(endUtc)}`;
-    googleParams.set("ctz", timeZone);
+      const startUtc = zonedTimeToUtc(
+        year,
+        month,
+        day,
+        start!.hour,
+        start!.minute,
+        timeZone,
+      );
+      const endUtc = zonedTimeToUtc(
+        year,
+        month,
+        day,
+        end!.hour,
+        end!.minute,
+        timeZone,
+      );
+      googleDates = `${formatIcsUtc(startUtc)}/${formatIcsUtc(endUtc)}`;
+      googleParams.set("ctz", timeZone);
+    }
   }
 
   googleParams.set("dates", googleDates);
@@ -360,12 +372,14 @@ export function buildCalendarEvent(
   let rrule: string | null = null;
   if (recurrence) {
     // Timed events end the series at the close of the last day in the event's
-    // own timezone, expressed in UTC as RFC 5545 requires; all-day events use
-    // a plain date.
+    // own timezone, expressed in UTC as RFC 5545 requires (floating times: in
+    // local time, as it requires for them); all-day events use a plain date.
     const untilValue = until
       ? allDay
         ? formatIcsDate(until.year, until.month, until.day)
-        : formatIcsUtc(
+        : floating
+          ? formatIcsLocal(until.year, until.month, until.day, 23, 59)
+          : formatIcsUtc(
             zonedTimeToUtc(
               until.year,
               until.month,
@@ -430,7 +444,7 @@ export function buildCalendarEvent(
     icsFilename: "event.ics",
     icsContent: lines.join("\r\n"),
     googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
-    timeZone,
+    timeZone: floating ? null : timeZone,
     inPast: !recurrence && isBeforeToday(year, month, day, timeZone, now),
     weekdayMismatch: recurrence ? null : describeWeekdayMismatch(event.weekday ?? null, year, month, day, lang),
     allDay,

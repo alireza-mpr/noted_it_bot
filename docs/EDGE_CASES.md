@@ -30,7 +30,7 @@ chosen in code (`resolveYear` in `src/time/timezone.ts`), not by the model:
 3. Otherwise (no weekday, or none of those years fits), use the current year.
 
 Two caption notes make a wrong guess visible:
-- **Past date:** a one-off event whose date is before today says "ℹ️ this date
+- **Past date:** a one-off event whose date is before today says "💡 this date
   has already passed …".
 - **Weekday mismatch:** when the stated weekday doesn't match the final date,
   even with a stated year, the caption says "🤔 The message says Monday, but
@@ -74,8 +74,15 @@ House". There is a Notting Hill in Melbourne and one in London.
 event by hours.
 
 **Handling now.** With no zone from the message, the event uses the user's
-`/tz` choice, or UTC if they haven't set one, and the caption says which zone
-was used and how to change it.
+`/tz` choice. If they haven't set one, the times are written "floating": no
+time zone at all, so every calendar shows 18:00 as 18:00 in its own zone. The
+caption says which, and how to set a zone with `/tz`.
+
+**Why not a default zone.** The first version used UTC. A user in Melbourne
+without a `/tz` zone got this 18:00 game night as 18:00 UTC, which Google
+Calendar showed as **4:00–7:30 am on Sunday 27 September**: a caption note
+explained it, but the calendar entry itself was wrong. Floating time keeps
+the time as written, which is what the message meant.
 
 ## A suburb the models know differently
 
@@ -89,7 +96,7 @@ places the suburb and returns `Australia/Melbourne`; the second plays safe and
 returns `timezone_hint: null`, every time.
 
 **Handling now.** Both answers are acceptable: with null, the event uses the
-user's `/tz` zone or UTC, and the caption says which. The test for this message
+user's `/tz` zone or floating times, and the caption says which. The test for this message
 accepts either, so it no longer depends on which model has quota left. The
 prompt isn't pushed to guess harder, since that would invite wrong zones for
 ambiguous places (see "A place that names no city").

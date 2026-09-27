@@ -227,9 +227,12 @@ auto-detect; `/lang auto` calls `setLang(userId, null)`) and `timezone` (set by 
 The table is created on first use like the others.
 
 **Which time zone an event uses.** In order: a zone the message states or implies (the model's
-`timezone_hint`); otherwise the user's `/tz` choice; otherwise `appConfig.defaultTimezone` (`UTC`, in
-[appConfig.ts](src/appConfig/appConfig.ts)). In the last two cases the caption says which zone was used and points to
-`/tz` (`TZ_USER_NOTE` / `TZ_DEFAULT_NOTE`); all-day events get no note, since their date doesn't depend on a zone.
+`timezone_hint`); otherwise the user's `/tz` choice; otherwise none: the times are written **floating** (no `TZID`
+in the `.ics`, and local times with no `ctz` in the Google link), so every calendar shows them as written in its
+own zone. In the last two cases the caption says so and points to `/tz` (`TZ_USER_NOTE` / `TZ_FLOATING_NOTE`);
+all-day events get no note, since their date doesn't depend on a zone. "Today" (for picking a missing year and the
+past-date note) still needs a zone: the one above, or `appConfig.defaultTimezone` (`UTC`, in
+[appConfig.ts](src/appConfig/appConfig.ts)) for floating times.
 
 `timezone` used to be `NOT NULL`, with `/lang` filling in the default. SQLite can't loosen that constraint in
 place, so an existing table is rebuilt once (the data is copied unchanged; a stored `UTC` behaves the same as

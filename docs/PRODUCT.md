@@ -18,8 +18,9 @@ Status: **Beta**. Runs on Cloudflare Workers, with Gemini doing the extraction.
   current year. The caption says when a one-off event's date has passed, and
   when the stated weekday doesn't match the date. See [EDGE_CASES.md](EDGE_CASES.md).
 - Time zone: the one the message states or implies; otherwise the user's
-  `/tz` choice; otherwise UTC. When the message gave none, the caption says
-  which zone was used and how to change it with `/tz`.
+  `/tz` choice; otherwise the time as written, in the calendar's own zone
+  (18:00 shows as 18:00 wherever you are). When the message gave none, the
+  caption says so and how to set a zone with `/tz`.
 - Works for non-Latin scripts (Persian tested end to end).
 
 ### Recurring events
