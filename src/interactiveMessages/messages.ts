@@ -14,8 +14,7 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
 🔁 Repeating events work too ("every Thursday, 7:30pm"). The link adds today's session everywhere; open it on a computer to get the whole series, or set the repeat yourself on a phone using the pattern I send.
 
-🌎 I reply in your Telegram language by default. To change it, send the /lang command, e.g. /lang fa to get my replies in Farsi.
-`,
+🌎 I reply in your Telegram language by default. To change it, send the /lang command, e.g. /lang fa to get my replies in Farsi.`,
 
   // Appended to START_MESSAGE when the daily quota is on; {0} is appConfig.dailyQuota.
   START_QUOTA_NOTE: `🎁 On the free plan, you can send up to {0} requests a day.`,
