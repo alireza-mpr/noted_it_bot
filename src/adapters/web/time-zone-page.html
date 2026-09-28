@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="{{lang}}" dir="{{dir}}">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta name="color-scheme" content="light dark">
+    <title>{{title}}</title>
+    <style nonce="{{nonce}}">{{style}}</style>
+</head>
+
+<body>
+    <main>
+        <h1 id="title"></h1>
+        <p id="status" role="status"></p>
+        <section id="detected" hidden>
+            <p id="detected-label"></p>
+            <p class="zone" id="detected-zone"></p>
+            <p id="detected-time"></p>
+            <button type="button" id="confirm"></button>
+            <button type="button" id="choose" class="secondary"></button>
+        </section>
+        <section id="chooser" hidden>
+            <input id="search" type="search" autocomplete="off">
+            <ul id="results"></ul>
+            <p class="zone" id="picked-zone"></p>
+            <p id="picked-time"></p>
+            <button type="button" id="save" hidden></button>
+        </section>
+    </main>
+    <script type="application/json" id="cfg">{{config}}</script>
+    <script nonce="{{nonce}}">
+        (() => {
+            const cfg = JSON.parse(document.getElementById("cfg").textContent);
+            const S = cfg.strings;
+            const $ = (id) => document.getElementById(id);
+            const say = (text) => { $("status").textContent = text; };
+            const timeIn = (zone) => {
+                try { return new Intl.DateTimeFormat(cfg.lang, { timeStyle: "short", timeZone: zone }).format(new Date()); }
+                catch (e) { return ""; }
+            };
+            const local = (zone) => S.localTime.replace("{0}", timeIn(zone));
+            const pretty = (zone) => zone.replace(/_/g, " ");
+            // Lower case, no accents, "_" as a space. So "São_Paulo" and "sao paulo" match.
+            const fold = (text) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[_\s]+/g, " ").trim();
+            // The zone's plain name in the user's language ("Eastern Time"), or ""
+            // if the browser does not know it.
+            const genericName = (zone) => {
+                for (const style of ["longGeneric", "long"]) {
+                    try {
+                        const parts = new Intl.DateTimeFormat(cfg.lang, { timeZone: zone, timeZoneName: style }).formatToParts(new Date());
+                        const name = parts.find((part) => part.type === "timeZoneName");
+                        if (name) return name.value;
+                    } catch (e) { /* try the next style */ }
+                }
+                return "";
+            };
+
+            $("title").textContent = S.title;
+            $("detected-label").textContent = S.detected;
+            $("confirm").textContent = S.confirm;
+            $("choose").textContent = S.choose;
+            $("search").placeholder = S.search;
+            $("search").setAttribute("aria-label", S.search);
+            $("save").textContent = S.save;
+
+            const buttons = () => document.querySelectorAll("button");
+            const setBusy = (busy) => buttons().forEach((b) => { b.disabled = busy; });
+
+            async function save(zone) {
+                say("");
+                setBusy(true);
+                try {
+                    const res = await fetch("/tz/save", {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ token: cfg.token, timezone: zone }),
+                    });
+                    if (res.ok) {
+                        $("detected").hidden = true;
+                        $("chooser").hidden = true;
+                        say("✅ " + S.saved);
+                        return;
+                    }
+                    say(res.status === 403 ? S.expired : S.error);
+                } catch (e) {
+                    say(S.error);
+                }
+                setBusy(false);
+            }
+
+            let detected = null;
+            try { detected = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) { detected = null; }
+
+            const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone").slice() : [];
+            if (!zones.includes("UTC")) zones.push("UTC");
+
+            // The name this browser uses for a city's zone, or null if the browser
+            // does not have it. (Older browsers may still call Europe/Kyiv "Europe/Kiev".)
+            const inList = (zone) => {
+                if (zones.includes(zone)) return zone;
+                try {
+                    const canonical = new Intl.DateTimeFormat("en", { timeZone: zone }).resolvedOptions().timeZone;
+                    return zones.includes(canonical) ? canonical : null;
+                } catch (e) { return null; }
+            };
+
+            // Built on the first search: each zone with its name, plain name and cities.
+            let index = null;
+            function buildIndex() {
+                const citiesByZone = new Map();
+                for (const [city, target] of Object.entries(cfg.cities || {})) {
+                    const zone = inList(target);
+                    if (!zone) continue;
+                    if (!citiesByZone.has(zone)) citiesByZone.set(zone, []);
+                    citiesByZone.get(zone).push(city);
+                }
+                index = zones.map((zone) => ({
+                    zone,
+                    name: fold(pretty(zone)),
+                    generic: genericName(zone),
+                    cities: citiesByZone.get(zone) || [],
+                }));
+            }
+
+            // How well a text matches the query: 0 exact, 1 starts with it, 2 contains it.
+            const closeness = (text, q) => (text === q ? 0 : text.startsWith(q) ? 1 : text.includes(q) ? 2 : null);
+
+            // Best matches first: an exact city or zone ("washington" before
+            // "washington state"), then names that start with the query, then names
+            // that contain it, then plain names ("pacific time").
+            function search(query) {
+                if (!index) buildIndex();
+                const q = fold(query);
+                if (!q) return index.map((entry) => ({ entry, city: null }));
+                const found = [];
+                for (const entry of index) {
+                    const place = entry.name.split("/").pop();
+                    let best = { rank: Math.min(closeness(place, q) ?? 9, closeness(entry.name, q) === null ? 9 : 2), city: null };
+                    for (const city of entry.cities) {
+                        const rank = closeness(fold(city), q);
+                        if (rank !== null && rank < best.rank) best = { rank, city };
+                    }
+                    if (best.rank === 9 && fold(entry.generic).includes(q)) best = { rank: 3, city: null };
+                    if (best.rank < 9) found.push({ entry, city: best.city, rank: best.rank });
+                }
+                // If two results tie, zones with more listed cities come first: they are
+                // the main zones people know.
+                return found.sort((a, b) => a.rank - b.rank || b.entry.cities.length - a.entry.cities.length);
+            }
+
+            let picked = null;
+            function renderResults() {
+                const list = $("results");
+                list.textContent = "";
+                search($("search").value)
+                    .slice(0, 40)
+                    .forEach(({ entry, city }) => {
+                        const zone = entry.zone;
+                        const item = document.createElement("li");
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.className = "secondary";
+                        button.textContent = city ? `${city} (${pretty(zone)})` : pretty(zone);
+                        const small = document.createElement("small");
+                        small.textContent = [entry.generic, timeIn(zone)].filter(Boolean).join(" · ");
+                        button.appendChild(small);
+                        button.addEventListener("click", () => {
+                            picked = zone;
+                            $("picked-zone").textContent = pretty(zone);
+                            $("picked-time").textContent = local(zone);
+                            $("save").hidden = false;
+                        });
+                        item.appendChild(button);
+                        list.appendChild(item);
+                    });
+            }
+
+            function showChooser() {
+                $("detected").hidden = true;
+                $("chooser").hidden = false;
+                renderResults();
+                $("search").focus();
+            }
+
+            $("search").addEventListener("input", renderResults);
+            $("choose").addEventListener("click", showChooser);
+            $("confirm").addEventListener("click", () => save(detected));
+            $("save").addEventListener("click", () => { if (picked) save(picked); });
+
+            if (detected) {
+                $("detected-zone").textContent = pretty(detected);
+                $("detected-time").textContent = local(detected);
+                $("detected").hidden = false;
+            } else {
+                showChooser();
+            }
+        })();
+    </script>
+</body>
+
+</html>

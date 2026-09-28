@@ -65,6 +65,8 @@ this list is called the "ubiquitous language".
 | Event time zone | Where the event's time zone comes from: the message, the user's setting, or nowhere. | `EventTimeZone`, `eventTimeZoneOf` |
 | Message time zone | The time zone the message states or suggests. | `draft.timeZone`, `kind: "from-message"` |
 | User time zone | The time zone the user set with `/tz`. | `userTimeZone`, `parseUserTimeZoneName`, `kind: "from-user"` |
+| Time zone page | The web page that `/tz` links to. The user confirms the device's time zone, or picks another one. | `timeZonePageOf` |
+| Time zone link token | The signed token in the `/tz` link and on the page: which user, in which language, for opening or saving, and until when. | `TimeZoneLinkTokenPayload`, `signTimeZoneLinkToken`, `verifyTimeZoneLinkToken` |
 | Floating time | A time with no time zone. Every calendar app shows it as written (18:00 stays 18:00). | `kind: "floating"` |
 | Floating time zone | The time zone that decides "today" for floating times (now UTC). | `floatingTimeZone` |
 | Local date and time | The date and the time of day in a time zone, at a moment. | `LocalDateTime` |

@@ -84,6 +84,7 @@ src/
                "generic subdomain"): e.g. do date math, convert data,
                format text
     date-time/        dates, times of day, time zones, calendar conversion
+    encoding/         base64url text
     hash/             hashing a text
     html/             escaping text for HTML
     icalendar/        RFC 5545 text and date formats
@@ -257,7 +258,7 @@ code, together with that area.
 | `router/*`, `quotaLimit/*` | `adapters/models/router.ts` (`generate` → `ask`, `MeteredProvider` → `RoutedProvider`), `router-log.ts` (OpenTelemetry events), `model-usage-store.ts` (`UsageRepository` → `ModelUsageStore`); the usage windows → private in `d1-counted-model-usage-store.ts`; `createRouter` → `app/` (step 5) | ✅ (`createRouter` ⏳) |
 | `prompts/diag_ping.txt` | with `/diag` in `app/commands/` (step 5) | ⏳ |
 | `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
-| `web/*` | `adapters/web/` | ⏳ |
+| `web/*` | `adapters/web/`: `time-zone-link-token.ts` (`tzToken.ts`; the token's JSON is unchanged, so links already sent keep working), `time-zone-page.ts` (`tzPage.ts`), `time-zone-page.html` and `.css` (unchanged), `time-zone-cities.ts` (`tzCities.ts`); the base64url helpers → `generic/encoding/base64-url.ts`; the routes (`tzRoutes.ts`) → the "set a time zone" use case in `app/` (step 5) | ✅ (routes ⏳) |
 | `appConfig/appConfig.ts`, `env.ts` | `config/app-config.ts` (`appConfig` → `APP_CONFIG`, `defaultTimezone` → `floatingTimeZoneName`), `config/env.ts` | ✅ |
 | `buildCalendarEvent` (used only by tests) | a helper in `tests/` | ⏳ |
 | `text-modules.d.ts`, `node-modules.d.ts` | stay in `src/` | ✅ |
@@ -288,7 +289,7 @@ after each commit.
 | 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ✅ |
 | 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`); a missing title becomes "Event" in the reply language | ✅ |
 | 4e | Adapters: Telegram (reading updates, the webhook secret check, the client, replies) | ✅ |
-| 4f | Adapters: the web pages (the /tz page and its routes) | ⏳ |
+| 4f | Adapters: the web pages (the /tz page, its link token, the city list) | ✅ |
 | 5 | App: one use case per file (create an event, set a language, set a time zone, …). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
 
