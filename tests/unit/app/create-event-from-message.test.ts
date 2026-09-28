@@ -8,17 +8,21 @@ import {
   createEventFromMessage,
   type EventRequestContext,
 } from "../../../src/app/create-event-from-message";
-import type { QuotaReservation, QuotaResult, UsageStore } from "../../../src/domain/quota/usage-store";
-import { UserQuotaPolicy } from "../../../src/domain/quota/user-quota-policy";
+import { QUOTA_RESET_AFTER_MS } from "../../../src/domain/quota/daily-quota-rule";
+import type { QuotaUsage } from "../../../src/domain/quota/quota-usage";
+import { newUser, type User } from "../../../src/domain/user/user";
 import { timeZoneNamed, type IanaTimeZone } from "../../../src/generic/date-time/time-zone";
 import type { SupportedLanguage } from "../../../src/domain/user/supported-language";
 import { translate } from "../../../src/i18n/translation";
 import type { CalendarFile } from "../../../src/output/calendar-file";
 import { axiomEventsOf } from "../adapters/logging/axiom-events-of";
 import { modelAnswerOf } from "../adapters/models/model-answer-of";
+import { InMemoryUserRepository } from "./in-memory-user-repository";
 
 const USER_ID = 42;
+const DAILY_QUOTA = 5;
 const WAIT_MS = (2 * 60 + 5) * 60_000;
+const ALICE = { username: "alice", firstName: "Alice", lastName: null, telegramLanguageCode: "en" };
 const NO_MODEL: ModelFailure = {
   ok: false,
   kind: "rate-limited",
@@ -85,60 +89,46 @@ class FakeReplier implements Replier {
   }
 }
 
-// Represents a usage store in memory, with a number of units left.
-class FakeUsageStore implements UsageStore {
-  readonly refundedReservations: QuotaReservation[] = [];
-
-  constructor(private remainingQuota: number) {}
-
-  async tryConsume(userId: number, dailyQuota: number, now: Date): Promise<QuotaResult> {
-    if (this.remainingQuota <= 0) {
-      return { ok: false, retryAt: new Date(now.getTime() + WAIT_MS) };
-    }
-    this.remainingQuota -= 1;
-    return {
-      ok: true,
-      remaining: this.remainingQuota,
-      reservation: {
-        userId,
-        dailyQuota,
-        consumedAt: now,
-        previousRemainingQuota: this.remainingQuota + 1,
-        previousLastUsedAt: new Date(0),
-      },
-    };
-  }
-
-  async refund(quotaReservation: QuotaReservation): Promise<void> {
-    this.refundedReservations.push(quotaReservation);
-    this.remainingQuota += 1;
-  }
-}
-
 interface TestSetup {
   modelResult?: ModelResult;
+  // null means the daily quota is off.
   remainingQuota?: number | null;
   language?: SupportedLanguage;
   userTimeZone?: IanaTimeZone | null;
   now?: Date;
 }
 
+// Returns the quota usage of a user with this many units left. A user with
+// none left can try again WAIT_MS after now.
+function quotaUsageWith(remainingQuota: number, now: Date): QuotaUsage {
+  return remainingQuota === DAILY_QUOTA
+    ? { kind: "unused" }
+    : { kind: "used", remainingQuota, lastUsedAt: new Date(now.getTime() + WAIT_MS - QUOTA_RESET_AFTER_MS) };
+}
+
 // Runs one message through the use case, and returns what it sent and used.
 async function sendMessage(messageText: string | null, testSetup: TestSetup = {}) {
+  const now = testSetup.now ?? new Date("2026-09-28T02:00:00Z");
+  const remainingQuota = testSetup.remainingQuota === undefined ? DAILY_QUOTA : testSetup.remainingQuota;
+  const storedUser: User = {
+    ...newUser(USER_ID, ALICE),
+    settings: { language: null, timeZone: testSetup.userTimeZone ?? null },
+    quotaUsage: quotaUsageWith(remainingQuota ?? DAILY_QUOTA, now),
+    version: 1,
+  };
   const fakeRouter = new FakeRouter(testSetup.modelResult ?? { ...modelAnswerOf(GEMINI_MODELS[0]), text: answerWith() });
   const fakeReplier = new FakeReplier();
-  const remainingQuota = testSetup.remainingQuota === undefined ? 5 : testSetup.remainingQuota;
-  const fakeUsageStore = new FakeUsageStore(remainingQuota ?? 0);
+  const userRepository = new InMemoryUserRepository([storedUser]);
   const eventRequestContext: EventRequestContext = {
     router: fakeRouter,
-    userQuotaPolicy: remainingQuota === null ? null : new UserQuotaPolicy(fakeUsageStore, 5),
+    userRepository,
+    dailyQuota: remainingQuota === null ? null : DAILY_QUOTA,
     replier: fakeReplier,
     language: testSetup.language ?? "en",
-    userTimeZone: testSetup.userTimeZone ?? null,
-    now: testSetup.now ?? new Date("2026-09-28T02:00:00Z"),
+    now,
   };
-  await createEventFromMessage({ userId: USER_ID, messageText }, eventRequestContext);
-  return { fakeRouter, fakeReplier, fakeUsageStore };
+  await createEventFromMessage({ user: storedUser, messageText }, eventRequestContext);
+  return { fakeRouter, fakeReplier, userRepository, storedQuotaUsage: () => userRepository.storedUsers.get(USER_ID)?.quotaUsage };
 }
 
 // Returns the calendar file and caption sent for a model answer.
@@ -276,11 +266,17 @@ describe("createEventFromMessage", () => {
   });
 
   it("answers a message with no text, without using quota or a model", async () => {
-    const { fakeReplier, fakeRouter, fakeUsageStore } = await sendMessage(null, { remainingQuota: 0 });
+    const { fakeReplier, fakeRouter, userRepository } = await sendMessage(null, { remainingQuota: 0 });
 
     expect(fakeReplier.texts).toEqual([translate("NO_TEXT_MESSAGE", "en")]);
     expect(fakeRouter.modelRequests).toEqual([]);
-    expect(fakeUsageStore.refundedReservations).toEqual([]);
+    expect(userRepository.saveCount).toBe(0);
+  });
+
+  it("refuses a used-up user with no read and no write", async () => {
+    const { userRepository } = await sendMessage("text", { remainingQuota: 0 });
+
+    expect([userRepository.loadCount, userRepository.saveCount]).toEqual([0, 0]);
   });
 
   it("says when the daily quota is used up, with the wait time in the reply language", async () => {
@@ -293,29 +289,31 @@ describe("createEventFromMessage", () => {
   });
 
   it("gives the quota unit back when no model answers", async () => {
-    const { fakeReplier, fakeUsageStore } = await sendMessage("text", { modelResult: NO_MODEL });
+    const { fakeReplier, userRepository, storedQuotaUsage } = await sendMessage("text", { modelResult: NO_MODEL });
 
     expect(fakeReplier.texts).toContain(translate("NO_AVAILABLE_MODEL_MESSAGE", "en"));
-    expect(fakeUsageStore.refundedReservations).toHaveLength(1);
+    expect(storedQuotaUsage()).toEqual({ kind: "unused" });
+    // The consume and the refund: two writes, and no read.
+    expect([userRepository.loadCount, userRepository.saveCount]).toEqual([0, 2]);
   });
 
   it("gives the quota unit back when the model's answer is not usable", async () => {
-    const { fakeUsageStore } = await sendMessage("text", {
+    const { storedQuotaUsage } = await sendMessage("text", {
       modelResult: { ...modelAnswerOf(GEMINI_MODELS[0]), text: "Sure!" },
     });
 
-    expect(fakeUsageStore.refundedReservations).toHaveLength(1);
+    expect(storedQuotaUsage()).toEqual({ kind: "unused" });
   });
 
   it("keeps the quota unit when the answer gives no event, and adds the quota line", async () => {
-    const { fakeReplier, fakeUsageStore } = await sendMessage("text", {
+    const { fakeReplier, storedQuotaUsage } = await sendMessage("text", {
       modelResult: { ...modelAnswerOf(GEMINI_MODELS[0]), text: answerWith({ date_kind: "relative", calendar: null, year: null, month: null, day: null }) },
     });
 
     expect(fakeReplier.texts.at(-1)).toBe(
       `${translate("NO_CALENDAR_EVENT_MESSAGE", "en")}\n\n${translate("USER_DAILY_QUOTA_REMAINING", "en").replace("{0}", "4")}`,
     );
-    expect(fakeUsageStore.refundedReservations).toEqual([]);
+    expect(storedQuotaUsage()).toMatchObject({ kind: "used", remainingQuota: 4 });
   });
 
   it("adds no quota line when the daily quota is off", async () => {
@@ -332,15 +330,16 @@ describe("createEventFromMessage", () => {
       throw new Error("network down");
     };
 
+    const now = new Date("2026-09-28T02:00:00Z");
     await createEventFromMessage(
-      { userId: USER_ID, messageText: "text" },
+      { user: newUser(USER_ID, ALICE), messageText: "text" },
       {
         router: new FakeRouter({ ...modelAnswerOf(GEMINI_MODELS[0]), text: answerWith() }),
-        userQuotaPolicy: null,
+        userRepository: new InMemoryUserRepository(),
+        dailyQuota: null,
         replier: fakeReplier,
         language: "en",
-        userTimeZone: null,
-        now: new Date("2026-09-28T02:00:00Z"),
+        now,
       },
     );
 

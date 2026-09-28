@@ -80,13 +80,14 @@ refused message must be as cheap as possible.
 - "Use first, then read the result" costs 2 reads.
 - `RETURNING` does not help. D1 counts it as a read too.
 
-**Decision.** First read the quota (`SELECT`). If nothing is left, stop. Only
-then use one unit (an upsert).
+**Decision.** Check the quota on the user read at the start of the update.
+If nothing is left, stop, with no write. The user row (profile, settings and
+quota usage, see ADR-3) is read once per update anyway, for the reply
+language. Before the rewrite, the quota was a second read on its own table.
 
 **Trade-offs.**
-- A refused message costs 1 read and 0 writes.
-- An allowed message needs two D1 calls instead of one. This adds a few
-  milliseconds. The LLM call after it takes seconds anyway.
+- A refused message costs 1 read and 0 writes (before: 2 reads).
+- An allowed message costs 1 read and 1 write (before: 2 reads and 1 write).
 
 ### ADR-3 — Reserve quota, give it back if no model answers
 
@@ -103,8 +104,20 @@ then use one unit (an upsert).
 | Charge after a model answers | Simple | A burst of messages gets around the quota |
 | Reserve first, give back if no answer | Safe with parallel messages | One extra write when no model answers |
 
+**How parallel messages are kept apart**
+
+| Option | Good | Bad |
+|---|---|---|
+| A conditional upsert, with the rule in SQL (`WHERE remaining > 0`); used before the rewrite | One statement, no retries | The quota rule is split between SQL and code |
+| Optimistic concurrency on one user row | The whole quota rule is pure, in the domain | A save that loses a race is tried again |
+
 **Decision.**
-- Reserve one unit with a conditional upsert (`WHERE remaining > 0`).
+- The user is one aggregate, in one D1 row: the profile, the settings and the
+  quota usage, with a `version`.
+- The domain decides (`domain/quota/daily-quota-rule.ts`): reset, consume,
+  refund. The repository saves the user only if its `version` is still the
+  loaded one. A save that loses a race loads the user again and applies the
+  change again (`app/update-user.ts`, up to 10 times).
 - If no model answers, give the unit back. `lastUsedAt` is also put back, so
   the reset time does not move.
 - Only messages that go to a model reserve quota. Commands, empty messages
@@ -112,10 +125,13 @@ then use one unit (an upsert).
   reserve-and-give-back writes.
 
 **Trade-offs.**
-- A test sends 10 messages at once with a quota of 3. Exactly 3 get through.
+- A test sends 10 messages at once to D1, with 5 units left. Exactly 5 get
+  through.
+- Races only happen while units are left: at most once per user per day. A
+  burst of 10 with 5 units left costs about 85 rows read and 5 written. Every
+  later burst that day costs 10 rows read and no write (before: 20).
 - When all models are down, every message gets its unit back. So the quota
-  stops nobody during that time. Each such message costs about 13 reads and 2
-  writes.
+  stops nobody during that time.
 
 ### ADR-4 — Try free models one after another
 

@@ -7,12 +7,15 @@ import type { Replier } from "../adapters/telegram/replier";
 import { APP_CONFIG } from "../config/app-config";
 import { createCalendarEvent } from "../domain/calendar-event/create-calendar-event";
 import { eventUidOf } from "../domain/calendar-event/event-uid-rule";
-import type { QuotaReservation } from "../domain/quota/usage-store";
-import type { UserQuotaPolicy } from "../domain/quota/user-quota-policy";
 import {
-  timeZoneNamed,
-  type IanaTimeZone,
-} from "../generic/date-time/time-zone";
+  consumeUnit,
+  refundUnit,
+  remainingQuotaOf,
+  type QuotaReservation,
+} from "../domain/quota/daily-quota-rule";
+import type { User } from "../domain/user/user";
+import type { UserRepository } from "../domain/user/user-repository";
+import { timeZoneNamed } from "../generic/date-time/time-zone";
 import { formatTimeUntil } from "../generic/intl/localized-time-span";
 import { fillPlaceholders } from "../generic/text/fill-placeholders";
 import type { BotMessageId } from "../i18n/bot-message";
@@ -21,25 +24,26 @@ import { translate } from "../i18n/translation";
 import { calendarFileOf } from "../output/calendar-file";
 import { captionOf } from "../output/caption";
 import { quotaLineOf } from "../output/quota-line";
+import { updateUser } from "./update-user";
 
 const LOGGER = new Logger<EventRequestEventName>("create-event-from-message");
 const FLOATING_TIME_ZONE = timeZoneNamed(APP_CONFIG.floatingTimeZoneName);
 
-// Represents a message that asks for a calendar event: who sent it, and its
-// text. The text is null when the message has none, e.g. a sticker.
+// Represents a message that asks for a calendar event: the user who sent it,
+// and its text. The text is null when the message has none, e.g. a sticker.
 export interface EventRequest {
-  userId: number;
+  user: User;
   messageText: string | null;
 }
 
-// Represents what creating an event from a message needs. userQuotaPolicy is
-// null when the daily quota is off (APP_CONFIG.enforceUserDailyQuota).
+// Represents what creating an event from a message needs. dailyQuota is null
+// when the daily quota is off (APP_CONFIG.enforceUserDailyQuota).
 export interface EventRequestContext {
   router: Pick<Router, "ask">;
-  userQuotaPolicy: UserQuotaPolicy | null;
+  userRepository: UserRepository;
+  dailyQuota: number | null;
   replier: Replier;
   language: SupportedLanguage;
-  userTimeZone: IanaTimeZone | null;
   now: Date;
 }
 
@@ -57,10 +61,7 @@ export async function createEventFromMessage(
     return;
   }
 
-  const quotaStep = await consumeQuota(
-    eventRequest.userId,
-    eventRequestContext,
-  );
+  const quotaStep = await consumeQuota(eventRequest.user, eventRequestContext);
   if (quotaStep.kind === "used-up") {
     logUserActivity("quota_used_up");
     const waitTime = formatTimeUntil(
@@ -78,20 +79,23 @@ export async function createEventFromMessage(
 
   const modelAnswered = await replyWithCalendarEvent(
     eventRequest.messageText,
+    eventRequest.user,
     quotaStep.kind === "consumed" ? quotaStep.remainingQuota : null,
     eventRequestContext,
   );
   if (!modelAnswered && quotaStep.kind === "consumed") {
-    await refundQuota(quotaStep.quotaReservation, eventRequestContext);
+    await refundQuota(quotaStep, eventRequestContext);
   }
 }
 
-// Represents the result of the quota step: no quota in use, a unit
-// consumed, or none left.
+// Represents the result of the quota step: no quota in use, a unit consumed
+// (with the saved user, for a refund), or none left.
 type QuotaStep =
   | { kind: "quota-off" }
   | {
       kind: "consumed";
+      savedUser: User;
+      dailyQuota: number;
       remainingQuota: number;
       quotaReservation: QuotaReservation;
     }
@@ -104,26 +108,39 @@ type EventRequestEventName =
   | "quota.refund_failed"
   | "event_request.notice_failed";
 
+// Consumes one unit of the user's daily quota, and saves the user. A user
+// with no unit left costs no write.
 async function consumeQuota(
-  userId: number,
+  user: User,
   eventRequestContext: EventRequestContext,
 ): Promise<QuotaStep> {
-  const userQuotaPolicy = eventRequestContext.userQuotaPolicy;
-  if (userQuotaPolicy === null) {
+  const { dailyQuota, now } = eventRequestContext;
+  if (dailyQuota === null) {
     return { kind: "quota-off" };
   }
-  const quotaResult = await userQuotaPolicy.tryConsume(
-    userId,
-    eventRequestContext.now,
+  const { user: savedUser, changeOutcome: consumeResult } = await updateUser(
+    eventRequestContext.userRepository,
+    user,
+    (currentUser) => {
+      const consumeResult = consumeUnit(currentUser.quotaUsage, dailyQuota, now);
+      return {
+        changedUser: consumeResult.ok
+          ? { ...currentUser, quotaUsage: consumeResult.quotaUsage }
+          : null,
+        changeOutcome: consumeResult,
+      };
+    },
   );
-  if (!quotaResult.ok) {
-    return { kind: "used-up", retryAt: quotaResult.retryAt };
+  if (!consumeResult.ok) {
+    return { kind: "used-up", retryAt: consumeResult.retryAt };
   }
-  LOGGER.info("quota.consumed", { "quota.remaining": quotaResult.remaining });
+  LOGGER.info("quota.consumed", { "quota.remaining": consumeResult.remainingQuota });
   return {
     kind: "consumed",
-    remainingQuota: quotaResult.remaining,
-    quotaReservation: quotaResult.reservation,
+    savedUser,
+    dailyQuota,
+    remainingQuota: consumeResult.remainingQuota,
+    quotaReservation: consumeResult.quotaReservation,
   };
 }
 
@@ -132,6 +149,7 @@ async function consumeQuota(
 // given back.
 async function replyWithCalendarEvent(
   messageText: string,
+  user: User,
   remainingQuota: number | null,
   eventRequestContext: EventRequestContext,
 ): Promise<boolean> {
@@ -169,7 +187,7 @@ async function replyWithCalendarEvent(
     extractionResult.draft,
     await eventUidOf(messageText),
     {
-      userTimeZone: eventRequestContext.userTimeZone,
+      userTimeZone: user.settings.timeZone,
       now,
       floatingTimeZone: FLOATING_TIME_ZONE,
     },
@@ -228,16 +246,32 @@ async function replyWithNoEvent(
   );
 }
 
-// Gives the quota unit back. If that fails, it is only logged: the user
-// already has a reply.
+// Gives the quota unit back, and saves the user. It starts from the user
+// saved by the consume, so it costs no read. If it fails, it is only logged:
+// the user already has a reply.
 async function refundQuota(
-  quotaReservation: QuotaReservation,
+  consumedQuotaStep: Extract<QuotaStep, { kind: "consumed" }>,
   eventRequestContext: EventRequestContext,
 ): Promise<void> {
+  const { savedUser, quotaReservation, dailyQuota } = consumedQuotaStep;
   try {
-    await eventRequestContext.userQuotaPolicy?.refund(quotaReservation);
+    const { user: refundedUser } = await updateUser(
+      eventRequestContext.userRepository,
+      savedUser,
+      (currentUser) => ({
+        changedUser: {
+          ...currentUser,
+          quotaUsage: refundUnit(currentUser.quotaUsage, quotaReservation, dailyQuota),
+        },
+        changeOutcome: null,
+      }),
+    );
     LOGGER.info("quota.refunded", {
-      "quota.remaining": quotaReservation.previousRemainingQuota,
+      "quota.remaining": remainingQuotaOf(
+        refundedUser.quotaUsage,
+        dailyQuota,
+        eventRequestContext.now,
+      ),
     });
   } catch (error) {
     LOGGER.error("quota.refund_failed", exceptionAttributesOf(error));

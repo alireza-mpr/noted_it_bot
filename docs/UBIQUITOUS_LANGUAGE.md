@@ -91,12 +91,15 @@ this list is called the "ubiquitous language".
 
 | Word | Meaning | In code |
 |---|---|---|
-| User | A Telegram user who talks to the bot. | `TelegramUser`, `userId` |
+| User | A Telegram user who talks to the bot. An entity and aggregate root: its identity is its id. It holds the profile, the settings and the quota usage, stored in one row. | `User`, `userId` |
+| User profile | What Telegram says about a user: username, first and last name, and the language of the user's Telegram app. It arrives with every update, and is stored when it changes. | `UserProfile`, `fullNameOf` |
+| Sender | Who sent an update: the user's id and profile. | `Sender` |
+| User repository | Where users are stored. A port that loads and saves a whole user. A save writes only if the version is still the loaded one. | `UserRepository`, `D1UserRepository` |
+| Version | A number that grows with every save of a user. A save with an old version loses the race, and the change is tried again on the new user (optimistic concurrency). | `User.version`, `updateUser` |
 | Update | What Telegram sends the webhook for one event: a message, a block or unblock, or something the bot does not use. | `TelegramUpdate`, `parseTelegramUpdate` |
 | Blocked, unblocked | The user blocks or unblocks the bot in a private chat. Telegram sends this as a `my_chat_member` update with the status `kicked` or `member`. | `kind: "bot-blocked"`, `kind: "bot-unblocked"` |
 | Reply | What the bot sends back to a chat: a text, a text with a link button, or the calendar file with its caption. | `Replier`, `TelegramReplier` |
 | User settings | The language and time zone the user chose. A value object that belongs to one user. `null` means not chosen. | `UserSettings` |
-| User settings store | Where the user settings are saved. A port. | `UserSettingsStore` |
 | Reply language | The language of the bot's messages: the user's choice, else Telegram's language, else English. | — |
 | Supported language | A language the bot replies in (16 of them). A value object in the domain. | `SupportedLanguage`, `parseLanguageCode` |
 | Bot message | A text the bot sends, with an id, e.g. `NO_TEXT_MESSAGE`. | `BOT_MESSAGES`, `BotMessageId` |
@@ -108,13 +111,13 @@ this list is called the "ubiquitous language".
 |---|---|---|
 | Daily quota | How many messages a user can send to a model per day. | `dailyQuota` |
 | Unit | One use of the quota: one message sent to a model. | — |
-| Consume | Take a unit before calling a model. In docs for readers: "use". | `tryConsume` |
-| Refund | Give a unit back, when no model answered. In docs for readers: "give back". | `refund` |
+| Quota usage | How much of the daily quota a user has used: never used, or the units left and when the last one was used. A value object that belongs to one user. | `QuotaUsage` |
+| Consume | Take a unit before calling a model. In docs for readers: "use". | `consumeUnit` |
+| Refund | Give a unit back, when no model answered. In docs for readers: "give back". | `refundUnit` |
 | Reservation | What is needed to refund a unit exactly. | `QuotaReservation` |
-| Quota reset | The daily quota is full again 24 hours after the last use. | `QUOTA_RESET_AFTER_MS` |
+| Quota reset | The daily quota is full again 24 hours after the last use. | `QUOTA_RESET_AFTER_MS`, `remainingQuotaOf` |
 | Retry time | When a user with no quota left can try again. The reply says how long that is, in the reply language. | `retryAt`, `formatTimeUntil` |
-| Quota policy | The quota rules for a user (tiers later). | `UserQuotaPolicy` |
-| Usage store | Where the quota usage is saved. A port. | `UsageStore` |
+| Quota rule | The daily quota rules: reset, consume, refund. Pure, in the domain (tiers later). | `domain/quota/daily-quota-rule.ts` |
 
 ## Models
 
@@ -154,7 +157,9 @@ this list is called the "ubiquitous language".
 | Value object | A small value with no identity, only its content (e.g. a date, a time zone). Its parse function is its only constructor, and lives next to it. | e.g. `IanaTimeZone` |
 | Factory | Creates a complex object from several inputs, using rules. | `createCalendarEvent` |
 | Port | An interface that the inside declares for something it needs from outside. | e.g. `UsageStore` |
-| Store | A port where the domain saves data. Not a DDD repository: it runs atomic commands (e.g. consume a unit), not "load, change, save". | e.g. `UsageStore`, `UserSettingsStore` |
+| Store | A port where the model usage is saved. Not a DDD repository: it runs atomic commands (e.g. count an answer), not "load, change, save". | e.g. `ModelUsageStore` |
+| Repository | A port that loads and saves a whole aggregate. | e.g. `UserRepository` |
+| Aggregate | An entity and the value objects it owns, loaded and saved together, so its rules hold. The entity is the aggregate root. | e.g. `User` |
 | Adapter | Code that talks to the outside world. It implements a port, turns raw data into typed values, or writes output (e.g. the logger). | `src/adapters/` |
 | Edge | Where raw data comes in or goes out. The adapters are the edge. | `src/adapters/` |
 
@@ -175,4 +180,3 @@ this list is called the "ubiquitous language".
 | calendar (for an event) | calendar event | The same reason. |
 | default time zone | floating time zone | Says what the time zone is for. |
 | zone (alone) | time zone | A short form hides what it is. |
-| repository | store | Our ports run atomic commands. A DDD repository loads and saves whole aggregates. |

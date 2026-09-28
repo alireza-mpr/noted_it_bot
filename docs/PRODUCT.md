@@ -129,6 +129,10 @@ Every deploy registers the visible commands with Telegram, so they show in the
 - User actions are logged as `user activity` events: commands, language and
   time zone changes, event requests, quota refusals, and blocking or
   unblocking the bot.
+- The bot stores each user in one D1 row (from the new code on): the
+  Telegram username, first and last name and app language, the chosen
+  language and time zone, and the quota usage. When a user started, and what
+  they did, is in the logs.
 
 ### Delivery
 - Two separate environments, each with its own bot, Worker, D1 database and

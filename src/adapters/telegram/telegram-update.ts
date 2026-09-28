@@ -1,3 +1,4 @@
+import type { UserProfile } from "../../domain/user/user-profile";
 import {
   readInteger,
   readRecord,
@@ -7,13 +8,11 @@ import {
   type JsonRecord,
 } from "../../generic/json/json-fields";
 
-// Represents a Telegram user who talks to the bot.
-export interface TelegramUser {
-  id: number;
-  username: string | null;
-  firstName: string;
-  lastName: string | null;
-  languageCode: string | null;
+// Represents who sent an update: the user's id, and what Telegram says about
+// the user.
+export interface Sender {
+  userId: number;
+  userProfile: UserProfile;
 }
 
 // Represents a message that a user sends or forwards to the bot. Its text is
@@ -21,7 +20,7 @@ export interface TelegramUser {
 // message has neither (e.g. a sticker).
 export interface IncomingMessage {
   chatId: number;
-  sender: TelegramUser;
+  sender: Sender;
   text: string | null;
 }
 
@@ -31,8 +30,8 @@ export interface IncomingMessage {
 // status "kicked" or "member".
 export type TelegramUpdate =
   | { kind: "message"; message: IncomingMessage }
-  | { kind: "bot-blocked"; chatId: number; user: TelegramUser }
-  | { kind: "bot-unblocked"; chatId: number; user: TelegramUser }
+  | { kind: "bot-blocked"; chatId: number; sender: Sender }
+  | { kind: "bot-unblocked"; chatId: number; sender: Sender }
   | { kind: "ignored"; reason: string };
 
 // Returns the update in the JSON that Telegram sends. An update the bot does
@@ -63,7 +62,7 @@ function messageUpdateOf(messageRecord: JsonRecord): TelegramUpdate {
     kind: "message",
     message: {
       chatId: readInteger(readRecord(messageRecord.chat, "chat"), "id"),
-      sender: telegramUserOf(readRecord(messageRecord.from, "from")),
+      sender: senderOf(readRecord(messageRecord.from, "from")),
       text:
         readStringOrNull(messageRecord, "text") ??
         readStringOrNull(messageRecord, "caption"),
@@ -81,16 +80,18 @@ function chatMemberUpdateOf(chatMemberRecord: JsonRecord): TelegramUpdate {
   return {
     kind: status === "kicked" ? "bot-blocked" : "bot-unblocked",
     chatId: readInteger(readRecord(chatMemberRecord.chat, "chat"), "id"),
-    user: telegramUserOf(readRecord(chatMemberRecord.from, "from")),
+    sender: senderOf(readRecord(chatMemberRecord.from, "from")),
   };
 }
 
-function telegramUserOf(userRecord: JsonRecord): TelegramUser {
+function senderOf(userRecord: JsonRecord): Sender {
   return {
-    id: readInteger(userRecord, "id"),
-    username: readStringOrNull(userRecord, "username"),
-    firstName: readString(userRecord, "first_name"),
-    lastName: readStringOrNull(userRecord, "last_name"),
-    languageCode: readStringOrNull(userRecord, "language_code"),
+    userId: readInteger(userRecord, "id"),
+    userProfile: {
+      username: readStringOrNull(userRecord, "username"),
+      firstName: readString(userRecord, "first_name"),
+      lastName: readStringOrNull(userRecord, "last_name"),
+      telegramLanguageCode: readStringOrNull(userRecord, "language_code"),
+    },
   };
 }

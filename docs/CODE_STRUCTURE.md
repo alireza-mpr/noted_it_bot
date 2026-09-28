@@ -95,9 +95,9 @@ src/
   domain/      pure rules, no input or output
     calendar-event/   CalendarEventDraft → a CalendarEvent, the calendars we
                       accept, the year rule, repeats
-    quota/            the daily quota rules (user tiers later)
-    user/             the user's settings: language and time zone; the languages
-                      the bot replies in
+    quota/            the quota usage and the daily quota rule (user tiers later)
+    user/             the user aggregate (profile, settings, quota usage) and its
+                      repository port; the languages the bot replies in
   output/      pure formats made from domain values
                (.ics file, Google Calendar link, caption texts, dates in a language)
   i18n/        the bot's messages and their translations (data and lookup only)
@@ -254,7 +254,7 @@ code, together with that area.
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
 | `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (plus one line: never translate the title or the location) | ✅ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/`: `telegram-update.ts` (`parseTelegramUpdate`), `webhook-auth.ts` (`isFromTelegram`), `telegram-client.ts`, `replier.ts` (`Replier`, `TelegramReplier`: sends only, the app writes the texts); the JSON field readers → `generic/json/json-fields.ts`; the webhook's `fetch` handler → the entry point in `app/` (step 5) | ✅ (`fetch` handler ⏳) |
-| `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | `adapters/database/d1-usage-store.ts`, `adapters/database/d1-user-settings-store.ts`, `adapters/database/batch-with-table.ts`; the port `domain/user/user-settings-store.ts`; `QUOTA_RESET_AFTER_MS` → `domain/quota/user-quota-policy.ts` | ✅ |
+| `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | the user aggregate (step 4g): `domain/user/user.ts`, `user-profile.ts`, `user-repository.ts` (port); `domain/quota/quota-usage.ts`, `daily-quota-rule.ts` (the quota rule, moved out of the SQL); `adapters/database/d1-user-repository.ts` (one `users` table); `app/update-user.ts` (load, save, retry) | ✅ |
 | `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/d1-counted-model-usage-store.ts` (table `gemini_usage`), `adapters/database/d1-retry-after-model-usage-store.ts` (table `groq_usage`); `dateTimeAest` → `dateTimeTextIn` in `generic/date-time/time-zone.ts` | ✅ |
 | `providers/*` | `adapters/models/model.ts` (`ProviderConfig` → `Model`, `ProviderLimits` → `ModelLimits`), `model-result.ts`, `provider-client.ts`; `adapters/models/providers/` (`registry.ts` → `model-list.ts`, the clients, the answer parsers, `jsonSchema.ts` → `groq-json-schema.ts`) | ✅ |
 | `router/*`, `quotaLimit/*` | `adapters/models/router.ts` (`generate` → `ask`, `MeteredProvider` → `RoutedProvider`), `router-log.ts` (OpenTelemetry events), `model-usage-store.ts` (`UsageRepository` → `ModelUsageStore`); the usage windows → private in `d1-counted-model-usage-store.ts`; `createRouter` → `app/` (step 5) | ✅ (`createRouter` ⏳) |
@@ -286,17 +286,18 @@ after each commit.
 | 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ✅ |
 | 4a | Config: `APP_CONFIG` and `Env` | ✅ |
 | 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ✅ |
-| 4c | Adapters: the database for users (the quota usage and the user settings) | ✅ |
+| 4c | Adapters: the database for users (the quota usage and the user settings); replaced by 4g | ✅ |
 | 4d-1 | Adapters: the provider clients (Gemini, Groq), the model list and limits, the model result types | ✅ |
 | 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ✅ |
 | 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`); a missing title becomes "Event" in the reply language | ✅ |
 | 4e | Adapters: Telegram (reading updates, the webhook secret check, the client, replies) | ✅ |
 | 4f | Adapters: the web pages (the /tz page, its link token, the city list) | ✅ |
+| 4g | The user aggregate: one `users` row with the profile, the settings and the quota usage; the quota rule in the domain; optimistic concurrency with a `version` (ADR-3). Done after 5a. | ✅ |
 | 5a | App: create an event from a message (quota, the "reading your message" notice, extraction, the calendar event, the caption and file, the refund). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ✅ |
 | 5b | App: the commands `/start`, `/ver`, `/diag`, `/lang`. On `/start`, log one `reply_language.chosen` event with the inputs and the result: the user's `/lang` choice, Telegram's raw `language_code`, whether it is supported, the chosen language and its source (`user_choice`, `telegram`, `english_fallback`). This helps find out why users start the bot but never try it. | ⏳ |
 | 5c | App: set a time zone (the `/tz` command, the `/tz` page route, the `/tz/save` route) | ⏳ |
 | 5d | App: handle an update, and the entry point (routing, the webhook secret check, the log session, ADR-8). New rule `domain/user/reply-language-rule.ts`: `replyLanguageOf(userSettings, telegramLanguageCode)` returns the language and its source. Every event of an update gets `telegram.user_language_code`, `telegram.reply_language` and `telegram.reply_language_source`. | ⏳ |
-| 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
+| 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README. Prod: right before the deploy, copy `user_preference` and `user_usage` into the new `users` table. | ⏳ |
 
 ## How the rules are checked
 

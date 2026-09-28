@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { parseTelegramUpdate } from "../../../../src/adapters/telegram/telegram-update";
 
 const ALICE = { id: 42, is_bot: false, first_name: "Alice", username: "alice", language_code: "fa" };
-const ALICE_USER = { id: 42, username: "alice", firstName: "Alice", lastName: null, languageCode: "fa" };
+const ALICE_SENDER = {
+  userId: 42,
+  userProfile: { username: "alice", firstName: "Alice", lastName: null, telegramLanguageCode: "fa" },
+};
 
 function messageUpdate(message: object) {
   return { update_id: 1, message: { message_id: 7, chat: { id: 42, type: "private" }, from: ALICE, ...message } };
@@ -23,7 +26,7 @@ describe("parseTelegramUpdate", () => {
   it("reads a message: its chat, its sender and its text", () => {
     expect(parseTelegramUpdate(messageUpdate({ text: "Book club 19 Sep" }))).toEqual({
       kind: "message",
-      message: { chatId: 42, sender: ALICE_USER, text: "Book club 19 Sep" },
+      message: { chatId: 42, sender: ALICE_SENDER, text: "Book club 19 Sep" },
     });
   });
 
@@ -40,14 +43,19 @@ describe("parseTelegramUpdate", () => {
   it("reads the sender's last name, and a missing username as null", () => {
     const update = messageUpdate({ text: "hi", from: { id: 42, first_name: "Alice", last_name: "Smith" } });
     expect(parseTelegramUpdate(update)).toMatchObject({
-      message: { sender: { username: null, firstName: "Alice", lastName: "Smith", languageCode: null } },
+      message: {
+        sender: { userProfile: { username: null, firstName: "Alice", lastName: "Smith", telegramLanguageCode: null } },
+      },
     });
   });
 
   it("reads a block and an unblock (Telegram's my_chat_member: kicked, member)", () => {
-    const alice = { id: 42, username: null, firstName: "Alice", lastName: null, languageCode: null };
-    expect(parseTelegramUpdate(chatMemberUpdate("kicked"))).toEqual({ kind: "bot-blocked", chatId: 42, user: alice });
-    expect(parseTelegramUpdate(chatMemberUpdate("member"))).toEqual({ kind: "bot-unblocked", chatId: 42, user: alice });
+    const alice = {
+      userId: 42,
+      userProfile: { username: null, firstName: "Alice", lastName: null, telegramLanguageCode: null },
+    };
+    expect(parseTelegramUpdate(chatMemberUpdate("kicked"))).toEqual({ kind: "bot-blocked", chatId: 42, sender: alice });
+    expect(parseTelegramUpdate(chatMemberUpdate("member"))).toEqual({ kind: "bot-unblocked", chatId: 42, sender: alice });
   });
 
   it("ignores any other membership status", () => {
