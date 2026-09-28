@@ -121,15 +121,16 @@ npm ci && npm run typecheck && npm test
 **`.github/workflows/ci.yml`** runs on every push. It has two jobs (a pull
 request runs only the first):
 
-- **`build`**: installs, typechecks, runs all tests (real Gemini, real dev D1).
-  It needs `GEMINI_API_KEY`, `GROQ_API_KEY`, `CLOUDFLARE_API_TOKEN` and
-  `CLOUDFLARE_ACCOUNT_ID`.
+- **`build`**: installs, typechecks, runs the offline tests, then the live
+  tests (real Gemini, real dev D1). It needs `GEMINI_API_KEY`, `GROQ_API_KEY`,
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 - **`deploy-dev`**: runs only when `build` passes, and only on `main`.
   - After a successful deploy, it pushes a git tag with the exact version that
-    `/ver` shows (e.g. `v1.0.42-beta-abc1234`). A failed deploy adds no tag.
-  - To deploy even when tests fail (e.g. the dev Gemini quota is used up): run
-    the CI workflow by hand on `main` in the Actions tab, and tick **Deploy to
-    dev even if the tests fail**.
+    `/ver` shows (e.g. `v1.0.42-abc1234`). A failed deploy adds no tag.
+  - To deploy without the live tests (e.g. the dev Gemini quota is used up):
+    run the CI workflow by hand on `main` in the Actions tab, and tick **Skip
+    the live tests**. The typecheck and the offline tests still run, and must
+    pass.
 
 **`.github/workflows/deploy.yml`** (`deploy-prod`) **never runs by itself.** You
 start it by hand, and only from a `v…` tag. See [Deploy to prod](#deploy-to-prod).
