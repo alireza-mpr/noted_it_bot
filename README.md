@@ -323,10 +323,6 @@ in [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md#logging).
 - Every event goes to the **`app-logs`** dataset in [Axiom](https://axiom.co)
   (`src/adapters/logging/axiom.ts`, region `us-east-1`: change it if your Axiom
   org is somewhere else).
-- Each dotted name is sent as nested fields, e.g. `"user.id": 42` as
-  `{ "user": { "id": 42 } }`. Axiom's filters read a dot as a nested field, so
-  a flat key with dots in its name would show as "Field does not exist". In
-  Axiom the field is still called `user.id`.
 - Every event is also printed to the console as one JSON line, so Workers Logs
   keeps a copy. There are no direct `console.*` calls in `src/`: everything
   uses a `Logger`.

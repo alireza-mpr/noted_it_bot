@@ -313,9 +313,7 @@ queue stayed stuck until it was cleared by hand.
   OTel namespace. We do not add an app prefix: only this bot writes to the
   dataset, and `service.name` names it.
 - One request is one log session with one `traceId`. Its events are sent to
-  the `app-logs` dataset in Axiom in one batch, after the response. Each
-  dotted name is sent as nested fields (`user.id` as `{ user: { id } }`):
-  Axiom's filters do not find a flat key with dots in its name. Every
+  the `app-logs` dataset in Axiom in one batch, after the response. Every
   event is also printed to the console, so Workers Logs keeps a copy.
 - Because the names are OTel names, a later switch to Cloudflare's OTel export
   changes only the sender.
