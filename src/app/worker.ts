@@ -1,5 +1,8 @@
 import { D1UserRepository } from "../adapters/database/d1-user-repository";
-import { runLogSession } from "../adapters/logging/log-session";
+import {
+  runLogSession,
+  setLogAttribute,
+} from "../adapters/logging/log-session";
 import { Logger } from "../adapters/logging/logger";
 import { routedProvidersOf } from "../adapters/models/providers/routed-providers";
 import { Router } from "../adapters/models/router";
@@ -42,6 +45,17 @@ export default {
 async function responseTo(request: Request, env: Env): Promise<Response> {
   const now = new Date();
   const { pathname, origin } = new URL(request.url);
+  const botEdition = parseBotEdition(env.BOT_EDITION);
+  if (botEdition === null) {
+    LOGGER.error("config.bot_edition_invalid", {
+      "config.bot_edition": env.BOT_EDITION,
+    });
+    // A setup mistake. The webhook's 500 makes Telegram keep the update and
+    // send it again, so no message is lost while BOT_EDITION is fixed.
+    return new Response("BOT_EDITION is not set up", { status: 500 });
+  }
+  setLogAttribute("bot.edition", botEdition);
+
   if (request.method === "GET" && pathname === TIME_ZONE_PAGE_PATH) {
     return openTimeZonePage(request, timeZonePageContextOf(env, now));
   }
@@ -50,15 +64,6 @@ async function responseTo(request: Request, env: Env): Promise<Response> {
   }
   if (request.method !== "POST") {
     return new Response("OK");
-  }
-  const botEdition = parseBotEdition(env.BOT_EDITION ?? "");
-  if (botEdition === null) {
-    LOGGER.error("config.bot_edition_invalid", {
-      "config.bot_edition": env.BOT_EDITION ?? null,
-    });
-    // A setup mistake: Telegram keeps the update and sends it again, so no
-    // message is lost while BOT_EDITION is fixed.
-    return new Response("BOT_EDITION is not set up", { status: 500 });
   }
   if (!isFromTelegram(request, env.WEBHOOK_SECRET)) {
     return new Response("Unauthorized", { status: 401 });

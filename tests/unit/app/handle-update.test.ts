@@ -171,11 +171,10 @@ describe("handleUpdate: a message", () => {
     );
   });
 
-  it("puts the edition, the user, the chat and how the reply language was chosen on every event", async () => {
+  it("puts the user, the chat and how the reply language was chosen on every event", async () => {
     const { logEvents } = await sendUpdate(messageUpdateOf("/start"));
 
     expect(eventNamed(logEvents, "user_activity.bot_started")).toMatchObject({
-      "bot.edition": "english",
       "user.id": USER_ID,
       "user.name": "alice",
       "user.full_name": "Alice Smith",
@@ -201,7 +200,6 @@ describe("handleUpdate: a message", () => {
 
     expect(fakeTelegramClient.sentTexts[0]).toMatch(/^سلام Alice! 👋 من ربات Noted هستم/);
     expect(eventNamed(logEvents, "user_activity.bot_started")).toMatchObject({
-      "bot.edition": "persian",
       "telegram.reply_language": "fa",
       "telegram.reply_language_source": "edition_default",
     });

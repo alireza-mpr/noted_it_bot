@@ -94,18 +94,40 @@ describe("worker", () => {
     expect((await responseTo(webhookRequestOf(JSON.stringify(VERSION_UPDATE)))).status).toBe(200);
   });
 
-  it("refuses the webhook with 500 when BOT_EDITION is not set up, so Telegram sends the update again later", async () => {
+  it("refuses every request with 500 when BOT_EDITION is not set up, so Telegram sends the update again later", async () => {
     const sentTexts = stubTelegram();
 
     for (const botEditionName of ["", "fa"]) {
-      const response = await responseTo(webhookRequestOf(JSON.stringify(VERSION_UPDATE)), {
-        ...WORKER_ENV,
-        BOT_EDITION: botEditionName,
-      });
+      const brokenEnv = { ...WORKER_ENV, BOT_EDITION: botEditionName };
 
-      expect(response.status, botEditionName).toBe(500);
+      expect((await responseTo(webhookRequestOf(JSON.stringify(VERSION_UPDATE)), brokenEnv)).status).toBe(500);
+      expect((await responseTo(new Request("https://bot.example/tz?token=bad"), brokenEnv)).status).toBe(500);
     }
     expect(sentTexts).toEqual([]);
+  });
+
+  it("puts the edition on every log event of any request, e.g. the /tz page", async () => {
+    let axiomEvents: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        if (url.includes("axiom")) {
+          axiomEvents = JSON.parse(init.body as string);
+        }
+        return new Response("{}");
+      }),
+    );
+
+    await responseTo(new Request("https://bot.example/tz?token=bad"), {
+      ...WORKER_ENV,
+      BOT_EDITION: "persian",
+      AXIOM_TOKEN: "test-token",
+    });
+
+    expect(axiomEvents.length).toBeGreaterThan(0);
+    for (const axiomEvent of axiomEvents) {
+      expect(axiomEvent["bot.edition"]).toBe("persian");
+    }
   });
 
   it("answers 200 to an update it cannot read", async () => {

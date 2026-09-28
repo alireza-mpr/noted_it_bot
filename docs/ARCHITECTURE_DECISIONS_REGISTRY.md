@@ -377,10 +377,11 @@ them after a few weeks of normal traffic. The event names are listed in
   project, not per key or bot. Two editions with the same key must share the
   table; an edition with its own key needs its own table, i.e. its own D1
   database.
-- Every log event has `bot.edition`, so each edition's users and usage can be
-  told apart from the first day.
-- A Worker with a missing or unknown `BOT_EDITION` answers the webhook with
-  500, before the auth check: Telegram keeps the update until it is fixed.
+- Every log event of every request has `bot.edition`, so each edition's
+  users and usage can be told apart from the first day.
+- `BOT_EDITION` must always be set. A Worker with an unknown one answers
+  every request with 500 and logs an `ERROR`, before the auth check: Telegram
+  keeps the update until it is fixed.
 
 **Trade-offs.**
 - The editions share the free limits of their account: Worker requests, D1

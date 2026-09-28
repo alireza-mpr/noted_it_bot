@@ -69,7 +69,6 @@ export async function handleUpdate(
   telegramUpdate: TelegramUpdate,
   updateContext: UpdateContext,
 ): Promise<void> {
-  setLogAttribute("bot.edition", updateContext.botEdition);
   switch (telegramUpdate.kind) {
     case "message":
       await handleMessage(telegramUpdate.message, updateContext);

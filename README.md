@@ -370,9 +370,9 @@ in [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md#logging).
 - Every printed line counts toward the Workers Logs limit (200,000 lines per
   day on the free plan, then 1% sampling).
 
-**Every event of an update** has `bot.edition` (`english` or `persian`), so
-each edition can be told apart in the one dataset. **Every event of a
-message** also has: `user.id`, `user.name` (the Telegram username: optional,
+**Every event of every request** (updates, the `/tz` page and its save) has
+`bot.edition` (`english` or `persian`), so each edition can be told apart in
+the one dataset. **Every event of a message** also has: `user.id`, `user.name` (the Telegram username: optional,
 so it can be `null`), `user.full_name`, `telegram.chat.id`,
 `telegram.user_language_code`, `telegram.reply_language` and
 `telegram.reply_language_source` (`user_choice`, `telegram` or
