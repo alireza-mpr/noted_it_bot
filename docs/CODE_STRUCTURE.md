@@ -247,7 +247,7 @@ code, together with that area.
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts` | `app/create-event-from-message.ts` | ⏳ |
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
-| `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (unchanged) | ✅ |
+| `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (plus one line: never translate the title or the location) | ✅ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
 | `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | `adapters/database/d1-usage-store.ts`, `adapters/database/d1-user-settings-store.ts`, `adapters/database/batch-with-table.ts`; the port `domain/user/user-settings-store.ts`; `QUOTA_RESET_AFTER_MS` → `domain/quota/user-quota-policy.ts` | ✅ |
 | `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/d1-counted-model-usage-store.ts` (table `gemini_usage`), `adapters/database/d1-retry-after-model-usage-store.ts` (table `groq_usage`); `dateTimeAest` → `dateTimeTextIn` in `generic/date-time/time-zone.ts` | ✅ |

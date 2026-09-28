@@ -9,6 +9,9 @@ import { GEMINI_DAY_TIME_ZONE, GEMINI_MODELS, GROQ_MODELS } from "../../src/adap
 import { Router } from "../../src/adapters/models/router";
 import type { Env } from "../../src/config/env";
 
+// A title in Persian script: the model must not translate it.
+const PERSIAN_TITLE = expect.stringMatching(/[؀-ۿ]/);
+
 // Each case is a message, and the parts of the extraction result we expect.
 // The match is partial (toMatchObject): fields left out (e.g. the title
 // wording, the confidence) are not checked. These call the real Gemini API,
@@ -51,6 +54,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
         // "Melbourne": some models place it, some play safe with null. Both
         // are fine for users, so which model answered must not fail this.
         timeZone: expect.toBeOneOf(["Australia/Melbourne", null]),
+        title: PERSIAN_TITLE,
         location: "Nunawading Community Hub | اتاق شماره دو",
       },
     },
@@ -65,6 +69,8 @@ const CASES: [messageText: string, expectedResult: object][] = [
         writtenInCalendar: "gregory",
         date: { year: null, month: 9, day: 26, weekday: "SA" },
         time: { kind: "timed", start: { hour: 18, minute: 0 }, end: { hour: 21, minute: 30 } },
+        title: PERSIAN_TITLE,
+        // An English place name in a Persian message stays in English.
         location: "Notting Hill Neighbourhood House",
       },
     },
@@ -126,8 +132,8 @@ const CASES: [messageText: string, expectedResult: object][] = [
   ],
   // Persian weekly sessions with no start date ("Shahnameh reading, Thursday
   // nights from 7:30pm"). The wording varies, but all mean: weekly on
-  // Thursday at 19:30, never ending. The title and the time zone are not
-  // checked: the models vary on both.
+  // Thursday at 19:30, never ending. The title's wording and the time zone
+  // are not checked: the models vary on both. The title stays in Persian.
   ...[
     "جلسه هفتگی شاهنامه خوانی پنجشنبه شبها\nاز ساعت 7:30 شب",
     "جلسه هفتگی شاهنامه خوانی هر پنجشنبه\nاز ساعت 7:30 شب",
@@ -137,6 +143,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
     {
       ok: true,
       draft: {
+        title: PERSIAN_TITLE,
         date: null,
         time: { kind: "timed", start: { hour: 19, minute: 30 } },
         repeat: { pattern: { frequency: "weekly", interval: 1, weekdays: ["TH"] }, end: { kind: "never" } },

@@ -80,6 +80,12 @@ Groq) read the events.
   event's own content (the title, the location) and time zone IDs (e.g.
   "Australia/Melbourne") stay as they are. The old code wrote the repeat line
   in English and the quota number in Latin digits.
+- **The event is never translated.** The user forwards a message and expects
+  the same event in the calendar. The title and the location stay in the
+  language and script of the message, even when it mixes languages (e.g. an
+  English place name in a Persian message stays in English). The prompt tells
+  the model this. Only when the message gives no name does the bot write
+  "Event" in the reply language.
 - `/tz` sets the time zone on a web page that the bot links to:
   - The page detects the device's zone and asks the user to confirm with one
     tap.
