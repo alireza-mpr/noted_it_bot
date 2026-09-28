@@ -92,8 +92,11 @@ I work out the time zone from the message. If it doesn't say, set yours with the
   GENERIC_ERROR_MESSAGE:
     "⚠️ Something went wrong on my end — I've logged it to fix later.",
 
-  LANG_USAGE:
-    "Which language? Send /lang followed by a language name or code, e.g. /lang Persian or /lang fa. To go back to auto-detecting from your Telegram settings, send /lang auto.",
+  // {0} is the reply language's own name, e.g. "Deutsch".
+  LANG_CURRENT: "🌎 I reply in {0}.",
+
+  LANG_CHANGE_HINT:
+    "To change it, send /lang followed by a language name or code, e.g. /lang Persian or /lang fa. To go back to auto-detecting from your Telegram settings, send /lang auto.",
 
   LANG_SET_CONFIRMATION: "Got it — I'll reply in {0} from now on.",
 

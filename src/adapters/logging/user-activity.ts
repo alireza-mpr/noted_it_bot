@@ -7,7 +7,7 @@ const LOGGER = new Logger<UserActivityEventName>("user-activity");
 export type UserActivity =
   | "bot_started"
   | "version_requested"
-  | "diagnosis_requested"
+  | "models_checked"
   | "language_set"
   | "language_reset"
   | "time_zone_link_sent"

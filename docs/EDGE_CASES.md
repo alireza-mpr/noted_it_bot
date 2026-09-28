@@ -195,6 +195,17 @@ the same UID.
   event. It does not add a copy.
 - If the text changes at all (even one character), it is a new event.
 
+## The reply language
+
+The bot replies in the first of these that is set:
+
+1. The language the user chose with `/lang`.
+2. The language of the user's Telegram app, if the bot supports it. A region
+   is ignored (e.g. "pt-BR" gives Portuguese).
+3. English.
+
+`/lang auto` removes the user's choice, so step 2 applies again.
+
 ## The real messages that showed us these rules
 
 | Date | Message | What went wrong | Rule now |

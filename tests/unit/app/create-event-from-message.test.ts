@@ -2,8 +2,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { EventAnswer, RecurrenceAnswer } from "../../../src/adapters/models/extraction/event-answer-schema";
 import type { ModelFailure, ModelRequest, ModelResult } from "../../../src/adapters/models/model-result";
 import { GEMINI_MODELS } from "../../../src/adapters/models/providers/model-list";
-import type { Replier } from "../../../src/adapters/telegram/replier";
-import type { LinkButton } from "../../../src/adapters/telegram/telegram-client";
 import {
   createEventFromMessage,
   type EventRequestContext,
@@ -14,9 +12,9 @@ import { newUser, type User } from "../../../src/domain/user/user";
 import { timeZoneNamed, type IanaTimeZone } from "../../../src/generic/date-time/time-zone";
 import type { SupportedLanguage } from "../../../src/domain/user/supported-language";
 import { translate } from "../../../src/i18n/translation";
-import type { CalendarFile } from "../../../src/output/calendar-file";
 import { axiomEventsOf } from "../adapters/logging/axiom-events-of";
 import { modelAnswerOf } from "../adapters/models/model-answer-of";
+import { FakeReplier } from "./fake-replier";
 import { InMemoryUserRepository } from "./in-memory-user-repository";
 
 const USER_ID = 42;
@@ -68,24 +66,6 @@ class FakeRouter {
     this.modelRequests.push(modelRequest);
     await beforeFirstTry();
     return this.modelResult;
-  }
-}
-
-// Represents a replier that keeps what it sends.
-class FakeReplier implements Replier {
-  readonly texts: string[] = [];
-  readonly calendarFiles: { calendarFile: CalendarFile; htmlCaption: string }[] = [];
-
-  async sendText(text: string): Promise<void> {
-    this.texts.push(text);
-  }
-
-  async sendTextWithLinkButton(text: string, _linkButton: LinkButton): Promise<void> {
-    this.texts.push(text);
-  }
-
-  async sendCalendarFile(calendarFile: CalendarFile, htmlCaption: string): Promise<void> {
-    this.calendarFiles.push({ calendarFile, htmlCaption });
   }
 }
 

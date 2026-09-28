@@ -72,7 +72,8 @@ Groq) read the events.
   English.
 - `/lang <language>` sets the language, by name or code ("Persian", "fa",
   "فارسی"). `/lang auto` goes back to the Telegram language. `/lang` alone
-  shows the current one (in its own name, for example "فارسی").
+  shows the current one (in its own name, for example "فارسی") and, on a new
+  line, how to change it.
 - Dates and times in the summary follow the reply language. They are always
   Gregorian.
 - **A reply is fully in the reply language** (in the new code, from the
@@ -113,7 +114,7 @@ Groq) read the events.
 | `/lang`  | Show or change the reply language                              |
 | `/tz`    | Set your time zone on a web page (or with an exact zone name)  |
 | `/ver`   | Show the running version                                       |
-| `/diag`  | Check the Gemini connection (hidden: not in the `/` menu)      |
+| `/diag`  | Check that the models answer (hidden: not in the `/` menu)     |
 
 Every deploy registers the visible commands with Telegram, so they show in the
 `/` menu.

@@ -80,7 +80,9 @@ export class D1UserRepository implements UserRepository {
   private batch<Row = unknown>(
     statement: D1PreparedStatement,
   ): Promise<D1Result<Row>[]> {
-    return batchWithTable<Row>(this.d1Database, CREATE_USERS_TABLE, [statement]);
+    return batchWithTable<Row>(this.d1Database, CREATE_USERS_TABLE, [
+      statement,
+    ]);
   }
 }
 
@@ -104,8 +106,10 @@ function userOf(userRow: UserRow): User {
     id: userRow.userId,
     profile: profileOf(userRow),
     settings: {
-      language: userRow.language === null ? null : parseLanguageCode(userRow.language),
-      timeZone: userRow.timeZone === null ? null : parseTimeZoneName(userRow.timeZone),
+      language:
+        userRow.language === null ? null : parseLanguageCode(userRow.language),
+      timeZone:
+        userRow.timeZone === null ? null : parseTimeZoneName(userRow.timeZone),
     },
     quotaUsage: quotaUsageOf(userRow),
     version: userRow.version,
