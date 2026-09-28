@@ -179,6 +179,11 @@ Every deploy registers the visible commands with Telegram, so they show in the
       (e.g. a Persian speaker with an English Telegram app gets English).
 - [ ] Show the daily quota again (`APP_CONFIG.showDailyQuota`) once usage
       grows.
+- [ ] **A separate bot for each language** (e.g. a Persian bot and an
+      English bot). Falling back to English is really demoralising for
+      Persian-speaking users: many of them have their Telegram app in
+      English, so they get English replies. A bot per language would reply
+      in its own language from the first message.
 - [ ] Relative and weekday dates ("tomorrow", "next Friday"). This needs a
       reliable reference date (the message time) and clear rules for unclear
       cases.

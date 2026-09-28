@@ -27,9 +27,12 @@ export function replyLanguageOf(user: User): ReplyLanguage {
     return { language: user.settings.language, source: "user-choice" };
   }
   const telegramLanguage = telegramLanguageOf(user);
-  return telegramLanguage === null
-    ? { language: FALLBACK_LANGUAGE, source: "language-fallback" }
-    : { language: telegramLanguage, source: "telegram" };
+  return { language: FALLBACK_LANGUAGE, source: "language-fallback" };
+
+  // TODO: Fix it
+  // return telegramLanguage === null
+  //   ? { language: FALLBACK_LANGUAGE, source: "language-fallback" }
+  //   : { language: telegramLanguage, source: "telegram" };
 }
 
 function telegramLanguageOf(user: User): SupportedLanguage | null {
