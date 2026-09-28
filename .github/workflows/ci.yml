@@ -103,7 +103,7 @@ jobs:
 
       - name: Point the Telegram webhook at the Worker
         run: |
-          curl -sS --fail-with-body"https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+          curl -sS --fail-with-body "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
             -d "url=${WORKER_URL}" \
             -d "secret_token=${WEBHOOK_SECRET}"
         env:
@@ -113,7 +113,7 @@ jobs:
 
       - name: Register the edition's / menu with Telegram
         run: |
-          curl -sS --fail-with-body-X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
             -H "Content-Type: application/json" \
             -d @.github/bot-menus/${{ matrix.edition }}.json
         env:
@@ -127,10 +127,10 @@ jobs:
           profile=.github/bot-profiles/${{ matrix.edition }}.json
           api="https://api.telegram.org/bot${BOT_TOKEN}"
           set_if_changed() {
-            current=$(curl -sS --fail-with-body"${api}/$1" | jq -r ".result.$3")
+            current=$(curl -sS --fail-with-body "${api}/$1" | jq -r ".result.$3")
             wanted=$(jq -r ".$3" "$profile")
             if [ "$current" != "$wanted" ]; then
-              curl -sS --fail-with-body-X POST "${api}/$2" -H "Content-Type: application/json" \
+              curl -sS --fail-with-body -X POST "${api}/$2" -H "Content-Type: application/json" \
                 -d "$(jq -c "{$3}" "$profile")"
             fi
           }
