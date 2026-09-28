@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 // What each folder may import from. See "Folders" in docs/CODE_STRUCTURE.md.
-// Folders not listed here (the old ones, and app/) are not checked.
+// app/ may import from every folder, so it is not listed.
 const ALLOWED_IMPORTS: Record<string, string[]> = {
   generic: ["generic"],
   domain: ["domain", "generic"],
@@ -44,10 +44,9 @@ describe("code structure", () => {
     expect(broken).toEqual([]);
   });
 
-  it("names every folder and file in kebab-case, outside legacy/", () => {
+  it("names every folder and file in kebab-case", () => {
     const badNames = Object.keys(SOURCES)
       .map((file) => file.replace("../../src/", ""))
-      .filter((path) => !path.startsWith("legacy/"))
       .filter((path) =>
         path
           .split("/")

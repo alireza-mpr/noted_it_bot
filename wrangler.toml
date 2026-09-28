@@ -1,4 +1,4 @@
-main = "src/legacy/telegram/telegramWebhook.ts"
+main = "src/app/worker.ts"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_als"]
 

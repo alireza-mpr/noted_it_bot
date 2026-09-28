@@ -53,7 +53,7 @@ weekday: "Saturday 26 September", "Thursday 9 Mehr".
 
 - The model copies the weekday as written (the `weekday` field). It never
   calculates it from the date.
-- Our code picks the year (`pickYear` in `src/legacy/extractedEvents/toGregorian.ts`). It counts
+- Our code picks the year (`pickYear` in `src/domain/calendar-event/year-rule.ts`). It counts
   years in the message's own calendar.
 
 **The rule:**
