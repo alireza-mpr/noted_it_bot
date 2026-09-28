@@ -13,6 +13,7 @@ export type UserActivity =
   | "time_zone_link_sent"
   | "time_zone_page_opened"
   | "time_zone_set"
+  | "unknown_command_sent"
   | "event_requested"
   | "quota_used_up"
   | "bot_blocked"

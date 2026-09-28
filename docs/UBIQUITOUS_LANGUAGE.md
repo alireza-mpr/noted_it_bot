@@ -96,7 +96,8 @@ this list is called the "ubiquitous language".
 | Sender | Who sent an update: the user's id and profile. | `Sender` |
 | User repository | Where users are stored. A port that loads and saves a whole user. A save writes only if the version is still the loaded one. | `UserRepository`, `D1UserRepository` |
 | Version | A number that grows with every save of a user. A save with an old version loses the race, and the change is tried again on the new user (optimistic concurrency). | `User.version`, `updateUser` |
-| Update | What Telegram sends the webhook for one event: a message, a block or unblock, or something the bot does not use. | `TelegramUpdate`, `parseTelegramUpdate` |
+| Update | What Telegram sends the webhook for one event: a message, a block or unblock, or something the bot does not use. | `TelegramUpdate`, `parseTelegramUpdate`, `handleUpdate` |
+| Bot command | A message that starts with "/", e.g. `/lang fa`: the command's name and the text after it. Telegram calls it a bot command. | `BotCommand`, `parseBotCommand` |
 | Blocked, unblocked | The user blocks or unblocks the bot in a private chat. Telegram sends this as a `my_chat_member` update with the status `kicked` or `member`. | `kind: "bot-blocked"`, `kind: "bot-unblocked"` |
 | Reply | What the bot sends back to a chat: a text, a text with a link button, or the calendar file with its caption. | `Replier`, `TelegramReplier` |
 | User settings | The language and time zone the user chose. A value object that belongs to one user. `null` means not chosen. | `UserSettings` |
