@@ -7,11 +7,7 @@ import { translateStatic } from "../translation/translate";
 import { canonicalTimezone } from "../time/canonicalTimezone";
 import { UserPreferenceRepository } from "../repositories/userPreferenceRepository";
 import { renderMessagePage, renderTzPage, pageSecurityHeaders } from "./tzPage";
-import {
-  SAVE_TOKEN_TTL_MS,
-  signTzToken,
-  verifyTzToken,
-} from "./tzToken";
+import { SAVE_TOKEN_TTL_MS, signTzToken, verifyTzToken } from "./tzToken";
 
 const logger = new Logger("tzRoutes");
 
@@ -28,31 +24,47 @@ function newNonce(): string {
 }
 
 function languageFromHeader(request: Request): string {
-  const first = request.headers.get("Accept-Language")?.split(",")[0]?.split(";")[0];
+  const first = request.headers
+    .get("Accept-Language")
+    ?.split(",")[0]
+    ?.split(";")[0];
   return toSupportedLanguage(first) ?? "en";
 }
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
   });
 }
 
 function expiredPage(request: Request): Response {
   const lang = languageFromHeader(request);
   const nonce = newNonce();
-  return new Response(renderMessagePage(lang, translateStatic("PAGE_EXPIRED", lang), nonce), {
-    status: 403,
-    headers: pageSecurityHeaders(nonce),
-  });
+  return new Response(
+    renderMessagePage(lang, translateStatic("PAGE_EXPIRED", lang), nonce),
+    {
+      status: 403,
+      headers: pageSecurityHeaders(nonce),
+    },
+  );
 }
 
-export async function handleTzPage(request: Request, env: TzRouteEnv, nowMs: number = Date.now()): Promise<Response> {
+export async function handleTzPage(
+  request: Request,
+  env: TzRouteEnv,
+  nowMs: number = Date.now(),
+): Promise<Response> {
   const token = new URL(request.url).searchParams.get("token") ?? "";
   const result = await verifyTzToken(env.WEBHOOK_SECRET, token, "open", nowMs);
   if (!result.ok) {
-    logger.warn("time zone page refused", { reason: result.reason, purpose: "open" });
+    logger.warn("time zone page refused", {
+      reason: result.reason,
+      purpose: "open",
+    });
     return expiredPage(request);
   }
 
@@ -70,9 +82,12 @@ export async function handleTzPage(request: Request, env: TzRouteEnv, nowMs: num
   });
   const nonce = newNonce();
   logActivity("tz_page_opened");
-  return new Response(renderTzPage({ lang: toSupportedLanguage(lang) ?? "en", saveToken, nonce }), {
-    headers: pageSecurityHeaders(nonce),
-  });
+  return new Response(
+    renderTzPage({ lang: toSupportedLanguage(lang) ?? "en", saveToken, nonce }),
+    {
+      headers: pageSecurityHeaders(nonce),
+    },
+  );
 }
 
 export interface TzSaveDeps {
@@ -80,7 +95,11 @@ export interface TzSaveDeps {
   nowMs?: number;
 }
 
-export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSaveDeps): Promise<Response> {
+export async function handleTzSave(
+  request: Request,
+  env: TzRouteEnv,
+  deps: TzSaveDeps,
+): Promise<Response> {
   const nowMs = deps.nowMs ?? Date.now();
 
   const raw = await request.text();
@@ -97,9 +116,17 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
     return json(400, { ok: false, error: "bad_request" });
   }
 
-  const result = await verifyTzToken(env.WEBHOOK_SECRET, body.token, "save", nowMs);
+  const result = await verifyTzToken(
+    env.WEBHOOK_SECRET,
+    body.token,
+    "save",
+    nowMs,
+  );
   if (!result.ok) {
-    logger.warn("time zone save refused", { reason: result.reason, purpose: "save" });
+    logger.warn("time zone save refused", {
+      reason: result.reason,
+      purpose: "save",
+    });
     return json(403, { ok: false, error: "expired" });
   }
 
@@ -110,7 +137,9 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
 
   const timezone = canonicalTimezone(body.timezone);
   if (!timezone) {
-    logger.warn("invalid time zone submitted", { submitted: body.timezone.slice(0, 64) });
+    logger.warn("invalid time zone submitted", {
+      submitted: body.timezone.slice(0, 64),
+    });
     return json(400, { ok: false, error: "invalid_timezone" });
   }
 
@@ -123,7 +152,10 @@ export async function handleTzSave(request: Request, env: TzRouteEnv, deps: TzSa
       fillPlaceholder(translateStatic("TZ_SET_CONFIRMATION", lang), timezone),
     );
   } catch (err) {
-    logger.warn("could not send the time zone confirmation", describeError(err));
+    logger.warn(
+      "could not send the time zone confirmation",
+      describeError(err),
+    );
   }
   return json(200, { ok: true, timezone });
 }
