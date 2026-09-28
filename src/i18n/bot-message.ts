@@ -88,7 +88,7 @@ I work out the time zone from the message. If it doesn't say, set yours with the
   REPEAT_DECLINED_MESSAGE:
     "⚠️ This looks like a repeating event, but I couldn't tell for sure how often it repeats, so I didn't create it. Please send it again with clearer wording, e.g. \"every Thursday at 7:30pm\".",
 
-  NO_CALENDAR_EVENT_MESSAGE: "⚠️ I couldn't turn this into a calendar event.",
+  NO_CALENDAR_EVENT_MESSAGE: "🤷🏻‍♂️ I couldn't turn this into a calendar event.",
 
   NO_TEXT_MESSAGE: "⚠️ Sorry! I couldn't find any text in your message.",
 

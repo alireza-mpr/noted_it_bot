@@ -102,11 +102,10 @@ jobs:
           curl -sf -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
             -H "Content-Type: application/json" \
             -d '{"commands":[
-              {"command":"start","description":"Start here, with an example to try"},
-              {"command":"help","description":"How I work, and what you can set"},
-              {"command":"lang","description":"Set or check your reply language"},
-              {"command":"tz","description":"Set your time zone, e.g. /tz Melbourne"},
-              {"command":"ver","description":"Show the running version"}
+              {"command": "start", "description": "معرفی خودم و آشنایی"},
+              {"command": "help", "description": "راهنما و مثال‌های کاربردی"},
+              {"command": "lang", "description": "انتخاب زبان گفتگو من با شما"},
+              {"command": "tz", "description": "تنظیم شهر و منطقه‌زمانی شما"}
             ]}'
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}

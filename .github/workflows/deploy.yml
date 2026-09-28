@@ -65,11 +65,13 @@ jobs:
         run: |
           curl -sf -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
             -H "Content-Type: application/json" \
-            -d '{"commands":[
-              {"command":"start","description":"بهتون می‌گم کار من چیه همراه با یک مثال"},
-              {"command":"help","description":"من چطور کار می‌کنم و چه توانایی‌هایی دارم"},
-              {"command":"lang","description":"تنظیم کردن زبانی که با شما صحبت می‌کنم"},
-              {"command":"tz","description":"تنظیم کردن منطقه‌زمانی شما مثلا ملبورن"},
-            ]}'
+            -d '{"commands":
+              [
+              {"command": "start", "description": "معرفی خودم و آشنایی"},
+              {"command": "help", "description": "راهنما و مثال‌های کاربردی"},
+              {"command": "lang", "description": "انتخاب زبان گفتگو من با شما"},
+              {"command": "tz", "description": "تنظیم شهر و منطقه‌زمانی شما"}
+            ]
+              }'
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}

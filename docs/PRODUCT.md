@@ -184,6 +184,9 @@ Every deploy registers the visible commands with Telegram, so they show in the
       Persian-speaking users: many of them have their Telegram app in
       English, so they get English replies. A bot per language would reply
       in its own language from the first message.
+      - Market research also showed that English command names and menu
+        texts do not appeal to Persian speakers. A bot per language can have
+        its whole `/` menu in its own language.
 - [ ] Relative and weekday dates ("tomorrow", "next Friday"). This needs a
       reliable reference date (the message time) and clear rules for unclear
       cases.
