@@ -152,8 +152,9 @@ that bot's Telegram webhook at it, and sets:
 - its `/` menu (`setMyCommands`), from `.github/bot-menus/<edition>.json`;
 - its name, description (shown before the user taps Start) and short
   description (the profile page), from `.github/bot-profiles/<edition>.json`.
-  Each is only sent when it differs from the bot's current text, because
-  Telegram rate-limits these calls.
+  The file holds the prod name; the dev deploy adds " - Dev" to it. Each is
+  only sent when it differs from the bot's current text, because Telegram
+  rate-limits these calls.
 
 ### Deploy to prod
 

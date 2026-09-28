@@ -124,7 +124,9 @@ jobs:
       - name: Set the edition's name and descriptions
         run: |
           set -o pipefail
-          profile=.github/bot-profiles/${{ matrix.edition }}.json
+          # The profile holds the prod name; a dev bot's name ends in " - Dev".
+          profile=$(mktemp)
+          jq '.name += " - Dev"' .github/bot-profiles/${{ matrix.edition }}.json > "$profile"
           api="https://api.telegram.org/bot${BOT_TOKEN}"
           set_if_changed() {
             current=$(curl -sS --fail-with-body "${api}/$1" | jq -r ".result.$3")

@@ -108,7 +108,8 @@ Groq) read the events.
   - The link works for one minute.
   - No model is used, so `/tz` cannot be abused to spend the LLM quota.
   - An exact zone name after `/tz` is applied at once.
-- The bot's name ("Noted") is never translated.
+- The bot's name ("Noted!") is never translated. The Persian bot is named
+  "Noted! - فارسی". Dev bots add " - Dev".
 
 ### Access
 - Open to everyone, with a daily quota per user (`APP_CONFIG.dailyQuota`, now
