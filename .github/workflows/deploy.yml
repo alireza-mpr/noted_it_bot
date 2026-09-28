@@ -27,7 +27,8 @@ jobs:
       - name: Check the edition is set up
         id: setup
         run: |
-          if [ -n "$BOT_TOKEN" ]; then
+          # SET_ME is the placeholder of a secret that is not set up yet.
+          if [ -n "$BOT_TOKEN" ] && [ "$BOT_TOKEN" != "SET_ME" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "::notice::No BOT_TOKEN in the ${{ matrix.environment }} environment: the ${{ matrix.edition }} edition is not deployed."
