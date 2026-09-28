@@ -45,7 +45,7 @@ Groq) read the events.
   daylight saving (checked in Google Calendar).
 - **On phones:** Google's mobile app ignores the repeat in the link and adds
   only one event. So for repeats, the file is the reliable way. The caption
-  and `/start` say this.
+  and `/help` say this.
 - If the repeat is unclear or invalid (low confidence, end before start, no
   days given), the bot declines with a message. It does not guess.
 - Monthly and yearly repeats work only in the Gregorian calendar.
@@ -98,8 +98,11 @@ Groq) read the events.
 - The bot's name ("Noted") is never translated.
 
 ### Access
-- Open to everyone, with a daily quota per user (`appConfig.dailyQuota`, now
-  5 messages that go to a model).
+- Open to everyone, with a daily quota per user (`APP_CONFIG.dailyQuota`, now
+  10 messages that go to a model).
+- The replies don't mention the quota for now (`APP_CONFIG.showDailyQuota`),
+  so a new user doesn't feel limited. A user who used it up is still told,
+  with the time to wait.
 - Commands do not use quota. If no model answers, the unit is given back.
   See [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
 - For individual users only, in a private chat with the bot. Groups and
@@ -110,7 +113,8 @@ Groq) read the events.
 ### Commands
 | Command  | Purpose                                                        |
 |----------|----------------------------------------------------------------|
-| `/start` | Intro, what the bot does, and the daily quota                  |
+| `/start` | A short welcome by first name, with one example to try         |
+| `/help`  | How the bot works, what you can set, and the daily quota       |
 | `/lang`  | Show or change the reply language                              |
 | `/tz`    | Set your time zone on a web page (or with an exact zone name)  |
 | `/ver`   | Show the running version                                       |
@@ -125,11 +129,10 @@ Every deploy registers the visible commands with Telegram, so they show in the
   The details go to the logs.
 - Workers Logs are on. Every log event also goes to Axiom, with the user's
   id, username and first name.
-- Messages (the text, the model's answer, and the model) are logged in Axiom,
-  as `/start` tells users.
-- User actions are logged as `user activity` events: commands, language and
-  time zone changes, event requests, quota refusals, and blocking or
-  unblocking the bot.
+- Messages (the text, the model's answer, and the model) are logged in Axiom.
+- User actions are logged as `user activity` events: commands (unknown ones
+  too, with the text after them), language and time zone changes, event
+  requests, quota refusals, and blocking or unblocking the bot.
 - The bot stores each user in one D1 row (from the new code on): the
   Telegram username, first and last name and app language, the chosen
   language and time zone, and the quota usage. When a user started, and what

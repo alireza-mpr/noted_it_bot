@@ -73,6 +73,7 @@ interface TestSetup {
   modelResult?: ModelResult;
   // null means the daily quota is off.
   remainingQuota?: number | null;
+  isDailyQuotaShown?: boolean;
   language?: SupportedLanguage;
   userTimeZone?: IanaTimeZone | null;
   now?: Date;
@@ -102,7 +103,8 @@ async function sendMessage(messageText: string | null, testSetup: TestSetup = {}
   const eventRequestContext: EventRequestContext = {
     router: fakeRouter,
     userRepository,
-    dailyQuota: remainingQuota === null ? null : DAILY_QUOTA,
+    dailyQuota: remainingQuota === null ? { kind: "off" } : { kind: "limited", unitsPerDay: DAILY_QUOTA },
+    isDailyQuotaShown: testSetup.isDailyQuotaShown ?? true,
     replier: fakeReplier,
     language: testSetup.language ?? "en",
     now,
@@ -302,6 +304,28 @@ describe("createEventFromMessage", () => {
     expect(fakeReplier.calendarFiles[0].htmlCaption).not.toContain("🔢");
   });
 
+  it("adds no quota line when the daily quota is hidden, but still uses a unit", async () => {
+    const { fakeReplier, storedQuotaUsage } = await sendMessage("text", { isDailyQuotaShown: false });
+
+    expect(fakeReplier.calendarFiles[0].htmlCaption).not.toContain("🔢");
+    expect(storedQuotaUsage()).toMatchObject({ kind: "used", remainingQuota: 4 });
+  });
+
+  it("adds no quota line to a reply with no event when the daily quota is hidden", async () => {
+    const { fakeReplier } = await sendMessage("text", {
+      isDailyQuotaShown: false,
+      modelResult: { ...modelAnswerOf(GEMINI_MODELS[0]), text: answerWith({ date_kind: "relative", calendar: null, year: null, month: null, day: null }) },
+    });
+
+    expect(fakeReplier.texts.at(-1)).toBe(translate("NO_CALENDAR_EVENT_MESSAGE", "en"));
+  });
+
+  it("still says when the daily quota is used up, even when it is hidden", async () => {
+    const { fakeReplier } = await sendMessage("text", { remainingQuota: 0, isDailyQuotaShown: false });
+
+    expect(fakeReplier.texts[0]).toMatch(/^🙅/);
+  });
+
   it("goes on when the notice cannot be sent", async () => {
     const fakeReplier = new FakeReplier();
     let noticeTries = 0;
@@ -316,7 +340,8 @@ describe("createEventFromMessage", () => {
       {
         router: new FakeRouter({ ...modelAnswerOf(GEMINI_MODELS[0]), text: answerWith() }),
         userRepository: new InMemoryUserRepository(),
-        dailyQuota: null,
+        dailyQuota: { kind: "off" },
+        isDailyQuotaShown: true,
         replier: fakeReplier,
         language: "en",
         now,

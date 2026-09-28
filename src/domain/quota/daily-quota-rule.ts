@@ -1,7 +1,6 @@
 import type { QuotaUsage } from "./quota-usage";
 
-// The time after the last use when a user's daily quota is full again. See
-// ADR-1 in ARCHITECTURE_DECISIONS.md.
+// The time after the last use when a user's daily quota is full again.
 export const QUOTA_RESET_AFTER_MS = 24 * 60 * 60 * 1000;
 
 // Represents what refunding a unit needs: the quota usage before the unit
@@ -26,17 +25,24 @@ export type ConsumeResult =
 // again 24 hours after the last use. See ADR-1 in ARCHITECTURE_DECISIONS.md.
 export function consumeUnit(
   quotaUsage: QuotaUsage,
-  dailyQuota: number,
+  unitsPerDay: number,
   now: Date,
 ): ConsumeResult {
-  const remainingQuota = remainingQuotaOf(quotaUsage, dailyQuota, now);
+  const remainingQuota = remainingQuotaOf(quotaUsage, unitsPerDay, now);
   if (remainingQuota <= 0) {
     const lastUsedAt = quotaUsage.kind === "used" ? quotaUsage.lastUsedAt : now;
-    return { ok: false, retryAt: new Date(lastUsedAt.getTime() + QUOTA_RESET_AFTER_MS) };
+    return {
+      ok: false,
+      retryAt: new Date(lastUsedAt.getTime() + QUOTA_RESET_AFTER_MS),
+    };
   }
   return {
     ok: true,
-    quotaUsage: { kind: "used", remainingQuota: remainingQuota - 1, lastUsedAt: now },
+    quotaUsage: {
+      kind: "used",
+      remainingQuota: remainingQuota - 1,
+      lastUsedAt: now,
+    },
     remainingQuota: remainingQuota - 1,
     quotaReservation: { previousQuotaUsage: quotaUsage, consumedAt: now },
   };
@@ -50,17 +56,19 @@ export function consumeUnit(
 export function refundUnit(
   quotaUsage: QuotaUsage,
   quotaReservation: QuotaReservation,
-  dailyQuota: number,
+  unitsPerDay: number,
 ): QuotaUsage {
   if (quotaUsage.kind === "unused") {
     return quotaUsage;
   }
-  if (quotaUsage.lastUsedAt.getTime() === quotaReservation.consumedAt.getTime()) {
+  if (
+    quotaUsage.lastUsedAt.getTime() === quotaReservation.consumedAt.getTime()
+  ) {
     return quotaReservation.previousQuotaUsage;
   }
   return {
     ...quotaUsage,
-    remainingQuota: Math.min(quotaUsage.remainingQuota + 1, dailyQuota),
+    remainingQuota: Math.min(quotaUsage.remainingQuota + 1, unitsPerDay),
   };
 }
 
@@ -68,12 +76,13 @@ export function refundUnit(
 // used, or if 24 hours have passed since the last use.
 export function remainingQuotaOf(
   quotaUsage: QuotaUsage,
-  dailyQuota: number,
+  unitsPerDay: number,
   now: Date,
 ): number {
   if (quotaUsage.kind === "unused") {
-    return dailyQuota;
+    return unitsPerDay;
   }
-  const isReset = now.getTime() - quotaUsage.lastUsedAt.getTime() >= QUOTA_RESET_AFTER_MS;
-  return isReset ? dailyQuota : quotaUsage.remainingQuota;
+  const isReset =
+    now.getTime() - quotaUsage.lastUsedAt.getTime() >= QUOTA_RESET_AFTER_MS;
+  return isReset ? unitsPerDay : quotaUsage.remainingQuota;
 }

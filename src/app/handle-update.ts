@@ -15,6 +15,7 @@ import type {
   Sender,
   TelegramUpdate,
 } from "../adapters/telegram/telegram-update";
+import type { DailyQuota } from "../domain/quota/daily-quota";
 import {
   replyLanguageOf,
   type ReplyLanguage,
@@ -29,6 +30,7 @@ import { translate } from "../i18n/translation";
 import { checkModels } from "./commands/check-models";
 import { setLanguage } from "./commands/set-language";
 import { setTimeZone } from "./commands/set-time-zone";
+import { showHelp } from "./commands/show-help";
 import { showVersion } from "./commands/show-version";
 import { startBot } from "./commands/start-bot";
 import { createEventFromMessage } from "./create-event-from-message";
@@ -36,20 +38,21 @@ import { loadUserOfUpdate } from "./update-user";
 
 const LOGGER = new Logger<UpdateEventName>("handle-update");
 const MAX_LOGGED_COMMAND_LENGTH = 64;
+const MAX_LOGGED_COMMAND_TEXT_LENGTH = 200;
 const LOGGED_REPLY_LANGUAGE_SOURCES: Record<ReplyLanguageSource, string> = {
   "user-choice": "user_choice",
   telegram: "telegram",
   "english-fallback": "english_fallback",
 };
 
-// Represents what handling an update needs. dailyQuota is null when the daily
-// quota is off (APP_CONFIG.enforceUserDailyQuota). workerOrigin is the
-// Worker's address, for the /tz link.
+// Represents what handling an update needs. workerOrigin is the Worker's
+// address, for the /tz link.
 export interface UpdateContext {
   router: Pick<Router, "ask">;
   userRepository: UserRepository;
   telegramClient: Pick<TelegramClient, "sendMessage" | "sendDocument">;
-  dailyQuota: number | null;
+  dailyQuota: DailyQuota;
+  isDailyQuotaShown: boolean;
   appVersion: string;
   webhookSecret: string;
   workerOrigin: string;
@@ -126,7 +129,7 @@ async function handleMessage(
     const replyLanguage = replyLanguageOf(user);
     language = replyLanguage.language;
     setReplyLanguageLogAttributes(replyLanguage);
-    await answerMessage(user, message.text, botCommand, {
+    await answerMessage(user, message, botCommand, {
       ...updateContext,
       replier,
       language,
@@ -146,27 +149,45 @@ async function handleMessage(
 
 async function answerMessage(
   user: User,
-  messageText: string | null,
+  message: IncomingMessage,
   botCommand: BotCommand | null,
   messageContext: MessageContext,
 ): Promise<void> {
   if (botCommand === null) {
-    await createEventFromMessage({ user, messageText }, messageContext);
+    await createEventFromMessage(
+      { user, messageText: message.text },
+      messageContext,
+    );
     return;
   }
-  await runBotCommand(user, botCommand, messageContext);
+  await runBotCommand(
+    user,
+    message.sender.userProfile.firstName,
+    botCommand,
+    messageContext,
+  );
 }
 
-// Runs the command. An unknown command, e.g. /help, gets no reply.
+// Runs the command. An unknown command, e.g. /settings, gets no reply; it is
+// logged with the text after it, to see what users try.
 async function runBotCommand(
   user: User,
+  firstName: string,
   botCommand: BotCommand,
   messageContext: MessageContext,
 ): Promise<void> {
   const { replier, language } = messageContext;
   switch (botCommand.name) {
     case "start":
-      await startBot(messageContext.dailyQuota, replier, language);
+      await startBot(firstName, replier, language);
+      return;
+    case "help":
+      await showHelp(
+        messageContext.dailyQuota,
+        messageContext.isDailyQuotaShown,
+        replier,
+        language,
+      );
       return;
     case "ver":
       await showVersion(messageContext.appVersion, replier);
@@ -186,6 +207,13 @@ async function runBotCommand(
           botCommand.name,
           MAX_LOGGED_COMMAND_LENGTH,
         ),
+        "user_activity.command_text":
+          botCommand.argumentText === null
+            ? null
+            : truncateText(
+                botCommand.argumentText,
+                MAX_LOGGED_COMMAND_TEXT_LENGTH,
+              ),
       });
   }
 }

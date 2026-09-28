@@ -80,7 +80,8 @@ async function sendUpdate(telegramUpdate: TelegramUpdate, testSetup: TestSetup =
     },
     userRepository,
     telegramClient: fakeTelegramClient,
-    dailyQuota: 5,
+    dailyQuota: { kind: "limited", unitsPerDay: 5 },
+    isDailyQuotaShown: true,
     appVersion: "0.2.41-beta-1a2b3c4",
     webhookSecret: "test-secret-value",
     workerOrigin: "https://bot.example",
@@ -110,7 +111,7 @@ describe("handleUpdate: a message", () => {
 
     expect(userRepository.storedUsers.get(USER_ID)).toMatchObject({ profile: ALICE, version: 1 });
     expect(fakeTelegramClient.sentTexts).toHaveLength(1);
-    expect(fakeTelegramClient.sentTexts[0]).toMatch(/^سلام! من ربات Noted/);
+    expect(fakeTelegramClient.sentTexts[0]).toMatch(/^سلام Alice! 👋 من ربات Noted هستم/);
   });
 
   it("puts the user, the chat and how the reply language was chosen on every event", async () => {
@@ -132,7 +133,7 @@ describe("handleUpdate: a message", () => {
       storedUsers: [storedAliceWith("de")],
     });
 
-    expect(fakeTelegramClient.sentTexts[0]).toMatch(/^Hallo! Ich bin der Bot Noted/);
+    expect(fakeTelegramClient.sentTexts[0]).toMatch(/^Hallo Alice! 👋 Ich bin Noted/);
     expect(eventNamed(logEvents, "user_activity.bot_started")).toMatchObject({
       "telegram.reply_language": "de",
       "telegram.reply_language_source": "user_choice",
@@ -140,18 +141,22 @@ describe("handleUpdate: a message", () => {
   });
 
   it("runs each command", async () => {
+    expect((await sendUpdate(messageUpdateOf("/help"))).fakeTelegramClient.sentTexts[0]).toMatch(/^این‌طوری کار می‌کنم 👇/);
     expect((await sendUpdate(messageUpdateOf("/ver"))).fakeTelegramClient.sentTexts).toEqual(["0.2.41-beta-1a2b3c4"]);
     expect((await sendUpdate(messageUpdateOf("/diag"))).fakeTelegramClient.sentTexts).toEqual(["Models: OK"]);
     expect((await sendUpdate(messageUpdateOf("/lang@noted_it_bot de"))).userRepository.storedUsers.get(USER_ID)?.settings.language).toBe("de");
     expect((await sendUpdate(messageUpdateOf("/tz"))).fakeTelegramClient.linkButtons).toHaveLength(1);
   });
 
-  it("gives an unknown command no reply, and logs it", async () => {
-    const { fakeTelegramClient, modelRequests, logEvents } = await sendUpdate(messageUpdateOf("/help"));
+  it("gives an unknown command no reply, and logs it with the text after it", async () => {
+    const { fakeTelegramClient, modelRequests, logEvents } = await sendUpdate(messageUpdateOf("/settings dark mode"));
 
     expect(fakeTelegramClient.sentTexts).toEqual([]);
     expect(modelRequests).toEqual([]);
-    expect(eventNamed(logEvents, "user_activity.unknown_command_sent")).toMatchObject({ "user_activity.command": "help" });
+    expect(eventNamed(logEvents, "user_activity.unknown_command_sent")).toMatchObject({
+      "user_activity.command": "settings",
+      "user_activity.command_text": "dark mode",
+    });
   });
 
   it("sends any other text to the models, to create an event", async () => {

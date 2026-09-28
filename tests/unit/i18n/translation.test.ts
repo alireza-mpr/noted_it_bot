@@ -9,7 +9,7 @@ const TRANSLATED_LANGUAGES = SUPPORTED_LANGUAGES.filter((language) => language !
 const placeholdersOf = (text: string) => (text.match(/\{+\d+\}+/g) ?? []).sort();
 const htmlTagsOf = (text: string) => (text.match(/<\/?[a-zA-Z]+[^>]*>/g) ?? []).sort();
 const emojiOf = (text: string) => (text.match(/[\u{1F300}-\u{1FAFF}☀-➿⬀-⯿⌀-⏿]/gu) ?? []).sort();
-const commandsOf = (text: string) => (text.match(/\/(?:lang|tz)(?![A-Za-z])/g) ?? []).sort();
+const commandsOf = (text: string) => (text.match(/\/(?:lang|tz|help)(?![A-Za-z])/g) ?? []).sort();
 
 describe("translations", () => {
   it("cover exactly the supported languages other than English", () => {

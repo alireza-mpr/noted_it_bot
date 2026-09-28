@@ -111,7 +111,7 @@ this list is called the "ubiquitous language".
 
 | Word | Meaning | In code |
 |---|---|---|
-| Daily quota | How many messages a user can send to a model per day. | `dailyQuota` |
+| Daily quota | How many messages a user can send to a model per day: off, or a number of units per day. | `DailyQuota`, `unitsPerDay` |
 | Unit | One use of the quota: one message sent to a model. | — |
 | Quota usage | How much of the daily quota a user has used: never used, or the units left and when the last one was used. A value object that belongs to one user. | `QuotaUsage` |
 | Consume | Take a unit before calling a model. In docs for readers: "use". | `consumeUnit` |

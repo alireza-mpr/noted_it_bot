@@ -13,31 +13,39 @@ afterEach(() => {
 });
 
 // Returns the one reply to /start.
-async function startReplyOf(dailyQuota: number | null, language: SupportedLanguage): Promise<string> {
+async function startReplyOf(firstName: string, language: SupportedLanguage): Promise<string> {
   const fakeReplier = new FakeReplier();
-  await startBot(dailyQuota, fakeReplier, language);
+  await startBot(firstName, fakeReplier, language);
   expect(fakeReplier.texts).toHaveLength(1);
   return fakeReplier.texts[0];
 }
 
 describe("startBot", () => {
-  it("ends with the daily quota", async () => {
-    const startReply = await startReplyOf(7, "en");
-
-    expect(startReply).toMatch(/^Heya! I am Noted bot/);
-    expect(startReply.endsWith("\n\n🎁 On the free plan, you can send up to 7 requests a day.")).toBe(true);
+  it("greets the user by first name, gives an example to try, and points to /help", async () => {
+    expect(await startReplyOf("Alice", "en")).toBe(
+      [
+        "Hi Alice! 👋 I'm Noted 😊",
+        "📆 Forward me any message about an event (like a meeting or a get-together with friends), or just type it here, and I'll quickly turn it into a calendar event you can add with one tap.",
+        "",
+        '🚀 Try it now, e.g. send me "Dinner with Sam, 19 Sep, 8pm, Olive Tree Restaurant".',
+        "💡 By the way, you can also try /help to see how I work, and all the other cool things I can do.",
+      ].join("\n"),
+    );
   });
 
-  it("writes the daily quota in the reply language's digits", async () => {
-    expect(await startReplyOf(5, "fa")).toContain("روزانه تا ۵ درخواست");
+  it("replies in the reply language, with a local example", async () => {
+    const startReply = await startReplyOf("سارا", "fa");
+
+    expect(startReply).toMatch(/^سلام سارا! 👋 من ربات Noted هستم 😊/);
+    expect(startReply).toContain("«شام با سارا، ۱۹ سپتامبر، ساعت ۸ شب»");
   });
 
-  it("leaves the quota note out when the daily quota is off", async () => {
-    expect(await startReplyOf(null, "en")).not.toContain("🎁");
+  it("leaves the daily quota to /help", async () => {
+    expect(await startReplyOf("Alice", "en")).not.toContain("🎁");
   });
 
   it("logs that the user started the bot", async () => {
-    const logEvents = await axiomEventsOf(() => startReplyOf(5, "en"));
+    const logEvents = await axiomEventsOf(() => startReplyOf("Alice", "en"));
 
     expect(logEvents.map((logEvent) => logEvent.eventName)).toEqual(["user_activity.bot_started"]);
   });

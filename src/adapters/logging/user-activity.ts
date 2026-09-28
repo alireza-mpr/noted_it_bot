@@ -6,6 +6,7 @@ const LOGGER = new Logger<UserActivityEventName>("user-activity");
 // Represents one thing a user did, e.g. set a time zone.
 export type UserActivity =
   | "bot_started"
+  | "help_requested"
   | "version_requested"
   | "models_checked"
   | "language_set"

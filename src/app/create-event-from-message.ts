@@ -7,6 +7,7 @@ import type { Replier } from "../adapters/telegram/replier";
 import { APP_CONFIG } from "../config/app-config";
 import { createCalendarEvent } from "../domain/calendar-event/create-calendar-event";
 import { eventUidOf } from "../domain/calendar-event/event-uid-rule";
+import type { DailyQuota } from "../domain/quota/daily-quota";
 import {
   consumeUnit,
   refundUnit,
@@ -36,12 +37,14 @@ export interface EventRequest {
   messageText: string | null;
 }
 
-// Represents what creating an event from a message needs. dailyQuota is null
-// when the daily quota is off (APP_CONFIG.enforceUserDailyQuota).
+// Represents what creating an event from a message needs. When
+// isDailyQuotaShown is false, the replies leave out the units left; a user
+// who used them all up is still told.
 export interface EventRequestContext {
   router: Pick<Router, "ask">;
   userRepository: UserRepository;
-  dailyQuota: number | null;
+  dailyQuota: DailyQuota;
+  isDailyQuotaShown: boolean;
   replier: Replier;
   language: SupportedLanguage;
   now: Date;
@@ -80,7 +83,9 @@ export async function createEventFromMessage(
   const modelAnswered = await replyWithCalendarEvent(
     eventRequest.messageText,
     eventRequest.user,
-    quotaStep.kind === "consumed" ? quotaStep.remainingQuota : null,
+    quotaStep.kind === "consumed" && eventRequestContext.isDailyQuotaShown
+      ? quotaStep.remainingQuota
+      : null,
     eventRequestContext,
   );
   if (!modelAnswered && quotaStep.kind === "consumed") {
@@ -95,7 +100,7 @@ type QuotaStep =
   | {
       kind: "consumed";
       savedUser: User;
-      dailyQuota: number;
+      unitsPerDay: number;
       remainingQuota: number;
       quotaReservation: QuotaReservation;
     }
@@ -115,14 +120,15 @@ async function consumeQuota(
   eventRequestContext: EventRequestContext,
 ): Promise<QuotaStep> {
   const { dailyQuota, now } = eventRequestContext;
-  if (dailyQuota === null) {
+  if (dailyQuota.kind === "off") {
     return { kind: "quota-off" };
   }
+  const { unitsPerDay } = dailyQuota;
   const { user: savedUser, changeOutcome: consumeResult } = await updateUser(
     eventRequestContext.userRepository,
     user,
     (currentUser) => {
-      const consumeResult = consumeUnit(currentUser.quotaUsage, dailyQuota, now);
+      const consumeResult = consumeUnit(currentUser.quotaUsage, unitsPerDay, now);
       return {
         changedUser: consumeResult.ok
           ? { ...currentUser, quotaUsage: consumeResult.quotaUsage }
@@ -138,13 +144,14 @@ async function consumeQuota(
   return {
     kind: "consumed",
     savedUser,
-    dailyQuota,
+    unitsPerDay,
     remainingQuota: consumeResult.remainingQuota,
     quotaReservation: consumeResult.quotaReservation,
   };
 }
 
 // Sends the reply to the message: the calendar file, or why there is none.
+// remainingQuota is null when the reply does not show the units left.
 // Returns false when no model gave a usable answer, so the quota unit is
 // given back.
 async function replyWithCalendarEvent(
@@ -253,7 +260,7 @@ async function refundQuota(
   consumedQuotaStep: Extract<QuotaStep, { kind: "consumed" }>,
   eventRequestContext: EventRequestContext,
 ): Promise<void> {
-  const { savedUser, quotaReservation, dailyQuota } = consumedQuotaStep;
+  const { savedUser, quotaReservation, unitsPerDay } = consumedQuotaStep;
   try {
     const { user: refundedUser } = await updateUser(
       eventRequestContext.userRepository,
@@ -261,7 +268,7 @@ async function refundQuota(
       (currentUser) => ({
         changedUser: {
           ...currentUser,
-          quotaUsage: refundUnit(currentUser.quotaUsage, quotaReservation, dailyQuota),
+          quotaUsage: refundUnit(currentUser.quotaUsage, quotaReservation, unitsPerDay),
         },
         changeOutcome: null,
       }),
@@ -269,7 +276,7 @@ async function refundQuota(
     LOGGER.info("quota.refunded", {
       "quota.remaining": remainingQuotaOf(
         refundedUser.quotaUsage,
-        dailyQuota,
+        unitsPerDay,
         eventRequestContext.now,
       ),
     });

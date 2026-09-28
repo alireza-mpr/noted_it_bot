@@ -1,7 +1,16 @@
 // The English text of every bot message, by id. The files in translations/
 // use the same ids. {0}, {1}, … are filled in after translation.
 export const BOT_MESSAGES = {
-  START_MESSAGE: `Heya! I am {0} bot 👋.
+  // {0} is the user's first name, {1} the bot's name. The example is a
+  // message the bot can read: an exact date, not "tomorrow". Its place has no
+  // city, because a city would set the event's time zone.
+  START_MESSAGE: `Hi {0}! 👋 I'm {1} 😊
+📆 Forward me any message about an event (like a meeting or a get-together with friends), or just type it here, and I'll quickly turn it into a calendar event you can add with one tap.
+
+🚀 Try it now, e.g. send me "Dinner with Sam, 19 Sep, 8pm, Olive Tree Restaurant".
+💡 By the way, you can also try /help to see how I work, and all the other cool things I can do.`,
+
+  HELP_MESSAGE: `Here's how I work 👇
 
 📆 Forward me any message with an event in it. I'll pull out the details and send you a one-tap link to add it to Google Calendar, plus a file for Apple Calendar, Outlook, or anywhere else.
 
@@ -14,7 +23,7 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 🌎 I reply in your Telegram language by default. To change it, send the /lang command, e.g. /lang fa to get my replies in Farsi.`,
 
   // {0} is the daily quota.
-  START_QUOTA_NOTE: `🎁 On the free plan, you can send up to {0} requests a day.`,
+  HELP_QUOTA_NOTE: `🎁 On the free plan, you can send up to {0} requests a day.`,
 
   // {0} is the link. The { } around it are on purpose: they make the link
   // stand out.

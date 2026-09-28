@@ -66,7 +66,10 @@ function updateContextOf(
     router: new Router(routedProvidersOf(env)),
     userRepository: new D1UserRepository(env.USAGE_DB),
     telegramClient: new TelegramClient(env.BOT_TOKEN),
-    dailyQuota: APP_CONFIG.enforceUserDailyQuota ? APP_CONFIG.dailyQuota : null,
+    dailyQuota: APP_CONFIG.enforceUserDailyQuota
+      ? { kind: "limited", unitsPerDay: APP_CONFIG.dailyQuota }
+      : { kind: "off" },
+    isDailyQuotaShown: APP_CONFIG.showDailyQuota,
     appVersion: env.APP_VERSION,
     webhookSecret: env.WEBHOOK_SECRET,
     workerOrigin,

@@ -1,7 +1,9 @@
 # User Quota — Design and D1 Cost
 
 Each user can send a fixed number of messages per day that go to a model.
-The number is `appConfig.dailyQuota` (now 5).
+The number is `APP_CONFIG.dailyQuota` (now 10). `APP_CONFIG.showDailyQuota`
+decides whether replies mention it. It is off for now: only a user who used
+the quota up is told.
 
 This file explains:
 - how the quota is used and given back,
@@ -104,7 +106,7 @@ More models means more reads to list them, and more writes in the worst case.
 | User with no quota left | no writes; about 2.5M per day (reads) | no real limit |
 
 Example: in the worst case (18 writes per message), the free plan supports
-about 1,100 users per day who each use all 5 requests.
+about 550 users per day who each use all 10 requests.
 
 **Worker requests usually run out first.**
 - Workers Free allows 100k requests per day.
