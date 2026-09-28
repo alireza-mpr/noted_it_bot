@@ -20,8 +20,9 @@ runs. The editions of a stage share its Cloudflare account and D1 database.
 | `prod` | english | `@noted_it_bot` | `prod` | the prod account | by hand, from a `v…` tag (see [Deploy to prod](#deploy-to-prod)) |
 | `prod-fa` | persian | `@noted_it_fa_bot` | `prod-fa` | the prod account | with `prod`, from the same tag |
 
-An edition whose GitHub Environment has no `BOT_TOKEN` yet is skipped by the
-deploys, with a notice.
+A wrong secret fails its edition's deploy job at the step that uses it, and
+the log shows Telegram's or Cloudflare's error. The other edition still
+deploys.
 
 More docs:
 

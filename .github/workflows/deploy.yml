@@ -9,8 +9,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Ships each bot edition to prod (ADR-10). An edition whose GitHub
-  # Environment has no BOT_TOKEN yet is skipped with a notice, not failed.
+  # Ships each bot edition to prod (ADR-10). A wrong secret fails its
+  # edition's job at the step that uses it, with Telegram's or Cloudflare's
+  # error in the log; the other edition still deploys.
   deploy-prod:
     if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v')
     strategy:
@@ -24,33 +25,17 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ matrix.environment }}
     steps:
-      - name: Check the edition is set up
-        id: setup
-        run: |
-          # SET_ME is the placeholder of a secret that is not set up yet.
-          if [ -n "$BOT_TOKEN" ] && [ "$BOT_TOKEN" != "SET_ME" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::No BOT_TOKEN in the ${{ matrix.environment }} environment: the ${{ matrix.edition }} edition is not deployed."
-          fi
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-
       - uses: actions/checkout@v4
-        if: steps.setup.outputs.ready == 'true'
 
       - uses: actions/setup-node@v4
-        if: steps.setup.outputs.ready == 'true'
         with:
           node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
-        if: steps.setup.outputs.ready == 'true'
         run: npm ci
 
       - name: Compute version
-        if: steps.setup.outputs.ready == 'true'
         id: version
         # Prod's version is the tag itself (e.g. v1.0.0 -> 1.0.0), not the
         # run-number scheme dev uses — /ver should say exactly what you
@@ -58,7 +43,6 @@ jobs:
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to Cloudflare Workers
-        if: steps.setup.outputs.ready == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -79,9 +63,8 @@ jobs:
           AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
 
       - name: Point the Telegram webhook at the Worker
-        if: steps.setup.outputs.ready == 'true'
         run: |
-          curl -sf "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+          curl -sS --fail-with-body"https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
             -d "url=${WORKER_URL}" \
             -d "secret_token=${WEBHOOK_SECRET}"
         env:
@@ -90,9 +73,8 @@ jobs:
           WORKER_URL: ${{ secrets.WORKER_URL }}
 
       - name: Register the edition's / menu with Telegram
-        if: steps.setup.outputs.ready == 'true'
         run: |
-          curl -sf -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
+          curl -sS --fail-with-body-X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
             -H "Content-Type: application/json" \
             -d @.github/bot-menus/${{ matrix.edition }}.json
         env:
@@ -101,15 +83,15 @@ jobs:
       # Telegram rate-limits these calls (setMyName especially), so each one
       # is only made when the text in the file differs from the bot's.
       - name: Set the edition's name and descriptions
-        if: steps.setup.outputs.ready == 'true'
         run: |
+          set -o pipefail
           profile=.github/bot-profiles/${{ matrix.edition }}.json
           api="https://api.telegram.org/bot${BOT_TOKEN}"
           set_if_changed() {
-            current=$(curl -sf "${api}/$1" | jq -r ".result.$3")
+            current=$(curl -sS --fail-with-body"${api}/$1" | jq -r ".result.$3")
             wanted=$(jq -r ".$3" "$profile")
             if [ "$current" != "$wanted" ]; then
-              curl -sf -X POST "${api}/$2" -H "Content-Type: application/json" \
+              curl -sS --fail-with-body-X POST "${api}/$2" -H "Content-Type: application/json" \
                 -d "$(jq -c "{$3}" "$profile")"
             fi
           }
