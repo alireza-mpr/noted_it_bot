@@ -15,6 +15,7 @@ import type {
   Sender,
   TelegramUpdate,
 } from "../adapters/telegram/telegram-update";
+import type { BotEdition } from "../domain/bot-edition/bot-edition";
 import type { DailyQuota } from "../domain/quota/daily-quota";
 import {
   replyLanguageOf,
@@ -42,12 +43,13 @@ const MAX_LOGGED_COMMAND_TEXT_LENGTH = 200;
 const LOGGED_REPLY_LANGUAGE_SOURCES: Record<ReplyLanguageSource, string> = {
   "user-choice": "user_choice",
   telegram: "telegram",
-  "language-fallback": "language-fallback",
+  "edition-default": "edition_default",
 };
 
-// Represents what handling an update needs. workerOrigin is the Worker's
-// address, for the /tz link.
+// Represents what handling an update needs. botEdition is the edition this
+// Worker runs. workerOrigin is the Worker's address, for the /tz link.
 export interface UpdateContext {
+  botEdition: BotEdition;
   router: Pick<Router, "ask">;
   userRepository: UserRepository;
   telegramClient: Pick<TelegramClient, "sendMessage" | "sendDocument">;
@@ -67,6 +69,7 @@ export async function handleUpdate(
   telegramUpdate: TelegramUpdate,
   updateContext: UpdateContext,
 ): Promise<void> {
+  setLogAttribute("bot.edition", updateContext.botEdition);
   switch (telegramUpdate.kind) {
     case "message":
       await handleMessage(telegramUpdate.message, updateContext);
@@ -115,10 +118,11 @@ async function handleMessage(
     updateContext.telegramClient,
     message.chatId,
   );
-  // The Telegram language until the user is loaded, e.g. when the database
-  // fails.
+  // The language of a new user until the user is loaded, e.g. when the
+  // database fails.
   let language = replyLanguageOf(
     newUser(sender.userId, sender.userProfile),
+    updateContext.botEdition,
   ).language;
   try {
     const user = await loadUserOfUpdate(
@@ -126,7 +130,7 @@ async function handleMessage(
       sender.userId,
       sender.userProfile,
     );
-    const replyLanguage = replyLanguageOf(user);
+    const replyLanguage = replyLanguageOf(user, updateContext.botEdition);
     language = replyLanguage.language;
     setReplyLanguageLogAttributes(replyLanguage);
     await answerMessage(user, message, botCommand, {

@@ -101,7 +101,9 @@ this list is called the "ubiquitous language".
 | Blocked, unblocked | The user blocks or unblocks the bot in a private chat. Telegram sends this as a `my_chat_member` update with the status `kicked` or `member`. | `kind: "bot-blocked"`, `kind: "bot-unblocked"` |
 | Reply | What the bot sends back to a chat: a text, a text with a link button, or the calendar file with its caption. | `Replier`, `TelegramReplier` |
 | User settings | The language and time zone the user chose. A value object that belongs to one user. `null` means not chosen. | `UserSettings` |
-| Reply language | The language of the bot's messages: the user's choice, else Telegram's language, else English. The source says which one. | `replyLanguageOf`, `ReplyLanguageSource` |
+| Reply language | The language of the bot's messages: the user's choice, else Telegram's language (English edition only), else the edition's default language. The source says which one. | `replyLanguageOf`, `ReplyLanguageSource` |
+| Bot edition | One Telegram bot, run by its own Worker from the same code, for the users of one language: `english` (@noted_it_bot) or `persian` (@noted_it_fa_bot). Set by `BOT_EDITION`. | `BotEdition`, `parseBotEdition` |
+| Default language | The language an edition replies in when the user chose none: English or Persian. | `defaultLanguageOf` |
 | Supported language | A language the bot replies in (16 of them). A value object in the domain. | `SupportedLanguage`, `parseLanguageCode` |
 | Language name | A language's name in its own language, e.g. "فارسی". `/lang` also accepts a code, the English name, or another common name (e.g. "Farsi"). | `languageNameOf`, `parseLanguageName` |
 | Bot message | A text the bot sends, with an id, e.g. `NO_TEXT_MESSAGE`. | `BOT_MESSAGES`, `BotMessageId` |

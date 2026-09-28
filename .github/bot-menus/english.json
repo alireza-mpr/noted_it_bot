@@ -1,0 +1,9 @@
+{
+  "commands": [
+    { "command": "start", "description": "Start here, with an example to try" },
+    { "command": "help", "description": "How I work, and what you can set" },
+    { "command": "lang", "description": "Set or check your reply language" },
+    { "command": "tz", "description": "Set your time zone, e.g. /tz Melbourne" },
+    { "command": "ver", "description": "Show the running version" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "commands": [
+    { "command": "start", "description": "معرفی خودم و آشنایی" },
+    { "command": "help", "description": "راهنما و مثال‌های کاربردی" },
+    { "command": "lang", "description": "انتخاب زبان گفتگو من با شما" },
+    { "command": "tz", "description": "تنظیم شهر و منطقه‌زمانی شما" }
+  ]
+}

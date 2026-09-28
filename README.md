@@ -8,12 +8,20 @@ type one. It replies with:
 - a one-tap "add to Google Calendar" link,
 - an `.ics` file for Apple Calendar, Outlook, and others.
 
-There are two environments:
+The same code runs two **bot editions** (ADR-10): an English bot and a Persian
+bot. Each edition is its own Worker, with its own bot, `/` menu and secrets.
+`BOT_EDITION` in [wrangler.toml](wrangler.toml) tells a Worker which one it
+runs. The editions of a stage share its Cloudflare account and D1 database.
 
-| Env  | Telegram bot        | Worker name        | Cloudflare account | Deploys when                                                     |
-| ---- | ------------------- | ------------------ | ------------------ | ---------------------------------------------------------------- |
-| dev  | `@noted_it_dev_bot` | `noted-it-dev-bot` | the dev account    | every push to `main`                                             |
-| prod | `@noted_it_bot`     | `prod`             | its own account    | by hand, from a `v…` tag (see [Deploy to prod](#deploy-to-prod)) |
+| Env (`wrangler.toml` and GitHub Environment) | Edition | Telegram bot | Worker name | Cloudflare account | Deploys when |
+|---|---|---|---|---|---|
+| `dev` | english | `@noted_it_dev_bot` | `noted-it-dev-bot` | the dev account | every push to `main` |
+| `dev-fa` | persian | `@noted_it_dev_fa_bot` | `noted-it-dev-fa-bot` | the dev account | every push to `main` |
+| `prod` | english | `@noted_it_bot` | `prod` | the prod account | by hand, from a `v…` tag (see [Deploy to prod](#deploy-to-prod)) |
+| `prod-fa` | persian | `@noted_it_fa_bot` | `prod-fa` | the prod account | with `prod`, from the same tag |
+
+An edition whose GitHub Environment has no `BOT_TOKEN` yet is skipped by the
+deploys, with a notice.
 
 More docs:
 
@@ -124,19 +132,23 @@ request runs only the first):
 - **`build`**: installs, typechecks, runs the offline tests, then the live
   tests (real Gemini, real dev D1). It needs `GEMINI_API_KEY`, `GROQ_API_KEY`,
   `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-- **`deploy-dev`**: runs only when `build` passes, and only on `main`.
-  - After a successful deploy, it pushes a git tag with the exact version that
-    `/ver` shows (e.g. `v1.0.42-abc1234`). A failed deploy adds no tag.
-  - To deploy without the live tests (e.g. the dev Gemini quota is used up):
-    run the CI workflow by hand on `main` in the Actions tab, and tick **Skip
-    the live tests**. The typecheck and the offline tests still run, and must
-    pass.
+- **`deploy-dev`**: runs only when `build` passes, and only on `main`. It
+  deploys each edition (`dev`, `dev-fa`) as its own job.
+  - After every edition deployed, `tag-dev` pushes a git tag with the exact
+    version that `/ver` shows (e.g. `v1.0.42-abc1234`). A failed deploy adds
+    no tag.
+  - To deploy without the integration tests (e.g. the dev Gemini quota is used
+    up): run the CI workflow by hand on `main` in the Actions tab, and tick
+    **Skip the integration tests**. The typecheck and the offline tests still
+    run, and must pass.
 
 **`.github/workflows/deploy.yml`** (`deploy-prod`) **never runs by itself.** You
-start it by hand, and only from a `v…` tag. See [Deploy to prod](#deploy-to-prod).
+start it by hand, and only from a `v…` tag. It deploys both prod editions
+(`prod`, `prod-fa`). See [Deploy to prod](#deploy-to-prod).
 
-Every deploy uses `wrangler` to deploy its own Worker. Then it points that
-environment's Telegram webhook and `/` menu (`setMyCommands`) at it.
+Every deploy uses `wrangler` to deploy the edition's Worker. Then it points
+that bot's Telegram webhook at it, and sets its `/` menu (`setMyCommands`)
+from `.github/bot-menus/<edition>.json`.
 
 ### Deploy to prod
 
@@ -154,7 +166,8 @@ deliberate click.
    A tag alone deploys nothing.
 3. Go to **Actions** → **Deploy** → **Run workflow**.
 4. In the branch list, pick the tag (not `main`).
-5. Click **Run workflow**. Only `deploy-prod` runs, on exactly that commit.
+5. Click **Run workflow**. Only `deploy-prod` runs, on exactly that commit,
+   for both editions.
 
 **Before a prod deploy, check for database changes.** If a release needs a D1
 change, make it on prod first. Otherwise an old table can break the
@@ -163,8 +176,9 @@ still `NOT NULL`.
 
 ### Roll back
 
-- Fastest: `npx wrangler rollback --env dev` (or `--env prod`). It switches the
-  live Worker back to its previous deploy at once, without CI.
+- Fastest: `npx wrangler rollback --env prod` (and `--env prod-fa`; or the dev
+  ones). It switches that Worker back to its previous deploy at once, without
+  CI. Each edition is rolled back on its own.
 - From source: run the prod deploy again and pick an older tag.
 
 ### Where secrets live
@@ -172,8 +186,14 @@ still `NOT NULL`.
 **Locally:** `secrets/dev.json` and `secrets/prod.json` (ignored by git, never
 committed).
 
-**In CI:** in [GitHub Environments](../../settings/environments) named `dev` and
-`prod` (Settings → Environments). Each has its own copy of:
+**In CI:** in [GitHub Environments](../../settings/environments) named `dev`,
+`dev-fa`, `prod` and `prod-fa` (Settings → Environments), one per edition and
+stage. Each has its own copy of the secrets below.
+- `BOT_TOKEN`, `WEBHOOK_SECRET` and `WORKER_URL` are different for each
+  edition.
+- The others have the same values as the stage's English environment, while
+  the editions share their resources. To separate an edition later, give it
+  its own values here (ADR-10).
 
 | Secret                  | Where it comes from                                                                                |
 | ----------------------- | -------------------------------------------------------------------------------------------------- |
@@ -344,11 +364,13 @@ in [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md#logging).
 - Every printed line counts toward the Workers Logs limit (200,000 lines per
   day on the free plan, then 1% sampling).
 
-**Every event of a message** also has: `user.id`, `user.name` (the Telegram
-username: optional, so it can be `null`), `user.full_name`, `telegram.chat.id`,
+**Every event of an update** has `bot.edition` (`english` or `persian`), so
+each edition can be told apart in the one dataset. **Every event of a
+message** also has: `user.id`, `user.name` (the Telegram username: optional,
+so it can be `null`), `user.full_name`, `telegram.chat.id`,
 `telegram.user_language_code`, `telegram.reply_language` and
 `telegram.reply_language_source` (`user_choice`, `telegram` or
-`english_fallback`). The `/tz` page's events get the user from the signed
+`edition_default`). The `/tz` page's events get the user from the signed
 token.
 
 **The events** (`INFO` unless noted):

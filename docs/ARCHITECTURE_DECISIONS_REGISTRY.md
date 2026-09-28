@@ -50,6 +50,7 @@ The daily quota's rules and what each message costs in D1 are in
 | 7   | Pure rules in the middle, input and output at the edges | all        |
 | 8   | Always answer Telegram with 200 after the auth check | NFR4, NFR2 |
 | 9   | Logging and monitoring: OpenTelemetry names, sent to Axiom | NFR1, NFR2, NFR4 |
+| 10  | One code base, one Worker per bot edition               | FR4, NFR1 |
 
 ---
 
@@ -342,6 +343,54 @@ them after a few weeks of normal traffic. The event names are listed in
 - How many Axiom monitors does our plan allow, and where should alerts go
   (e.g. email, or a Telegram message to the owner)?
 - Should the bot stop taking new users when a daily limit gets close?
+
+### ADR-10 — One code base, one Worker per bot edition
+
+**Problem.**
+- Persian speakers were put off by English: replies in English (many have
+  their Telegram app in English), and English command descriptions in the `/`
+  menu.
+- One bot has one `/` menu, in one language, for all its users.
+- We may later want each language to scale on its own: its own free limits,
+  model keys and database.
+
+**Options**
+
+| Option | Good | Bad |
+|---|---|---|
+| One bot for everyone | Nothing to set up | One menu language; the reply language guessed from the Telegram app |
+| One Worker for several bots (tell them apart by the webhook secret) | One deploy | Splitting later needs code changes; one bad deploy breaks every bot |
+| One Worker per bot, from the same code | Each bot is set up on its own; splitting later is configuration only | Two deploys per release (one workflow runs both) |
+
+**Decision.**
+- One code base, one Worker per **bot edition**: `english` (@noted_it_bot)
+  and `persian` (@noted_it_fa_bot). `BOT_EDITION` in `wrangler.toml` tells a
+  Worker which edition it runs. Each edition has its own bot token, webhook
+  secret and `/` menu (`.github/bot-menus/`).
+- **Everything an edition uses comes from its configuration, never from
+  code:** its Worker (`wrangler.toml`), its D1 database, its model keys and
+  its Cloudflare account (its GitHub Environment). Code never names an edition
+  to choose a resource.
+- For now, the editions of a stage share one Cloudflare account, one D1
+  database and the same model keys.
+- **One `gemini_usage` table per Google project.** Gemini counts usage per
+  project, not per key or bot. Two editions with the same key must share the
+  table; an edition with its own key needs its own table, i.e. its own D1
+  database.
+- Every log event has `bot.edition`, so each edition's users and usage can be
+  told apart from the first day.
+- A Worker with a missing or unknown `BOT_EDITION` answers the webhook with
+  500, before the auth check: Telegram keeps the update until it is fixed.
+
+**Trade-offs.**
+- The editions share the free limits of their account: Worker requests, D1
+  reads and writes, and the model quotas.
+- The `users` table is shared, so a user of both bots has one daily quota and
+  one `/tz` setting across them.
+- To separate an edition later: a new D1 database in its `wrangler.toml`
+  environment, new keys (and maybe a new Cloudflare account) in its GitHub
+  Environment. Its users start with fresh settings unless their rows are
+  copied. No code changes.
 
 ---
 

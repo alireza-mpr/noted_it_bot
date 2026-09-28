@@ -68,7 +68,18 @@ Groq) read the events.
 - The bot replies in 16 languages: English, Persian, Arabic, Spanish, French,
   German, Italian, Portuguese, Russian, Turkish, Chinese, Japanese, Korean,
   Hindi, Dutch, Polish.
-- It uses the user's Telegram language, unless the user picks another one.
+- **Two editions, two bots:** English (@noted_it_bot) and Persian
+  (@noted_it_fa_bot), from the same code (ADR-10). Each has its own `/` menu
+  in its language. Command names stay Latin (`/start`, `/tz`): Telegram allows
+  only `a–z`, digits and `_` in them.
+- **Why a Persian edition:** falling back to English was really demoralising
+  for Persian-speaking users. Many have their Telegram app in English, so they
+  got English replies. Market research also showed that English command texts
+  do not appeal to them.
+- The English edition uses the user's Telegram language, unless the user
+  picks another one. The Persian edition replies in Persian, unless the user
+  picks another one. See "The reply language" in
+  [EDGE_CASES.md](EDGE_CASES.md).
 - Every message is translated ahead of time and shipped with the bot. So
   choosing a language never calls a model. Other languages fall back to
   English.
@@ -179,14 +190,9 @@ Every deploy registers the visible commands with Telegram, so they show in the
       (e.g. a Persian speaker with an English Telegram app gets English).
 - [ ] Show the daily quota again (`APP_CONFIG.showDailyQuota`) once usage
       grows.
-- [ ] **A separate bot for each language** (e.g. a Persian bot and an
-      English bot). Falling back to English is really demoralising for
-      Persian-speaking users: many of them have their Telegram app in
-      English, so they get English replies. A bot per language would reply
-      in its own language from the first message.
-      - Market research also showed that English command names and menu
-        texts do not appeal to Persian speakers. A bot per language can have
-        its whole `/` menu in its own language.
+- [ ] **Launch the Persian edition:** create @noted_it_fa_bot (and a dev
+      bot) in BotFather, and set up the `dev-fa` and `prod-fa` GitHub
+      Environments. The code and the deploys are ready (ADR-10).
 - [ ] Relative and weekday dates ("tomorrow", "next Friday"). This needs a
       reliable reference date (the message time) and clear rules for unclear
       cases.

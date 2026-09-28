@@ -9,6 +9,7 @@ const WORKER_ENV: Env = {
   BOT_TOKEN: "test-bot-token",
   WEBHOOK_SECRET,
   APP_VERSION: "0.2.41-beta-1a2b3c4",
+  BOT_EDITION: "english",
   GEMINI_API_KEY: "test-gemini-key",
   GROQ_API_KEY: "test-groq-key",
   // No Axiom token: the logs are not sent.
@@ -51,9 +52,9 @@ function stubTelegram(failsToSend = false): string[] {
   return sentTexts;
 }
 
-async function responseTo(request: Request): Promise<Response> {
+async function responseTo(request: Request, workerEnv: Env = WORKER_ENV): Promise<Response> {
   const executionContext = createExecutionContext();
-  const response = await worker.fetch(request, WORKER_ENV, executionContext);
+  const response = await worker.fetch(request, workerEnv, executionContext);
   await waitOnExecutionContext(executionContext);
   return response;
 }
@@ -91,6 +92,20 @@ describe("worker", () => {
     stubTelegram(true);
 
     expect((await responseTo(webhookRequestOf(JSON.stringify(VERSION_UPDATE)))).status).toBe(200);
+  });
+
+  it("refuses the webhook with 500 when BOT_EDITION is not set up, so Telegram sends the update again later", async () => {
+    const sentTexts = stubTelegram();
+
+    for (const botEditionName of ["", "fa"]) {
+      const response = await responseTo(webhookRequestOf(JSON.stringify(VERSION_UPDATE)), {
+        ...WORKER_ENV,
+        BOT_EDITION: botEditionName,
+      });
+
+      expect(response.status, botEditionName).toBe(500);
+    }
+    expect(sentTexts).toEqual([]);
   });
 
   it("answers 200 to an update it cannot read", async () => {

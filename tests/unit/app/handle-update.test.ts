@@ -14,6 +14,7 @@ import {
   handleUpdate,
   type UpdateContext,
 } from "../../../src/app/handle-update";
+import type { BotEdition } from "../../../src/domain/bot-edition/bot-edition";
 import type { SupportedLanguage } from "../../../src/domain/user/supported-language";
 import { newUser, type User } from "../../../src/domain/user/user";
 import { TRANSLATIONS } from "../../../src/i18n/translation";
@@ -75,6 +76,7 @@ class FakeTelegramClient {
 }
 
 interface TestSetup {
+  botEdition?: BotEdition;
   storedUsers?: User[];
   modelResult?: ModelResult;
   userLoadFails?: boolean;
@@ -98,6 +100,7 @@ async function sendUpdate(
   fakeTelegramClient.failsToSend = testSetup.sendFails ?? false;
   const modelRequests: ModelRequest[] = [];
   const updateContext: UpdateContext = {
+    botEdition: testSetup.botEdition ?? "english",
     router: {
       ask: async (modelRequest: ModelRequest) => {
         modelRequests.push(modelRequest);
@@ -168,20 +171,41 @@ describe("handleUpdate: a message", () => {
     );
   });
 
-  // FIX it:
-  // it("puts the user, the chat and how the reply language was chosen on every event", async () => {
-  //   const { logEvents } = await sendUpdate(messageUpdateOf("/start"));
+  it("puts the edition, the user, the chat and how the reply language was chosen on every event", async () => {
+    const { logEvents } = await sendUpdate(messageUpdateOf("/start"));
 
-  //   expect(eventNamed(logEvents, "user_activity.bot_started")).toMatchObject({
-  //     "user.id": USER_ID,
-  //     "user.name": "alice",
-  //     "user.full_name": "Alice Smith",
-  //     "telegram.chat.id": CHAT_ID,
-  //     "telegram.user_language_code": "fa",
-  //     "telegram.reply_language": "fa",
-  //     "telegram.reply_language_source": "telegram",
-  //   });
-  // });
+    expect(eventNamed(logEvents, "user_activity.bot_started")).toMatchObject({
+      "bot.edition": "english",
+      "user.id": USER_ID,
+      "user.name": "alice",
+      "user.full_name": "Alice Smith",
+      "telegram.chat.id": CHAT_ID,
+      "telegram.user_language_code": "fa",
+      "telegram.reply_language": "fa",
+      "telegram.reply_language_source": "telegram",
+    });
+  });
+
+  it("replies in Persian in the Persian edition, whatever the Telegram language", async () => {
+    const { fakeTelegramClient, logEvents } = await sendUpdate(
+      {
+        kind: "message",
+        message: {
+          chatId: CHAT_ID,
+          sender: { userId: USER_ID, userProfile: { ...ALICE, telegramLanguageCode: "en" } },
+          text: "/start",
+        },
+      },
+      { botEdition: "persian" },
+    );
+
+    expect(fakeTelegramClient.sentTexts[0]).toMatch(/^سلام Alice! 👋 من ربات Noted هستم/);
+    expect(eventNamed(logEvents, "user_activity.bot_started")).toMatchObject({
+      "bot.edition": "persian",
+      "telegram.reply_language": "fa",
+      "telegram.reply_language_source": "edition_default",
+    });
+  });
 
   it("replies in the language the user chose", async () => {
     const { fakeTelegramClient, logEvents } = await sendUpdate(

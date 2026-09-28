@@ -200,11 +200,16 @@ the same UID.
 The bot replies in the first of these that is set:
 
 1. The language the user chose with `/lang`.
-2. The language of the user's Telegram app, if the bot supports it. A region
-   is ignored (e.g. "pt-BR" gives Portuguese).
-3. English.
+2. **English edition only:** the language of the user's Telegram app, if the
+   bot supports it. A region is ignored (e.g. "pt-BR" gives Portuguese).
+3. The edition's default language: English for the English edition, Persian
+   for the Persian one.
 
-`/lang auto` removes the user's choice, so step 2 applies again.
+**Why the Persian edition ignores the Telegram language:** many Persian
+speakers have their Telegram app in English. With step 2, they got English
+replies from a bot they chose because it speaks Persian.
+
+`/lang auto` removes the user's choice, so steps 2 and 3 apply again.
 
 ## The real messages that showed us these rules
 

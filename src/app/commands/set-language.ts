@@ -1,6 +1,7 @@
 import { Logger } from "../../adapters/logging/logger";
 import { logUserActivity } from "../../adapters/logging/user-activity";
 import type { Replier } from "../../adapters/telegram/replier";
+import type { BotEdition } from "../../domain/bot-edition/bot-edition";
 import { replyLanguageOf } from "../../domain/user/reply-language-rule";
 import {
   SUPPORTED_LANGUAGES,
@@ -21,6 +22,7 @@ const MAX_LOGGED_LANGUAGE_TEXT_LENGTH = 100;
 // Represents what /lang needs. language is the reply language before the
 // command.
 export interface SetLanguageContext {
+  botEdition: BotEdition;
   userRepository: UserRepository;
   replier: Replier;
   language: SupportedLanguage;
@@ -29,14 +31,15 @@ export interface SetLanguageContext {
 // Replies to /lang, and saves the user's choice. languageText is the text
 // after /lang, or null when there is none:
 // - null: shows the reply language, and how to change it;
-// - "auto": goes back to the language of the user's Telegram app;
+// - "auto": goes back to the language the rule picks when the user chose
+//   none, e.g. the Telegram app's language;
 // - a language, e.g. "fa" or "Persian": replies in it from now on.
 export async function setLanguage(
   user: User,
   languageText: string | null,
   setLanguageContext: SetLanguageContext,
 ): Promise<void> {
-  const { userRepository, replier, language } = setLanguageContext;
+  const { botEdition, userRepository, replier, language } = setLanguageContext;
   if (languageText === null) {
     await replier.sendText(currentLanguageTextOf(language));
     return;
@@ -46,7 +49,10 @@ export async function setLanguage(
     const savedUser = await saveChosenLanguage(user, null, userRepository);
     logUserActivity("language_reset");
     await replier.sendText(
-      translate("LANG_RESET_CONFIRMATION", replyLanguageOf(savedUser).language),
+      translate(
+        "LANG_RESET_CONFIRMATION",
+        replyLanguageOf(savedUser, botEdition).language,
+      ),
     );
     return;
   }

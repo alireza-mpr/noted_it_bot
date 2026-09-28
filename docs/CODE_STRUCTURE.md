@@ -89,6 +89,8 @@ src/
                       reading typed fields from JSON
     text/             filling {0}, {1}, … in a text; cutting a long text
   domain/      pure rules, no input or output
+    bot-edition/      the bot editions (english, persian) and their default
+                      languages
     calendar-event/   CalendarEventDraft → a CalendarEvent, the calendars we
                       accept, the year rule, repeats
     quota/            the quota usage and the daily quota rule (user tiers later)

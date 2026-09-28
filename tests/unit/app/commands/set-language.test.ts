@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { setLanguage } from "../../../../src/app/commands/set-language";
+import type { BotEdition } from "../../../../src/domain/bot-edition/bot-edition";
 import type { SupportedLanguage } from "../../../../src/domain/user/supported-language";
 import { newUser, type User } from "../../../../src/domain/user/user";
 import { BOT_MESSAGES } from "../../../../src/i18n/bot-message";
@@ -40,6 +41,7 @@ function storedAliceWith(chosenLanguage: SupportedLanguage | null): User {
 async function sendLanguageCommand(
   languageText: string | null,
   chosenLanguage: SupportedLanguage | null = null,
+  botEdition: BotEdition = "english",
 ) {
   const userRepository = new InMemoryUserRepository([
     storedAliceWith(chosenLanguage),
@@ -47,6 +49,7 @@ async function sendLanguageCommand(
   const fakeReplier = new FakeReplier();
   const logEvents = await axiomEventsOf(() =>
     setLanguage(storedAliceWith(chosenLanguage), languageText, {
+      botEdition,
       userRepository,
       replier: fakeReplier,
       language: chosenLanguage ?? "de",
@@ -95,14 +98,19 @@ describe("setLanguage", () => {
     });
   });
 
-  //TODO: fix
-  // it("goes back to the Telegram language with auto, and confirms in it", async () => {
-  //   const { replyTexts, storedLanguage, logEvents } = await sendLanguageCommand(" AUTO ", "fa");
+  it("goes back to the Telegram language with auto in the English edition, and confirms in it", async () => {
+    const { replyTexts, storedLanguage, logEvents } = await sendLanguageCommand(" AUTO ", "fa");
 
-  //   expect(storedLanguage).toBeNull();
-  //   expect(replyTexts).toEqual([TRANSLATIONS.de.LANG_RESET_CONFIRMATION]);
-  //   expect(logEvents.map((logEvent) => logEvent.eventName)).toContain("user_activity.language_reset");
-  // });
+    expect(storedLanguage).toBeNull();
+    expect(replyTexts).toEqual([TRANSLATIONS.de.LANG_RESET_CONFIRMATION]);
+    expect(logEvents.map((logEvent) => logEvent.eventName)).toContain("user_activity.language_reset");
+  });
+
+  it("goes back to Persian with auto in the Persian edition, whatever the Telegram language", async () => {
+    const { replyTexts } = await sendLanguageCommand("auto", "de", "persian");
+
+    expect(replyTexts).toEqual([TRANSLATIONS.fa.LANG_RESET_CONFIRMATION]);
+  });
 
   it("lists the supported languages by their own names for a language it does not support", async () => {
     const { replyTexts, saveCount, logEvents } = await sendLanguageCommand(

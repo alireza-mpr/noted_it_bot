@@ -48,38 +48,61 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  # Ships to dev when the job above passed. Only main deploys; PRs and other
-  # branches never do.
+  # Ships each bot edition to dev when the job above passed (ADR-10). Only
+  # main deploys; PRs and other branches never do. An edition whose GitHub
+  # Environment has no BOT_TOKEN yet is skipped with a notice, not failed.
   deploy-dev:
     needs: build
     if: >-
       github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: english
+            environment: dev
+          - edition: persian
+            environment: dev-fa
     runs-on: ubuntu-latest
-    environment: dev
-    permissions:
-      contents: write # needed to push the per-deploy tag below
+    environment: ${{ matrix.environment }}
     steps:
+      - name: Check the edition is set up
+        id: setup
+        run: |
+          if [ -n "$BOT_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No BOT_TOKEN in the ${{ matrix.environment }} environment: the ${{ matrix.edition }} edition is not deployed."
+          fi
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
       - uses: actions/checkout@v4
+        if: steps.setup.outputs.ready == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.setup.outputs.ready == 'true'
         with:
           node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
+        if: steps.setup.outputs.ready == 'true'
         run: npm ci
 
       - name: Compute version
+        if: steps.setup.outputs.ready == 'true'
         id: version
         run: echo "version=1.0.${{ github.run_number }}-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy to Cloudflare Workers (dev)
+      - name: Deploy to Cloudflare Workers
+        if: steps.setup.outputs.ready == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env dev --var APP_VERSION:${{ steps.version.outputs.version }}
-          environment: dev
+          command: deploy --env ${{ matrix.environment }} --var APP_VERSION:${{ steps.version.outputs.version }}
+          environment: ${{ matrix.environment }}
           secrets: |
             BOT_TOKEN
             WEBHOOK_SECRET
@@ -94,6 +117,7 @@ jobs:
           AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
 
       - name: Point the Telegram webhook at the Worker
+        if: steps.setup.outputs.ready == 'true'
         run: |
           curl -sf "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
             -d "url=${WORKER_URL}" \
@@ -103,23 +127,28 @@ jobs:
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
           WORKER_URL: ${{ secrets.WORKER_URL }}
 
-      - name: Register bot commands for Telegram's autocomplete menu
+      - name: Register the edition's / menu with Telegram
+        if: steps.setup.outputs.ready == 'true'
         run: |
           curl -sf -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
             -H "Content-Type: application/json" \
-            -d '{"commands":[
-              {"command": "start", "description": "معرفی خودم و آشنایی"},
-              {"command": "help", "description": "راهنما و مثال‌های کاربردی"},
-              {"command": "lang", "description": "انتخاب زبان گفتگو من با شما"},
-              {"command": "tz", "description": "تنظیم شهر و منطقه‌زمانی شما"}
-            ]}'
+            -d @.github/bot-menus/${{ matrix.edition }}.json
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
 
-      # Tags this exact dev deploy with the same string /ver reports, so a
-      # specific dev deployment can be found later via `git tag`. Only runs
-      # after a successful deploy — a failed deploy leaves no tag.
+  # Tags this dev deploy with the same string /ver reports, so it can be found
+  # later with `git tag`. Runs once, only after every edition deployed (or was
+  # skipped): a failed deploy leaves no tag.
+  tag-dev:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Tag this dev deploy
         run: |
-          git tag "v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
+          version="1.0.${{ github.run_number }}-$(git rev-parse --short HEAD)"
+          git tag "v${version}"
+          git push origin "v${version}"
