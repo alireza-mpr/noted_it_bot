@@ -147,8 +147,12 @@ start it by hand, and only from a `v…` tag. It deploys both prod editions
 (`prod`, `prod-fa`). See [Deploy to prod](#deploy-to-prod).
 
 Every deploy uses `wrangler` to deploy the edition's Worker. Then it points
-that bot's Telegram webhook at it, and sets its `/` menu (`setMyCommands`)
-from `.github/bot-menus/<edition>.json`.
+that bot's Telegram webhook at it, and sets:
+- its `/` menu (`setMyCommands`), from `.github/bot-menus/<edition>.json`;
+- its name, description (shown before the user taps Start) and short
+  description (the profile page), from `.github/bot-profiles/<edition>.json`.
+  Each is only sent when it differs from the bot's current text, because
+  Telegram rate-limits these calls.
 
 ### Deploy to prod
 

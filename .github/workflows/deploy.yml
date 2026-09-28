@@ -97,3 +97,24 @@ jobs:
             -d @.github/bot-menus/${{ matrix.edition }}.json
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+      # Telegram rate-limits these calls (setMyName especially), so each one
+      # is only made when the text in the file differs from the bot's.
+      - name: Set the edition's name and descriptions
+        if: steps.setup.outputs.ready == 'true'
+        run: |
+          profile=.github/bot-profiles/${{ matrix.edition }}.json
+          api="https://api.telegram.org/bot${BOT_TOKEN}"
+          set_if_changed() {
+            current=$(curl -sf "${api}/$1" | jq -r ".result.$3")
+            wanted=$(jq -r ".$3" "$profile")
+            if [ "$current" != "$wanted" ]; then
+              curl -sf -X POST "${api}/$2" -H "Content-Type: application/json" \
+                -d "$(jq -c "{$3}" "$profile")"
+            fi
+          }
+          set_if_changed getMyName setMyName name
+          set_if_changed getMyDescription setMyDescription description
+          set_if_changed getMyShortDescription setMyShortDescription short_description
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
