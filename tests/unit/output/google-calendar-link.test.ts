@@ -16,10 +16,10 @@ describe("googleCalendarLinkOf", () => {
   });
 
   it("writes a time in a time zone as UTC times, with the time zone", () => {
-    // 20:00 Iran time (UTC+3:30, no daylight saving) is 16:30 UTC.
+    // 20:00 in Melbourne on 23 Sep 2026 (AEST, UTC+10) is 10:00 UTC.
     const linkParameters = linkParametersOf();
-    expect(linkParameters.get("dates")).toBe("20260923T163000Z/20260923T173000Z");
-    expect(linkParameters.get("ctz")).toBe("Asia/Tehran");
+    expect(linkParameters.get("dates")).toBe("20260923T100000Z/20260923T110000Z");
+    expect(linkParameters.get("ctz")).toBe("Australia/Melbourne");
   });
 
   it("writes a floating time as local times, with no time zone", () => {

@@ -208,14 +208,16 @@ describe("handleUpdate: other updates", () => {
     expect([userRepository.loadCount, userRepository.saveCount]).toEqual([0, 0]);
   });
 
-  it("logs an unblock", async () => {
+  it("logs an unblock, with a null username when the user has none", async () => {
     const { logEvents } = await sendUpdate({
       kind: "bot-unblocked",
       chatId: CHAT_ID,
-      sender: { userId: USER_ID, userProfile: ALICE },
+      sender: { userId: USER_ID, userProfile: { ...ALICE, username: null } },
     });
 
-    expect(logEvents.map((logEvent) => logEvent.eventName)).toEqual(["user_activity.bot_unblocked"]);
+    expect(logEvents).toEqual([
+      expect.objectContaining({ eventName: "user_activity.bot_unblocked", "user.id": USER_ID, "user.name": null }),
+    ]);
   });
 
   it("logs an update the bot does not use, with the reason", async () => {

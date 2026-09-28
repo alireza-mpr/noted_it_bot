@@ -9,18 +9,18 @@ import {
 
 describe("parseTimeZoneName", () => {
   it("returns the standard name for another name or casing of the time zone", () => {
-    expect(parseTimeZoneName("Iran")).toBe("Asia/Tehran");
-    expect(parseTimeZoneName("asia/tehran")).toBe("Asia/Tehran");
+    expect(parseTimeZoneName("Australia/Victoria")).toBe("Australia/Melbourne");
+    expect(parseTimeZoneName("australia/melbourne")).toBe("Australia/Melbourne");
   });
 
   it("returns null for a name that is not a time zone", () => {
-    expect(parseTimeZoneName("Iran Standard Time")).toBeNull();
+    expect(parseTimeZoneName("AUS Eastern Standard Time")).toBeNull();
   });
 });
 
 describe("timeZoneNamed", () => {
   it("returns the time zone for a name written in the code", () => {
-    expect(timeZoneNamed("Asia/Tehran")).toBe("Asia/Tehran");
+    expect(timeZoneNamed("Australia/Melbourne")).toBe("Australia/Melbourne");
   });
 
   it("throws for a name that is not a time zone", () => {
@@ -53,9 +53,9 @@ describe("localDateTimeIn", () => {
 
 describe("toUtcMoment", () => {
   it("uses the time zone's offset", () => {
-    // Iran is UTC+3:30, with no daylight saving.
-    const utcDate = toUtcMoment({ year: 2026, month: 9, day: 23 }, { hour: 20, minute: 0 }, timeZoneNamed("Asia/Tehran"));
-    expect(utcDate.toISOString()).toBe("2026-09-23T16:30:00.000Z");
+    // India is UTC+5:30, with no daylight saving.
+    const utcDate = toUtcMoment({ year: 2026, month: 9, day: 23 }, { hour: 20, minute: 0 }, timeZoneNamed("Asia/Kolkata"));
+    expect(utcDate.toISOString()).toBe("2026-09-23T14:30:00.000Z");
   });
 
   it("uses the daylight saving offset on that day", () => {

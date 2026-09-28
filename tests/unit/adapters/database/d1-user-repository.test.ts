@@ -44,7 +44,7 @@ describe("D1UserRepository", () => {
     const changedUser: User = {
       ...createdUser,
       profile: { ...ALICE, lastName: "Smith" },
-      settings: { language: "fa", timeZone: timeZoneNamed("Asia/Tehran") },
+      settings: { language: "fa", timeZone: timeZoneNamed("Australia/Melbourne") },
       quotaUsage: { kind: "used", remainingQuota: 3, lastUsedAt: NOW },
     };
 

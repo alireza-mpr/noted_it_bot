@@ -26,7 +26,7 @@ More docs:
 |----------|--------------|
 | `/start` | Intro message, with the daily quota |
 | `/lang`  | Set the reply language (`/lang fa`, `/lang Persian`). `/lang auto` goes back to the Telegram language. `/lang` alone explains how to use it. |
-| `/tz`    | Set your time zone on a web page (the button works for 1 minute). `/tz Asia/Tehran` (an exact zone name) is applied at once. Does not use quota. |
+| `/tz`    | Set your time zone on a web page (the button works for 1 minute). `/tz Australia/Melbourne` (an exact zone name) is applied at once. Does not use quota. |
 | `/ver`   | Show the running version |
 | `/diag`  | Check the Gemini connection. It works, but it is not in Telegram's `/` menu on purpose. |
 
@@ -289,7 +289,7 @@ used.
 4. Saving sends a `POST` to `/tz/save`. It checks the zone with `Intl`, stores it
    in `user_preference.timezone`, and sends a confirmation to the chat.
 
-`/tz asia/tehran` (an exact zone name) is applied at once, without the page. Any
+`/tz australia/melbourne` (an exact zone name) is applied at once, without the page. Any
 other text after `/tz` just gets the link.
 
 **How the page knows the user.** Only from a signed token, never from anything

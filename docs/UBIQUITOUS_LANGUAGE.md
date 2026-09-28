@@ -62,7 +62,7 @@ this list is called the "ubiquitous language".
 
 | Word | Meaning | In code |
 |---|---|---|
-| Time zone | An IANA time zone name in its standard spelling, e.g. "Asia/Tehran". | `IanaTimeZone` |
+| Time zone | An IANA time zone name in its standard spelling, e.g. "Australia/Melbourne". | `IanaTimeZone` |
 | Event time zone | Where the event's time zone comes from: the message, the user's setting, or nowhere. | `EventTimeZone`, `eventTimeZoneOf` |
 | Message time zone | The time zone the message states or suggests. | `draft.timeZone`, `kind: "from-message"` |
 | User time zone | The time zone the user set with `/tz`. | `userTimeZone`, `parseUserTimeZoneName`, `saveUserTimeZone`, `kind: "from-user"` |

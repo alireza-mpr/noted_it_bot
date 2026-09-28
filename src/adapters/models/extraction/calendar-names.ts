@@ -4,8 +4,8 @@ import type { CalendarId } from "../../../domain/calendar-event/calendar";
 // are data" in docs/EDGE_CASES.md.
 const CALENDAR_NAMES: Record<CalendarId, readonly string[]> = {
   gregory: ["gregorian", "western", "christian"],
-  // A plain "hijri" is left out on purpose: in Iran it means this calendar,
-  // in Arab countries the lunar one.
+  // A plain "hijri" is left out on purpose: in some countries it means this
+  // calendar, in others the lunar one.
   persian: ["jalali", "solar hijri", "shamsi", "iranian"],
   hebrew: ["jewish"],
   buddhist: ["thai", "thai solar"],

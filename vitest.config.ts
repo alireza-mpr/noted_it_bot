@@ -40,7 +40,7 @@ export default defineConfig({
         bindings: {
           GEMINI_API_KEY: geminiApiKey,
           ...(secret("GROQ_API_KEY") && { GROQ_API_KEY: secret("GROQ_API_KEY") }),
-          // How many calls tests/manual/quotaFill.test.ts fires at once.
+          // How many calls tests/manual/quota-fill.test.ts fires at once.
           ...(quotaFillCalls && { QUOTA_FILL_CALLS: quotaFillCalls }),
         },
       },

@@ -3,7 +3,7 @@ import {
   type IanaTimeZone,
 } from "../../generic/date-time/time-zone";
 
-// Matches "Area/Location" time zone names, e.g. "Asia/Tehran".
+// Matches "Area/Location" time zone names, e.g. "Australia/Melbourne".
 const AREA_TIME_ZONE_NAME = /^[A-Za-z_+\-0-9]+(\/[A-Za-z_+\-0-9]+)+$/;
 
 // Matches "UTC" and "GMT", in any casing.

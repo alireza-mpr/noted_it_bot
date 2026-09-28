@@ -26,8 +26,8 @@ describe("calendarFileOf", () => {
 
   it("writes a time in a time zone as local time with TZID", () => {
     const icsLines = icsLinesOf();
-    expect(icsLines).toContain("DTSTART;TZID=Asia/Tehran:20260923T200000");
-    expect(icsLines).toContain("DTEND;TZID=Asia/Tehran:20260923T210000");
+    expect(icsLines).toContain("DTSTART;TZID=Australia/Melbourne:20260923T200000");
+    expect(icsLines).toContain("DTEND;TZID=Australia/Melbourne:20260923T210000");
   });
 
   it("writes a floating time with no TZID", () => {

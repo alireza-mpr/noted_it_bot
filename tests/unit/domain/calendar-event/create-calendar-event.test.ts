@@ -171,7 +171,7 @@ describe("a date in another calendar, written without a year", () => {
 });
 
 describe("the event's time zone", () => {
-  const TEHRAN = timeZoneNamed("Asia/Tehran");
+  const LONDON = timeZoneNamed("Europe/London");
   // Returns the event time zone of a one-off event with the given message and
   // user time zones.
   const eventTimeZoneWith = (
@@ -187,11 +187,11 @@ describe("the event's time zone", () => {
     ).timeZone;
 
   it("is the time zone in the message, even when the user has one", () => {
-    expect(eventTimeZoneWith(MELBOURNE, TEHRAN)).toEqual({ kind: "from-message", timeZone: MELBOURNE });
+    expect(eventTimeZoneWith(MELBOURNE, LONDON)).toEqual({ kind: "from-message", timeZone: MELBOURNE });
   });
 
   it("is the user's time zone when the message has none", () => {
-    expect(eventTimeZoneWith(null, TEHRAN)).toEqual({ kind: "from-user", timeZone: TEHRAN });
+    expect(eventTimeZoneWith(null, LONDON)).toEqual({ kind: "from-user", timeZone: LONDON });
   });
 
   it("is floating when neither has one", () => {
@@ -313,10 +313,11 @@ describe("a repeating event that cannot be trusted", () => {
 });
 
 describe("the Persian radio programme", () => {
-  // Every night at 20:00 Iran time, from Wednesday 1 Mehr 1405 (23 Sep 2026).
+  // Every night at 20:00 Melbourne time, from Wednesday 1 Mehr 1405 (23 Sep
+  // 2026).
   const dailyRadio = draftWith({
     title: "جام جهان‌نما",
-    timeZone: timeZoneNamed("Asia/Tehran"),
+    timeZone: MELBOURNE,
     time: { kind: "timed", start: { hour: 20, minute: 0 }, end: { hour: 21, minute: 0 } },
     date: writtenDate(9, 23, 2026),
     repeat: { pattern: { frequency: "daily", interval: 1 }, end: { kind: "never" } },

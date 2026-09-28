@@ -35,8 +35,8 @@ Only calendars whose years are plain numbers are in the table. The Japanese
 calendar is not: its years count within eras.
 
 A plain "Hijri" is **not** in the table, on purpose:
-- in Iran, it means the solar calendar;
-- in Arab countries, it means the lunar calendar.
+- in some countries, it means the solar calendar;
+- in others, it means the lunar calendar.
 A wrong guess moves the date by about 600 years.
 
 **The bot declines a date when it cannot convert it safely:**
@@ -159,7 +159,7 @@ The event's time zone, in this order:
      18:00.
 
 **What a user may type in `/tz`:** only "Area/Location" names (e.g.
-"Asia/Tehran") and UTC or GMT. Short names like "EST" or "CST" are refused,
+"Australia/Melbourne") and UTC or GMT. Short names like "EST" or "CST" are refused,
 because they are unclear ("CST" is used in the USA, China and Cuba).
 
 In cases 2 and 3, the caption tells the user, and explains how to set a time zone

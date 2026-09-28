@@ -180,20 +180,20 @@ describe("saveTimeZoneFromPage", () => {
 
     const logEvents = await axiomEventsOf(async () => {
       const response = await saveTimeZoneFromPage(
-        saveRequestOf({ token: saveToken, timezone: "asia/tehran" }),
+        saveRequestOf({ token: saveToken, timezone: "australia/melbourne" }),
         timeZonePageContext,
       );
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ ok: true, timezone: "Asia/Tehran" });
+      expect(await response.json()).toEqual({ ok: true, timezone: "Australia/Melbourne" });
     });
 
-    expect(userRepository.storedUsers.get(USER_ID)?.settings.timeZone).toBe("Asia/Tehran");
+    expect(userRepository.storedUsers.get(USER_ID)?.settings.timeZone).toBe("Australia/Melbourne");
     expect(sentMessages).toEqual([
-      { chatId: USER_ID, text: TRANSLATIONS.fa.TZ_SET_CONFIRMATION?.replace("{0}", "Asia/Tehran") },
+      { chatId: USER_ID, text: TRANSLATIONS.fa.TZ_SET_CONFIRMATION?.replace("{0}", "Australia/Melbourne") },
     ]);
     expect(logEvents.find((logEvent) => logEvent.eventName === "user_activity.time_zone_set")).toMatchObject({
       "user.id": USER_ID,
-      "user_activity.time_zone": "Asia/Tehran",
+      "user_activity.time_zone": "Australia/Melbourne",
       "user_activity.via": "page",
     });
   });
@@ -213,7 +213,7 @@ describe("saveTimeZoneFromPage", () => {
 
   it("refuses time zones that are not allowed or not real, and saves and sends nothing", async () => {
     const saveToken = await tokenFor("save");
-    for (const timeZoneName of ["Mars/Olympus", "Iran", "Melbourne", "EST", "", "'; DROP TABLE users;--", "A/".repeat(50)]) {
+    for (const timeZoneName of ["Mars/Olympus", "Japan", "Melbourne", "EST", "", "'; DROP TABLE users;--", "A/".repeat(50)]) {
       const { userRepository, sentMessages, timeZonePageContext } = setup();
 
       const response = await saveTimeZoneFromPage(
@@ -238,7 +238,7 @@ describe("saveTimeZoneFromPage", () => {
       const { userRepository, sentMessages, timeZonePageContext } = setup(nowMs);
 
       const response = await saveTimeZoneFromPage(
-        saveRequestOf({ token: saveToken, timezone: "Asia/Tehran" }),
+        saveRequestOf({ token: saveToken, timezone: "Australia/Melbourne" }),
         timeZonePageContext,
       );
 
@@ -254,7 +254,7 @@ describe("saveTimeZoneFromPage", () => {
     const saveToken = await tokenFor("save");
 
     const response = await saveTimeZoneFromPage(
-      saveRequestOf({ token: saveToken, timezone: "Asia/Tehran" }),
+      saveRequestOf({ token: saveToken, timezone: "Australia/Melbourne" }),
       timeZonePageContext,
     );
 
@@ -268,9 +268,9 @@ describe("saveTimeZoneFromPage", () => {
       ["not json", 400],
       ["null", 400],
       [{ token: saveToken }, 400],
-      [{ timezone: "Asia/Tehran" }, 400],
-      [{ token: 5, timezone: "Asia/Tehran" }, 400],
-      [{ token: saveToken, timezone: ["Asia/Tehran"] }, 400],
+      [{ timezone: "Australia/Melbourne" }, 400],
+      [{ token: 5, timezone: "Australia/Melbourne" }, 400],
+      [{ token: saveToken, timezone: ["Australia/Melbourne"] }, 400],
       [{ token: saveToken, timezone: "x".repeat(5000) }, 413],
     ];
     for (const [body, httpStatus] of bodyCases) {
@@ -289,7 +289,7 @@ describe("saveTimeZoneFromPage", () => {
     const saveToken = await tokenFor("save");
 
     const response = await saveTimeZoneFromPage(
-      saveRequestOf({ token: saveToken, timezone: "Asia/Tehran" }),
+      saveRequestOf({ token: saveToken, timezone: "Australia/Melbourne" }),
       timeZonePageContext,
     );
 
@@ -305,11 +305,11 @@ describe("saveTimeZoneFromPage", () => {
     const saveToken = await tokenFor("save");
 
     const response = await saveTimeZoneFromPage(
-      saveRequestOf({ token: saveToken, timezone: "Asia/Tehran" }),
+      saveRequestOf({ token: saveToken, timezone: "Australia/Melbourne" }),
       timeZonePageContext,
     );
 
     expect(response.status).toBe(200);
-    expect(userRepository.storedUsers.get(USER_ID)?.settings.timeZone).toBe("Asia/Tehran");
+    expect(userRepository.storedUsers.get(USER_ID)?.settings.timeZone).toBe("Australia/Melbourne");
   });
 });

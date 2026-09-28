@@ -74,7 +74,7 @@ describe("setTimeZone", () => {
   });
 
   it("sends the link for a city, a country or nonsense too, and saves nothing", async () => {
-    for (const timeZoneText of ["Melbourne", "Iran", "asdf qwer", "19:54", "Mars/Olympus"]) {
+    for (const timeZoneText of ["Melbourne", "Japan", "asdf qwer", "19:54", "Mars/Olympus"]) {
       const { fakeReplier, saveCount } = await sendTimeZoneCommand(timeZoneText);
 
       expect(fakeReplier.linkButtons, timeZoneText).toHaveLength(1);
@@ -83,13 +83,13 @@ describe("setTimeZone", () => {
   });
 
   it("saves an exact time zone name in its standard spelling, and confirms it", async () => {
-    const { fakeReplier, storedTimeZone, logEvents } = await sendTimeZoneCommand("asia/tehran");
+    const { fakeReplier, storedTimeZone, logEvents } = await sendTimeZoneCommand("australia/melbourne");
 
-    expect(storedTimeZone).toBe("Asia/Tehran");
+    expect(storedTimeZone).toBe("Australia/Melbourne");
     expect(fakeReplier.linkButtons).toEqual([]);
-    expect(fakeReplier.texts).toEqual([TRANSLATIONS.fa.TZ_SET_CONFIRMATION?.replace("{0}", "Asia/Tehran")]);
+    expect(fakeReplier.texts).toEqual([TRANSLATIONS.fa.TZ_SET_CONFIRMATION?.replace("{0}", "Australia/Melbourne")]);
     expect(logEvents.find((logEvent) => logEvent.eventName === "user_activity.time_zone_set")).toMatchObject({
-      "user_activity.time_zone": "Asia/Tehran",
+      "user_activity.time_zone": "Australia/Melbourne",
       "user_activity.via": "command",
     });
   });

@@ -175,11 +175,11 @@ describe("the game night message, forwarded on 27 September 2026", () => {
 
 describe("the event time zone", () => {
   it("uses the message's time zone over the user's, with no note", async () => {
-    const { icsContent, htmlCaption } = await sentCalendarFileOf(answerWith({ timezone_hint: "Asia/Tehran" }), {
+    const { icsContent, htmlCaption } = await sentCalendarFileOf(answerWith({ timezone_hint: "Australia/Melbourne" }), {
       userTimeZone: timeZoneNamed("Europe/London"),
     });
 
-    expect(icsContent).toContain("DTSTART;TZID=Asia/Tehran:20300923T200000");
+    expect(icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20300923T200000");
     expect(htmlCaption).not.toContain("🌎");
   });
 
@@ -268,6 +268,12 @@ describe("createEventFromMessage", () => {
     expect(fakeReplier.texts).toHaveLength(1);
     expect(fakeReplier.texts[0]).toMatch(/۲ ساعت.*۵ دقیقه/);
     expect(fakeReplier.texts[0]).not.toMatch(/[0-9]/);
+  });
+
+  it("logs a used-up quota as a user activity", async () => {
+    const logEvents = await axiomEventsOf(() => sendMessage("text", { remainingQuota: 0 }));
+
+    expect(logEvents.map((logEvent) => logEvent.eventName)).toEqual(["user_activity.quota_used_up"]);
   });
 
   it("gives the quota unit back when no model answers", async () => {

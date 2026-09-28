@@ -83,7 +83,7 @@ export async function openTimeZonePage(
 
 // Saves the time zone the user picked on the page (POST /tz/save), and
 // confirms it in Telegram. The user comes only from the save token, never
-// from the body. Returns JSON, e.g. { ok: true, timezone: "Asia/Tehran" } or
+// from the body. Returns JSON, e.g. { ok: true, timezone: "Australia/Melbourne" } or
 // { ok: false, error: "expired" }; the page's script reads the 403 as expired.
 export async function saveTimeZoneFromPage(
   request: Request,

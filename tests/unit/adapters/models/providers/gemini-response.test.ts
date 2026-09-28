@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GEMINI_MODELS } from "../../../../../src/adapters/models/providers/model-list";
 import { parseGeminiResponse } from "../../../../../src/adapters/models/providers/gemini-response";
-import { GEMINI_503_UNAVAILABLE } from "../../../fixtures/gemini503Unavailable";
+import { GEMINI_503_UNAVAILABLE } from "../../../fixtures/gemini-503-unavailable";
 
 const MODEL = GEMINI_MODELS[0];
 

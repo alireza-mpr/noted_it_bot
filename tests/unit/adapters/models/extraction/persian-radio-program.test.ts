@@ -8,7 +8,7 @@ import { googleCalendarLinkOf } from "../../../../../src/output/google-calendar-
 import {
   GEMINI_3_1_FLASH_LITE_RADIO_EVENT,
   GEMINI_3_5_FLASH_LITE_JALALI_RADIO_EVENT,
-} from "../../../fixtures/persianRadioProgram";
+} from "../../../fixtures/persian-radio-program";
 
 // Real model answers for one message, from parsing to the calendar file.
 
@@ -42,24 +42,24 @@ describe("the Persian radio programme, as gemini-3.1-flash-lite answered it", ()
   const calendarEvent = calendarEventOf(GEMINI_3_1_FLASH_LITE_RADIO_EVENT);
   const icsContent = calendarFileOf(calendarEvent, "en", NOW).content;
 
-  it("is a timed event at the stated 20:00, in Tehran time", () => {
-    expect(icsContent).toContain("DTSTART;TZID=Asia/Tehran:20260923T200000");
+  it("is a timed event at the stated 20:00, in Melbourne time", () => {
+    expect(icsContent).toContain("DTSTART;TZID=Australia/Melbourne:20260923T200000");
     expect(icsContent).not.toContain("VALUE=DATE");
   });
 
   it("ends an hour later when no end time is stated", () => {
-    expect(icsContent).toContain("DTEND;TZID=Asia/Tehran:20260923T210000");
+    expect(icsContent).toContain("DTEND;TZID=Australia/Melbourne:20260923T210000");
   });
 
   it("repeats daily", () => {
     expect(icsContent).toContain("RRULE:FREQ=DAILY");
   });
 
-  it("puts the same time, in Tehran time, in the Google Calendar link", () => {
+  it("puts the same time, in Melbourne time, in the Google Calendar link", () => {
     const linkParameters = new URL(googleCalendarLinkOf(calendarEvent, "en")).searchParams;
-    // 20:00 Iran time (UTC+3:30, no daylight saving) is 16:30 UTC.
-    expect(linkParameters.get("dates")).toBe("20260923T163000Z/20260923T173000Z");
-    expect(linkParameters.get("ctz")).toBe("Asia/Tehran");
+    // 20:00 in Melbourne on 23 Sep 2026 (AEST, UTC+10) is 10:00 UTC.
+    expect(linkParameters.get("dates")).toBe("20260923T100000Z/20260923T110000Z");
+    expect(linkParameters.get("ctz")).toBe("Australia/Melbourne");
     expect(linkParameters.get("recur")).toBe("RRULE:FREQ=DAILY");
   });
 });

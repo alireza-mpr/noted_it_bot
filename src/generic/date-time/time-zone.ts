@@ -4,7 +4,7 @@ import type { TimeOfDay } from "./time-of-day";
 declare const parsedTimeZone: unique symbol;
 
 // Represents an IANA time zone name in its standard spelling, e.g.
-// "Asia/Tehran". Only parseTimeZoneName and timeZoneNamed create one.
+// "Australia/Melbourne". Only parseTimeZoneName and timeZoneNamed create one.
 export type IanaTimeZone = string & { readonly [parsedTimeZone]: true };
 
 // Represents a date and a time of day in a time zone.
@@ -14,8 +14,8 @@ export interface LocalDateTime {
 }
 
 // Returns the standard name of a time zone, or null if the name is not a
-// time zone. Other names of a time zone are accepted, e.g. "Iran" gives
-// "Asia/Tehran".
+// time zone. Other names of a time zone are accepted, e.g.
+// "Australia/Victoria" gives "Australia/Melbourne".
 export function parseTimeZoneName(name: string): IanaTimeZone | null {
   try {
     return new Intl.DateTimeFormat("en", {

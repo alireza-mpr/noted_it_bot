@@ -25,7 +25,7 @@ export interface SetTimeZoneContext {
 
 // Replies to /tz. timeZoneText is the text after /tz, or null when there is
 // none:
-// - an exact time zone name, e.g. "Asia/Tehran": saves it;
+// - an exact time zone name, e.g. "Australia/Melbourne": saves it;
 // - anything else, e.g. nothing or "Melbourne": sends a link button to the
 //   time zone page.
 export async function setTimeZone(

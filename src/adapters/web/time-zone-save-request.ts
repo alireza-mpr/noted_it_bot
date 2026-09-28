@@ -9,7 +9,7 @@ export type TimeZoneSaveRequestResult =
   | { ok: false; reason: "too-large" | "bad-request" };
 
 // Returns the token and the time zone name in the body of a save from the
-// time zone page, e.g. {"token": "…", "timezone": "Asia/Tehran"}, or why the
+// time zone page, e.g. {"token": "…", "timezone": "Australia/Melbourne"}, or why the
 // body is refused. Other fields are ignored.
 export function parseTimeZoneSaveRequest(
   bodyText: string,

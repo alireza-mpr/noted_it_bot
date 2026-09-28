@@ -79,7 +79,7 @@ describe("captionOf: the quota line", () => {
 });
 
 describe("captionOf in Persian (the bugs from the screenshot)", () => {
-  // The radio programme from the screenshot: every day at 20:00 in Tehran.
+  // The radio programme from the screenshot: every day at 20:00.
   const persianCaption = captionOf(calendarEventWith({ title: "برنامه جام جهان‌نما", repeat: DAILY }), "fa", 9974);
 
   it("writes the repeat line in Persian", () => {
@@ -95,5 +95,14 @@ describe("captionOf in Persian (the bugs from the screenshot)", () => {
   it("has no Latin letters or digits in the summary", () => {
     const summary = persianCaption.split("\n\n")[0];
     expect(summary).not.toMatch(/[A-Za-z0-9]/);
+  });
+
+  it("names the weekdays of a wrong weekday in Persian, with the Gregorian date", () => {
+    // 20 Jan 2030 is a Sunday.
+    const caption = captionOf(calendarEventWith({ date: { year: 2030, month: 1, day: 20 }, wrongWeekday: "MO" }), "fa", null);
+
+    expect(caption).toContain("دوشنبه");
+    expect(caption).toContain("یکشنبه");
+    expect(caption).toContain("۲۰۳۰");
   });
 });

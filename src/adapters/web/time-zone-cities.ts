@@ -1,6 +1,6 @@
 // Well-known cities that are not in any time zone's name. So the /tz page can
 // find "Washington" (America/New_York) or "Mumbai" (Asia/Kolkata).
-// Cities that are already in a zone name (London, Tokyo, New York, Tehran) are
+// Cities that are already in a zone name (London, Tokyo, New York, Melbourne) are
 // not listed. Names are in English only. The search ignores case and accents.
 export const TIME_ZONE_CITIES: Record<string, string> = {
   // North America

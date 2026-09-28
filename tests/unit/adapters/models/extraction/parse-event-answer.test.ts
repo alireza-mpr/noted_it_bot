@@ -114,8 +114,9 @@ describe("parseEventAnswer", () => {
   });
 
   it("reads the message time zone, and gives no event for one that does not exist", () => {
-    expect(draftOf({ ...GAME_NIGHT_ANSWER, timezone_hint: "Asia/Tehran" }).timeZone).toBe("Asia/Tehran");
-    expect(parsedAnswer({ ...GAME_NIGHT_ANSWER, timezone_hint: "Iran Standard Time" })).toMatchObject({
+    expect(draftOf({ ...GAME_NIGHT_ANSWER, timezone_hint: "Australia/Melbourne" }).timeZone).toBe("Australia/Melbourne");
+    expect(draftOf({ ...GAME_NIGHT_ANSWER, timezone_hint: "Australia/Victoria" }).timeZone).toBe("Australia/Melbourne");
+    expect(parsedAnswer({ ...GAME_NIGHT_ANSWER, timezone_hint: "AUS Eastern Standard Time" })).toMatchObject({
       ok: false,
       reason: "no-event",
     });

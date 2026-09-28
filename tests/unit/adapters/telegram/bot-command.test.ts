@@ -5,7 +5,7 @@ describe("parseBotCommand", () => {
   it("reads the command's name and the text after it", () => {
     expect(parseBotCommand("/tz")).toEqual({ name: "tz", argumentText: null });
     expect(parseBotCommand("/tz Melbourne")).toEqual({ name: "tz", argumentText: "Melbourne" });
-    expect(parseBotCommand("/tz   Iran  ")).toEqual({ name: "tz", argumentText: "Iran" });
+    expect(parseBotCommand("/tz   Japan  ")).toEqual({ name: "tz", argumentText: "Japan" });
     expect(parseBotCommand("/tz\nTokyo")).toEqual({ name: "tz", argumentText: "Tokyo" });
     expect(parseBotCommand("/start abc123")).toEqual({ name: "start", argumentText: "abc123" });
   });

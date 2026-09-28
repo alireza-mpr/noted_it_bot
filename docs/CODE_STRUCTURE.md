@@ -262,7 +262,7 @@ code, together with that area.
 | `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
 | `web/*` | `adapters/web/`: `time-zone-link-token.ts` (`tzToken.ts`; the token's JSON is unchanged, so links already sent keep working), `time-zone-page.ts` (`tzPage.ts`), `time-zone-page.html` and `.css` (unchanged), `time-zone-cities.ts` (`tzCities.ts`); the base64url helpers → `generic/encoding/base64-url.ts`; the routes (`tzRoutes.ts`) → `app/time-zone-page.ts` (`handleTzPage` → `openTimeZonePage`, `handleTzSave` → `saveTimeZoneFromPage`), with the save shared with `/tz` in `app/save-user-time-zone.ts`; the save body → `adapters/web/time-zone-save-request.ts`; `languageFromHeader` → `adapters/web/request-language.ts`; `setLogField` for the user → `adapters/logging/user-log-attributes.ts` | ✅ |
 | `appConfig/appConfig.ts`, `env.ts` | `config/app-config.ts` (`appConfig` → `APP_CONFIG`, `defaultTimezone` → `floatingTimeZoneName`), `config/env.ts` | ✅ |
-| `buildCalendarEvent` (used only by tests) | a helper in `tests/` | ⏳ |
+| `buildCalendarEvent` (used only by tests) | dropped: the new tests build events with `calendarEventWith` (`tests/unit/output/calendar-event-with.ts`) or run the rules directly | ✅ |
 | `text-modules.d.ts`, `node-modules.d.ts` | stay in `src/` | ✅ |
 
 ## Order of the work
@@ -298,7 +298,9 @@ after each commit.
 | 5c | App: set a time zone (the `/tz` command, the `/tz` page route, the `/tz/save` route) | ✅ |
 | 5d | App: handle an update, and the entry point (routing, the webhook secret check, the log session, ADR-8). Every event of an update gets `telegram.user_language_code`, `telegram.reply_language` and `telegram.reply_language_source`. So `user_activity.bot_started` shows how the reply language was chosen, to find out why users start the bot but never try it. | ✅ |
 | 5e | App: a short `/start` (a welcome with the first name, one example to try, a pointer to `/help`) and a new `/help` (how the bot works, what you can set, the daily quota). An unknown command is logged with the text after it (`user_activity.command_text`). The daily quota is a named type, `DailyQuota` in `domain/quota/daily-quota.ts` (`{ kind: "off" }` instead of `null`). `APP_CONFIG.showDailyQuota` (off for now) hides the quota in replies, except when it is used up; the quota is now 10. | ✅ |
-| 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README. Add `/help` to the `/` menu in `ci.yml` and `deploy.yml` (not before: the old code has no `/help`). Prod: right before the deploy, copy `user_preference` and `user_usage` into the new `users` table. | ⏳ |
+| 6a | Tests: check every case of the old tests against the new ones, port the 4 that were missing, port the live and the manual tests (`extract-draft`, `quota-fill`), and delete the old tests | ✅ |
+| 6b | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README. Add `/help` to the `/` menu in `ci.yml` and `deploy.yml` (not before: the old code has no `/help`). | ⏳ |
+| 6c | Prod: right before the deploy, copy `user_preference` and `user_usage` into the new `users` table. | ⏳ |
 
 ## How the rules are checked
 
