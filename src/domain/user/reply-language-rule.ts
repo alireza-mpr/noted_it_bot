@@ -1,12 +1,18 @@
-import { parseLanguageCode, type SupportedLanguage } from "./supported-language";
+import {
+  parseLanguageCode,
+  type SupportedLanguage,
+} from "./supported-language";
 import type { User } from "./user";
 
-const FALLBACK_LANGUAGE: SupportedLanguage = "en";
+const FALLBACK_LANGUAGE: SupportedLanguage = "fa";
 
 // Represents where the reply language comes from: the language the user
 // chose with /lang, the language of the user's Telegram app, or English when
 // neither is set or supported.
-export type ReplyLanguageSource = "user-choice" | "telegram" | "english-fallback";
+export type ReplyLanguageSource =
+  | "user-choice"
+  | "telegram"
+  | "language-fallback";
 
 // Represents the language the bot replies in, and where it comes from.
 export interface ReplyLanguage {
@@ -22,11 +28,13 @@ export function replyLanguageOf(user: User): ReplyLanguage {
   }
   const telegramLanguage = telegramLanguageOf(user);
   return telegramLanguage === null
-    ? { language: FALLBACK_LANGUAGE, source: "english-fallback" }
+    ? { language: FALLBACK_LANGUAGE, source: "language-fallback" }
     : { language: telegramLanguage, source: "telegram" };
 }
 
 function telegramLanguageOf(user: User): SupportedLanguage | null {
   const telegramLanguageCode = user.profile?.telegramLanguageCode ?? null;
-  return telegramLanguageCode === null ? null : parseLanguageCode(telegramLanguageCode);
+  return telegramLanguageCode === null
+    ? null
+    : parseLanguageCode(telegramLanguageCode);
 }

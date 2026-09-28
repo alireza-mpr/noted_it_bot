@@ -42,7 +42,7 @@ const MAX_LOGGED_COMMAND_TEXT_LENGTH = 200;
 const LOGGED_REPLY_LANGUAGE_SOURCES: Record<ReplyLanguageSource, string> = {
   "user-choice": "user_choice",
   telegram: "telegram",
-  "english-fallback": "english_fallback",
+  "language-fallback": "language-fallback",
 };
 
 // Represents what handling an update needs. workerOrigin is the Worker's
