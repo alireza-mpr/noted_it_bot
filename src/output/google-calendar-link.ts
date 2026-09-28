@@ -7,16 +7,22 @@ import {
   formatIcsLocalDateTime,
   formatIcsUtcDateTime,
 } from "../generic/icalendar/ics-date-time";
+import type { SupportedLanguage } from "../i18n/supported-language";
+import { eventTitleOf } from "./event-title";
 import { rruleOf } from "./rrule";
 
 const GOOGLE_CALENDAR_RENDER_URL =
   "https://calendar.google.com/calendar/render";
 
-// Returns the link that opens Google Calendar with the event filled in.
-export function googleCalendarLinkOf(calendarEvent: CalendarEvent): string {
+// Returns the link that opens Google Calendar with the event filled in. An
+// event with no title gets "Event" in the language.
+export function googleCalendarLinkOf(
+  calendarEvent: CalendarEvent,
+  language: SupportedLanguage,
+): string {
   const linkParameters = new URLSearchParams({
     action: "TEMPLATE",
-    text: calendarEvent.title,
+    text: eventTitleOf(calendarEvent, language),
   });
   const ianaTimeZone = ianaTimeZoneOf(calendarEvent.timeZone);
   if (ianaTimeZone !== null && calendarEvent.time.kind === "timed") {

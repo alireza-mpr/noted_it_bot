@@ -54,5 +54,6 @@
   "REPEAT_MONTHLY_ON_LAST": "{1}, ayın son {0} günü",
   "REPEAT_UNTIL": "{0} tarihine kadar",
   "REPEAT_ONE_TIME": "{0} kez",
-  "REPEAT_TIMES": "{0} kez"
+  "REPEAT_TIMES": "{0} kez",
+  "UNTITLED_EVENT_TITLE": "Etkinlik"
 }

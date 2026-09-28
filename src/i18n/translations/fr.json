@@ -54,5 +54,6 @@
   "REPEAT_MONTHLY_ON_LAST": "{1}, le dernier {0}",
   "REPEAT_UNTIL": "jusqu’au {0}",
   "REPEAT_ONE_TIME": "{0} fois",
-  "REPEAT_TIMES": "{0} fois"
+  "REPEAT_TIMES": "{0} fois",
+  "UNTITLED_EVENT_TITLE": "Événement"
 }

@@ -22,7 +22,7 @@ this list is called the "ubiquitous language".
 | Calendar event | An event created from a draft: Gregorian dates, each with a year. Ready for output. | `CalendarEvent` |
 | No event | Creating the calendar event found no usable date. | `reason: "no-event"` |
 | Declined repeat | The repeat can't be trusted, so the bot does not guess it. | `repeatDeclineReason`, `reason: "repeat-declined"` |
-| Title | The event's name. "Event" when the message gives none. | `title` |
+| Title | The event's name. `null` when the message gives none; the output then says "Event" in the reply language. | `title`, `eventTitleOf` |
 | Location | Where the event happens. `null` when the message gives none. | `location` |
 | Confidence | How sure the model is about the event, from 0 to 1. | `confidence` |
 | Event UID | The identity of a calendar event, calculated from the message. The same message always gives the same UID. See [EDGE_CASES.md](EDGE_CASES.md#the-same-message-forwarded-again). | `EventUid`, `eventUidOf` |

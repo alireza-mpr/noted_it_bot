@@ -4,12 +4,12 @@ import { calendarEventWith } from "./calendar-event-with";
 
 // Returns the link's parameters.
 function linkParametersOf(overrides: Parameters<typeof calendarEventWith>[0] = {}): URLSearchParams {
-  return new URL(googleCalendarLinkOf(calendarEventWith(overrides))).searchParams;
+  return new URL(googleCalendarLinkOf(calendarEventWith(overrides), "en")).searchParams;
 }
 
 describe("googleCalendarLinkOf", () => {
   it("opens Google Calendar's event template with the title", () => {
-    const link = googleCalendarLinkOf(calendarEventWith({ title: "جام جهان‌نما" }));
+    const link = googleCalendarLinkOf(calendarEventWith({ title: "جام جهان‌نما" }), "en");
     expect(link.startsWith("https://calendar.google.com/calendar/render?")).toBe(true);
     expect(new URL(link).searchParams.get("action")).toBe("TEMPLATE");
     expect(new URL(link).searchParams.get("text")).toBe("جام جهان‌نما");

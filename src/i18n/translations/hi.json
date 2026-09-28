@@ -54,5 +54,6 @@
   "REPEAT_MONTHLY_ON_LAST": "{1} के आखिरी {0} को",
   "REPEAT_UNTIL": "{0} तक",
   "REPEAT_ONE_TIME": "{0} बार",
-  "REPEAT_TIMES": "{0} बार"
+  "REPEAT_TIMES": "{0} बार",
+  "UNTITLED_EVENT_TITLE": "इवेंट"
 }

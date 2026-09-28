@@ -5,6 +5,7 @@ import { fillPlaceholders } from "../generic/text/fill-placeholders";
 import type { BotMessageId } from "../i18n/bot-message";
 import type { SupportedLanguage } from "../i18n/supported-language";
 import { translate } from "../i18n/translation";
+import { eventTitleOf } from "./event-title";
 import { googleCalendarLinkOf } from "./google-calendar-link";
 import {
   formatClockTime,
@@ -46,7 +47,7 @@ function summaryOf(
   language: SupportedLanguage,
 ): string {
   const summaryLines = [
-    `📌 ${escapeHtml(calendarEvent.title)}`,
+    `📌 ${escapeHtml(eventTitleOf(calendarEvent, language))}`,
     `🗓️ ${escapeHtml(whenOf(calendarEvent, language))}`,
   ];
   const repeatSentence = repeatSentenceOf(calendarEvent, language);
@@ -74,7 +75,7 @@ function linkOf(
   language: SupportedLanguage,
 ): string {
   const linkLabel = translate("LINK_LABEL", language);
-  return `<a href="${escapeHtml(googleCalendarLinkOf(calendarEvent))}">${linkLabel}</a>`;
+  return `<a href="${escapeHtml(googleCalendarLinkOf(calendarEvent, language))}">${linkLabel}</a>`;
 }
 
 // Returns the notes: 🤔 wrong weekday, 💡 in the past, 🔁 repeat, 🤔 all day,

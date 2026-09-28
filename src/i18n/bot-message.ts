@@ -23,6 +23,9 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
   LINK_LABEL: "here",
 
+  // The title of an event whose message gives no name.
+  UNTITLED_EVENT_TITLE: "Event",
+
   ALL_DAY_NOTE:
     "<i>🤔 By the way, no specific time was mentioned, so this was added as an all-day event.</i>",
 

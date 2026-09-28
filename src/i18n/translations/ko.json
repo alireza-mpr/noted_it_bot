@@ -54,5 +54,6 @@
   "REPEAT_MONTHLY_ON_LAST": "{1} 마지막 {0}",
   "REPEAT_UNTIL": "{0}까지",
   "REPEAT_ONE_TIME": "{0}회",
-  "REPEAT_TIMES": "{0}회"
+  "REPEAT_TIMES": "{0}회",
+  "UNTITLED_EVENT_TITLE": "일정"
 }

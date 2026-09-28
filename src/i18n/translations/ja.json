@@ -54,5 +54,6 @@
   "REPEAT_MONTHLY_ON_LAST": "{1}の最終{0}",
   "REPEAT_UNTIL": "{0}まで",
   "REPEAT_ONE_TIME": "{0}回",
-  "REPEAT_TIMES": "{0}回"
+  "REPEAT_TIMES": "{0}回",
+  "UNTITLED_EVENT_TITLE": "予定"
 }

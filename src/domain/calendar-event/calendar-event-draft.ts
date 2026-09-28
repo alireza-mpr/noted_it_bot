@@ -6,9 +6,9 @@ import type { Repeat } from "./repeat";
 
 // Represents a calendar event as the message describes it, before it becomes
 // a calendar event. Its dates are in the message's calendar, and their
-// years can be missing.
+// years can be missing. The title is null when the message gives no name.
 export interface CalendarEventDraft {
-  title: string;
+  title: string | null;
   location: string | null;
   writtenInCalendar: CalendarId;
   date: WrittenDate | null;

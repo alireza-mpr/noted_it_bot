@@ -7,6 +7,8 @@ import {
   formatIcsUtcDateTime,
 } from "../generic/icalendar/ics-date-time";
 import { escapeIcsText, foldIcsLine } from "../generic/icalendar/ics-text";
+import type { SupportedLanguage } from "../i18n/supported-language";
+import { eventTitleOf } from "./event-title";
 import { rruleOf } from "./rrule";
 
 const CALENDAR_FILE_NAME = "event.ics";
@@ -18,9 +20,10 @@ export interface CalendarFile {
 }
 
 // Returns the calendar file of the event. The file's time stamp (DTSTAMP) is
-// now.
+// now. An event with no title gets "Event" in the language.
 export function calendarFileOf(
   calendarEvent: CalendarEvent,
+  language: SupportedLanguage,
   now: Date,
 ): CalendarFile {
   const rrule = rruleOf(calendarEvent);
@@ -34,7 +37,7 @@ export function calendarFileOf(
     `DTSTAMP:${formatIcsUtcDateTime(now)}`,
     ...startAndEndLinesOf(calendarEvent),
     ...(rrule === null ? [] : [`RRULE:${rrule}`]),
-    `SUMMARY:${escapeIcsText(calendarEvent.title)}`,
+    `SUMMARY:${escapeIcsText(eventTitleOf(calendarEvent, language))}`,
     ...(location === null ? [] : [`LOCATION:${escapeIcsText(location)}`]),
     "END:VEVENT",
     "END:VCALENDAR",

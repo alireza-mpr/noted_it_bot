@@ -6,10 +6,11 @@ import type { Repeat } from "./repeat";
 declare const eventUidBrand: unique symbol;
 
 // Represents a calendar event created from a draft, ready for output. Its
-// dates are Gregorian, each with a year.
+// dates are Gregorian, each with a year. The title is null when the message
+// gives no name.
 export interface CalendarEvent {
   uid: EventUid;
-  title: string;
+  title: string | null;
   location: string | null;
   date: DateOnly;
   time: EventTime;
