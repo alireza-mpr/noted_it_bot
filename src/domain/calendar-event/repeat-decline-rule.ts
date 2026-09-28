@@ -1,13 +1,19 @@
 import { compareDates, type DateOnly } from "../../generic/date-time/date-only";
 import { patternNamesDays, type Repeat } from "./repeat";
 
-// Returns why the repeat is declined, or null if it is not. See "Repeats" in
-// docs/EDGE_CASES.md.
+const MIN_REPEAT_CONFIDENCE = 0.7;
+
+// Returns why the repeat is declined, or null if it is not. confidence is the
+// model's confidence in the event. See "Repeats" in docs/EDGE_CASES.md.
 export function repeatDeclineReason(
   repeat: Repeat<DateOnly>,
   hasStartDate: boolean,
   firstDate: DateOnly,
+  confidence: number,
 ): string | null {
+  if (confidence < MIN_REPEAT_CONFIDENCE) {
+    return `low confidence (${confidence})`;
+  }
   const pattern = repeat.pattern;
   if (!isWholeNumberFrom(1, pattern.interval)) {
     return `invalid interval ${pattern.interval}`;

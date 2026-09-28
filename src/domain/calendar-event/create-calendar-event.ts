@@ -134,6 +134,7 @@ function createRepeatingEvent(
     gregorianRepeat,
     startDate !== null,
     firstDate,
+    draft.confidence,
   );
   if (declineReason !== null) {
     return repeatDeclined(declineReason);

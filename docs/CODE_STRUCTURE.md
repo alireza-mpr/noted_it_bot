@@ -108,8 +108,6 @@ src/
     logging/   the logger and Axiom
     web/       web pages the Worker serves: the /tz page and its routes
   config/      APP_CONFIG and Env
-  todo/        temporary: values whose place is not decided yet (each file
-               says why in a TODO)
 ```
 
 **A domain folder is named after one word from
@@ -225,13 +223,13 @@ code, together with that area.
 
 | Old code (`legacy/`) | New code | Status |
 |---|---|---|
-| `time/dateOnly.ts` | `generic/date-time/date-only.ts`, `generic/date-time/time-of-day.ts`; `nowIn` → `localDateTimeIn` in `generic/date-time/time-zone.ts`; `parseTime` → the edge that reads the model's answer | ✅ (`parseTime` ⏳) |
+| `time/dateOnly.ts` | `generic/date-time/date-only.ts`, `generic/date-time/time-of-day.ts`; `nowIn` → `localDateTimeIn` in `generic/date-time/time-zone.ts`; `parseTime` → `timeOfDayOf` in `adapters/models/extraction/parse-event-answer.ts` | ✅ |
 | `time/timezone.ts`, `time/canonicalTimezone.ts` | `generic/date-time/time-zone.ts` (`parseTimeZoneName`), `domain/user/user-time-zone-rule.ts` (`parseUserTimeZoneName`) | ✅ |
-| `extractedEvents/toGregorian.ts` | `generic/date-time/calendar-conversion.ts`, `domain/calendar-event/calendar.ts` (`CalendarId`), `domain/calendar-event/year-rule.ts` (`pickYear`, `pickEndYear`), `domain/calendar-event/create-calendar-event.ts` (the dates of an event); the calendar names the model uses → `adapters/models/` | ✅ (names ⏳) |
-| `extractedEvents/extractedEvent.ts` | `domain/calendar-event/calendar-event-draft.ts`, `domain/calendar-event/event-time.ts`; turning the model's answer into a draft → `adapters/models/` | ✅ (answer → draft ⏳) |
+| `extractedEvents/toGregorian.ts` | `generic/date-time/calendar-conversion.ts`, `domain/calendar-event/calendar.ts` (`CalendarId`), `domain/calendar-event/year-rule.ts` (`pickYear`, `pickEndYear`), `domain/calendar-event/create-calendar-event.ts` (the dates of an event); the calendar names the model uses → `adapters/models/extraction/calendar-names.ts` | ✅ |
+| `extractedEvents/extractedEvent.ts` | `domain/calendar-event/calendar-event-draft.ts`, `domain/calendar-event/event-time.ts`, `domain/calendar-event/event-time-rule.ts` (one hour with no end time); turning the model's answer into a draft → `adapters/models/extraction/parse-event-answer.ts` | ✅ |
 | `extractedEvents/eventPlan.ts` | `domain/calendar-event/calendar-event.ts`, `event-time-zone.ts`, `time-zone-order-rule.ts`, `wrong-guess-rule.ts`, `create-calendar-event.ts` (all in `domain/calendar-event/`) | ✅ |
 | `extractedEvents/recurrence.ts` (rules) | `repeat.ts`, `first-date-rule.ts`, `repeat-decline-rule.ts`, `repeat-calendar-rule.ts` (all in `domain/calendar-event/`) | ✅ |
-| `RECURRENCE_MIN_CONFIDENCE` in `extractedEvents/recurrence.ts` | `todo/repeat-confidence.ts`, until we decide where it belongs | ⏳ |
+| `RECURRENCE_MIN_CONFIDENCE` in `extractedEvents/recurrence.ts` | `MIN_REPEAT_CONFIDENCE` in `domain/calendar-event/repeat-decline-rule.ts` | ✅ |
 | `extractedEvents/eventUid.ts` | `domain/calendar-event/event-uid-rule.ts`, `generic/hash/sha256-hex.ts` | ✅ |
 | `policy/userQuotaPolicy.ts` | `domain/quota/user-quota-policy.ts`, with the `UsageStore` port in `domain/quota/usage-store.ts` | ✅ |
 | `policy/userQuotaPolicyLogger.ts` | the quota use case in `app/` logs the line with a `Logger` (step 5) | ⏳ |
@@ -249,7 +247,7 @@ code, together with that area.
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts` | `app/create-event-from-message.ts` | ⏳ |
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
-| `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/`, with the answer → draft parser (step 4d-3) | ⏳ |
+| `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (unchanged) | ✅ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
 | `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | `adapters/database/d1-usage-store.ts`, `adapters/database/d1-user-settings-store.ts`, `adapters/database/batch-with-table.ts`; the port `domain/user/user-settings-store.ts`; `QUOTA_RESET_AFTER_MS` → `domain/quota/user-quota-policy.ts` | ✅ |
 | `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/d1-counted-model-usage-store.ts` (table `gemini_usage`), `adapters/database/d1-retry-after-model-usage-store.ts` (table `groq_usage`); `dateTimeAest` → `dateTimeTextIn` in `generic/date-time/time-zone.ts` | ✅ |
@@ -286,7 +284,7 @@ after each commit.
 | 4c | Adapters: the database for users (the quota usage and the user settings) | ✅ |
 | 4d-1 | Adapters: the provider clients (Gemini, Groq), the model list and limits, the model result types | ✅ |
 | 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ✅ |
-| 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`) | ⏳ |
+| 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`); a missing title becomes "Event" in the reply language | ✅ |
 | 4e | Adapters: Telegram (the client, update types, the webhook, replies) | ⏳ |
 | 4f | Adapters: the web pages (the /tz page and its routes) | ⏳ |
 | 5 | App: one use case per file (create an event, set a language, set a time zone, …). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ⏳ |

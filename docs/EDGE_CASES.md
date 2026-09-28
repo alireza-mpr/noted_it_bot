@@ -18,16 +18,18 @@ rule. Do not add a fix for that one message.
 
 1. The model copies the date as written. It also names the calendar
    ("Gregorian", "Solar Hijri", …).
-2. One step, `toGregorianDates` (`src/legacy/extractedEvents/toGregorian.ts`),
-   converts the dates to Gregorian and adds any missing year. It works the
-   same for every calendar.
+2. One step, `createCalendarEvent`
+   (`src/domain/calendar-event/create-calendar-event.ts`), converts the dates
+   to Gregorian and adds any missing year. It works the same for every
+   calendar.
 3. Everything after this step sees only Gregorian dates: the repeat check, the
    `.ics` file, the Google link, and the caption notes. So no calendar is a
    special case.
 
-**Calendars are data.** A table lists each calendar the date library supports,
-and the names the model may use for it ("Jalali", "Lunar Hijri", "Hebrew" …).
-To add a calendar, add a row.
+**Calendars are data.** A table
+(`src/adapters/models/extraction/calendar-names.ts`) lists each calendar the
+bot accepts, and the names the model may use for it ("Jalali", "Hebrew" …).
+To add a calendar, add it to `CalendarId` and add a row.
 
 Only calendars whose years are plain numbers are in the table. The Japanese
 calendar is not: its years count within eras.
@@ -107,6 +109,15 @@ year.
 - "29 February" with no year can land on a year that has no 29 February.
 - Hebrew leap years have an extra month. So a Hebrew month number late in the
   year can mean different months in different years.
+
+## Event time
+
+- **No start time: an all-day event.** The bot never guesses a time. The
+  caption says so (🤔).
+- **A start time but no end time: the event lasts one hour** (e.g. 20:00
+  gives 20:00–21:00).
+- **Not solved yet:** a start at 23:00 or later with no end time ends after
+  midnight (23:30 gives 00:30), but the end stays on the same date.
 
 ## Repeats
 

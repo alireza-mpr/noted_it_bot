@@ -33,7 +33,7 @@ this list is called the "ubiquitous language".
 |---|---|---|
 | Date | A day: year, month and day. No time of day, no time zone. | `DateOnly` |
 | Time of day | An hour and a minute, on a 24-hour clock. | `TimeOfDay` |
-| Event time | All day, or timed with a start and an end time of day. | `EventTime` |
+| Event time | All day, or timed with a start and an end time of day. One hour when the message gives no end time. | `EventTime`, `eventTimeOf` |
 | Weekday | A day of the week, as an iCalendar code (`MO` … `SU`). | `Weekday` |
 | Written date | A date as the message writes it. The year can be missing. It can have a written weekday. | `WrittenDate` |
 | Written weekday | The weekday the message writes next to a date (e.g. "Saturday 26 Sep"). | `WrittenDate.weekday` |
@@ -120,7 +120,7 @@ this list is called the "ubiquitous language".
 | Model failure | Why a model gave no answer, e.g. rate limited or unavailable. | `ModelFailure` |
 | Model usage | How much a model was used: counts per minute and per day, or a retry time. It says which models are used up. | `ModelUsageStore`, `D1CountedModelUsageStore`, `D1RetryAfterModelUsageStore` |
 | Router | Tries the models in order: Gemini first, then Groq. | `Router`, `RoutedProvider` |
-| Extraction | Sends a message to a model, and turns the model answer into a draft. | — |
+| Extraction | Sends a message to a model, and turns the model answer into a draft. | `extractDraft`, `parseEventAnswer` |
 
 ## Logging
 
