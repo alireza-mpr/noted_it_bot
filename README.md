@@ -4,36 +4,37 @@ A Telegram bot that runs on Cloudflare Workers.
 
 You forward it a message with an event (a photo with a caption works too), or
 type one. It replies with:
+
 - a one-tap "add to Google Calendar" link,
 - an `.ics` file for Apple Calendar, Outlook, and others.
 
 There are two environments:
 
-| Env  | Telegram bot        | Worker name        | Cloudflare account | Deploys when |
-|------|---------------------|--------------------|--------------------|--------------|
-| dev  | `@noted_it_dev_bot` | `noted-it-dev-bot` | the dev account    | every push to `main` |
+| Env  | Telegram bot        | Worker name        | Cloudflare account | Deploys when                                                     |
+| ---- | ------------------- | ------------------ | ------------------ | ---------------------------------------------------------------- |
+| dev  | `@noted_it_dev_bot` | `noted-it-dev-bot` | the dev account    | every push to `main`                                             |
 | prod | `@noted_it_bot`     | `prod`             | its own account    | by hand, from a `v…` tag (see [Deploy to prod](#deploy-to-prod)) |
 
 More docs:
 
-| Doc | What is in it |
-|---|---|
-| [docs/PRODUCT.md](docs/PRODUCT.md) | Features, what users do, and the backlog |
-| [docs/EDGE_CASES.md](docs/EDGE_CASES.md) | The rules for dates, calendars, repeats and time zones, and the real messages behind them |
+| Doc                                                                                | What is in it                                                                              |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [docs/PRODUCT.md](docs/PRODUCT.md)                                                 | Features, what users do, and the backlog                                                   |
+| [docs/EDGE_CASES.md](docs/EDGE_CASES.md)                                           | The rules for dates, calendars, repeats and time zones, and the real messages behind them  |
 | [docs/ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md) | Why the main parts work the way they do; the daily quota and what each message costs in D1 |
-| [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md) | How the code is organised, and the coding and logging rules |
-| [docs/UBIQUITOUS_LANGUAGE.md](docs/UBIQUITOUS_LANGUAGE.md) | The words we use in code and docs |
+| [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md)                                   | How the code is organised, and the coding and logging rules                                |
+| [docs/UBIQUITOUS_LANGUAGE.md](docs/UBIQUITOUS_LANGUAGE.md)                         | The words we use in code and docs                                                          |
 
 ## Commands
 
-| Command  | What it does |
-|----------|--------------|
-| `/start` | A short welcome, with one example to try |
-| `/help`  | How the bot works, what you can set, and the daily quota (when it is shown) |
+| Command  | What it does                                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/start` | A short welcome, with one example to try                                                                                                    |
+| `/help`  | How the bot works, what you can set, and the daily quota (when it is shown)                                                                 |
 | `/lang`  | Set the reply language (`/lang fa`, `/lang Persian`). `/lang auto` goes back to the Telegram language. `/lang` alone shows the current one. |
-| `/tz`    | Set your time zone on a web page (the button works for 1 minute). `/tz Australia/Melbourne` (an exact zone name) is applied at once. |
-| `/ver`   | Show the running version |
-| `/diag`  | Check that the models answer. It is not in Telegram's `/` menu on purpose. |
+| `/tz`    | Set your time zone on a web page (the button works for 1 minute). `/tz Australia/Melbourne` (an exact zone name) is applied at once.        |
+| `/ver`   | Show the running version                                                                                                                    |
+| `/diag`  | Check that the models answer. It is not in Telegram's `/` menu on purpose.                                                                  |
 
 Commands never use quota. Any other message is treated as an event and sent to
 a model. An unknown command (e.g. `/settings`) gets no reply, but it is logged.
@@ -43,13 +44,13 @@ a model. An unknown command (e.g. `/settings`) gets no reply, but it is logged.
 Telegram calls the Worker's URL (a webhook) for every update. There is no
 polling and no server that runs all the time.
 
-| Step | File |
-|---|---|
-| The entry point: one log session per request. `GET /tz` and `POST /tz/save` go to the time zone page. Any other `POST` is the webhook: a wrong secret gets 401, and everything else gets 200 (ADR-8). | `src/app/worker.ts` |
-| One update: a message, a block or unblock, or something the bot ignores. For a message, it loads the user, picks the reply language, then runs the command or creates the event. It never throws: a failure gets a general error reply. | `src/app/handle-update.ts` |
-| The commands, one file each | `src/app/commands/` |
-| An event from a message: the quota, the model, the calendar event, the reply, and the refund when no model answers | `src/app/create-event-from-message.ts` |
-| Loading and saving a user, with a retry when two updates race (ADR-3) | `src/app/update-user.ts` |
+| Step                                                                                                                                                                                                                                    | File                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| The entry point: one log session per request. `GET /tz` and `POST /tz/save` go to the time zone page. Any other `POST` is the webhook: a wrong secret gets 401, and everything else gets 200 (ADR-8).                                   | `src/app/worker.ts`                    |
+| One update: a message, a block or unblock, or something the bot ignores. For a message, it loads the user, picks the reply language, then runs the command or creates the event. It never throws: a failure gets a general error reply. | `src/app/handle-update.ts`             |
+| The commands, one file each                                                                                                                                                                                                             | `src/app/commands/`                    |
+| An event from a message: the quota, the model, the calendar event, the reply, and the refund when no model answers                                                                                                                      | `src/app/create-event-from-message.ts` |
+| Loading and saving a user, with a retry when two updates race (ADR-3)                                                                                                                                                                   | `src/app/update-user.ts`               |
 
 The rest of `src/` follows one rule: pure rules in `domain/` and `output/`,
 input and output only in `adapters/`, and `app/` connects them. See
@@ -79,11 +80,11 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
 
 ## Tests
 
-| Kind | Where | How to run |
-|---|---|---|
-| Unit tests, offline | `tests/unit/` (the same folders as `src/`) | `npx vitest run tests/unit` |
-| Live tests: real messages through the real router and models | `tests/integration/extract-draft.test.ts` | part of `npm test` |
-| Manual: fills the Gemini quota on purpose, to check that the router moves on | `tests/manual/quota-fill.test.ts` | `npm run test:quota-fill` (never in CI) |
+| Kind                                                                         | Where                                      | How to run                              |
+| ---------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------------- |
+| Unit tests, offline                                                          | `tests/unit/` (the same folders as `src/`) | `npx vitest run tests/unit`             |
+| Live tests: real messages through the real router and models                 | `tests/integration/extract-draft.test.ts`  | part of `npm test`                      |
+| Manual: fills the Gemini quota on purpose, to check that the router moves on | `tests/manual/quota-fill.test.ts`          | `npm run test:quota-fill` (never in CI) |
 
 - All tests run inside the Workers runtime (`@cloudflare/vitest-plugin`).
 - The live tests check only the fields they list (`toMatchObject`). A failed
@@ -92,6 +93,7 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
   name casing.
 
 **Databases in tests:**
+
 - The dev D1 database is a **remote binding** (`remote = true` in
   [wrangler.toml](wrangler.toml)). So tests that use it read and write the real
   dev database, locally and in CI.
@@ -118,6 +120,7 @@ npm ci && npm run typecheck && npm test
 
 **`.github/workflows/ci.yml`** runs on every push. It has two jobs (a pull
 request runs only the first):
+
 - **`build`**: installs, typechecks, runs all tests (real Gemini, real dev D1).
   It needs `GEMINI_API_KEY`, `GROQ_API_KEY`, `CLOUDFLARE_API_TOKEN` and
   `CLOUDFLARE_ACCOUNT_ID`.
@@ -142,7 +145,7 @@ deliberate click.
 
 1. Make sure `main` has everything you want. Let `deploy-dev` check it.
 2. Pick the tag to deploy. Every dev deploy already has one
-   (`v1.0.N-beta-<commit>`). Or make your own, e.g. for a release:
+   (`v1.0.N-<commit>`). Or make your own, e.g. for a release:
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
@@ -171,16 +174,16 @@ committed).
 **In CI:** in [GitHub Environments](../../settings/environments) named `dev` and
 `prod` (Settings → Environments). Each has its own copy of:
 
-| Secret                  | Where it comes from |
-|-------------------------|---------------------|
-| `BOT_TOKEN`             | the token in `secrets/{dev,prod}.json` |
+| Secret                  | Where it comes from                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `BOT_TOKEN`             | the token in `secrets/{dev,prod}.json`                                                             |
 | `WEBHOOK_SECRET`        | a random string, one per environment (e.g. `openssl rand -hex 32`). It also signs the `/tz` links. |
-| `WORKER_URL`            | `https://<worker-name>.<your-subdomain>.workers.dev` (you see it after the first deploy) |
-| `GEMINI_API_KEY`        | your Gemini API key |
-| `GROQ_API_KEY`          | your Groq API key |
-| `AXIOM_TOKEN`           | an Axiom token that can write to the `app-logs` dataset |
-| `CLOUDFLARE_API_TOKEN`  | a token for that environment's Cloudflare account |
-| `CLOUDFLARE_ACCOUNT_ID` | that environment's Cloudflare account id |
+| `WORKER_URL`            | `https://<worker-name>.<your-subdomain>.workers.dev` (you see it after the first deploy)           |
+| `GEMINI_API_KEY`        | your Gemini API key                                                                                |
+| `GROQ_API_KEY`          | your Groq API key                                                                                  |
+| `AXIOM_TOKEN`           | an Axiom token that can write to the `app-logs` dataset                                            |
+| `CLOUDFLARE_API_TOKEN`  | a token for that environment's Cloudflare account                                                  |
+| `CLOUDFLARE_ACCOUNT_ID` | that environment's Cloudflare account id                                                           |
 
 - Environments (not plain repository secrets) make sure dev and prod never
   share a `BOT_TOKEN` by mistake.
@@ -193,11 +196,11 @@ committed).
 One D1 database per environment (binding `USAGE_DB`). Every table is created
 on first use: each query runs together with its `CREATE TABLE IF NOT EXISTS`.
 
-| Table | One row per | What it holds | Code |
-|---|---|---|---|
-| `users` | user | The Telegram profile (username, first and last name, app language), the chosen language and time zone, the quota usage, and a `version` for races (ADR-3) | `src/adapters/database/d1-user-repository.ts` |
-| `gemini_usage` | Gemini model | Requests and tokens in the current minute, requests in the current day, the last error and the last success | `src/adapters/database/d1-counted-model-usage-store.ts` |
-| `groq_usage` | Groq model | When the model can be tried again, the daily request count Groq reports, the last error and the last success | `src/adapters/database/d1-retry-after-model-usage-store.ts` |
+| Table          | One row per  | What it holds                                                                                                                                             | Code                                                        |
+| -------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `users`        | user         | The Telegram profile (username, first and last name, app language), the chosen language and time zone, the quota usage, and a `version` for races (ADR-3) | `src/adapters/database/d1-user-repository.ts`               |
+| `gemini_usage` | Gemini model | Requests and tokens in the current minute, requests in the current day, the last error and the last success                                               | `src/adapters/database/d1-counted-model-usage-store.ts`     |
+| `groq_usage`   | Groq model   | When the model can be tried again, the daily request count Groq reports, the last error and the last success                                              | `src/adapters/database/d1-retry-after-model-usage-store.ts` |
 
 - In `users`, `NULL` means "not chosen" (the language, the time zone) or "never
   used" (the quota). What a user did, and when, is in the logs, not in D1.
@@ -224,13 +227,13 @@ extraction and `/diag` use the models.
   `src/adapters/models/providers/model-list.ts`.
 - Only `src/adapters/models/providers/` knows the names Gemini and Groq.
 
-| Result | What the router does |
-|---|---|
-| An answer | Records the usage, and returns the answer |
-| 429 (rate limit) | Marks the model as used up for the minute or the day (Groq: until its `retry-after`, else 60 seconds), then tries the next model |
-| 503, or no answer in 12 seconds | Records the error, then tries the next model |
-| Any other error (other 4xx or 5xx, an empty answer) | Records the error, then tries the next model |
-| 401 or 403 (a bad API key) | Records the error, then skips the whole provider |
+| Result                                              | What the router does                                                                                                             |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| An answer                                           | Records the usage, and returns the answer                                                                                        |
+| 429 (rate limit)                                    | Marks the model as used up for the minute or the day (Groq: until its `retry-after`, else 60 seconds), then tries the next model |
+| 503, or no answer in 12 seconds                     | Records the error, then tries the next model                                                                                     |
+| Any other error (other 4xx or 5xx, an empty answer) | Records the error, then tries the next model                                                                                     |
+| 401 or 403 (a bad API key)                          | Records the error, then skips the whole provider                                                                                 |
 
 When every model fails, `ask` returns the last failure. Its `kind` is one of
 `rate-limited`, `unavailable`, `bad-request`, `unauthorized`, `empty-answer`,
@@ -238,6 +241,7 @@ When every model fails, `ask` returns the last failure. Its `kind` is one of
 (rate-limited)".
 
 **What we learnt about Gemini's limits:**
+
 - **The day ends at midnight Pacific time.** Google's docs say: "Requests per
   day (RPD) quotas reset at midnight Pacific time." So the day is the
   `America/Los_Angeles` date. Do not change it to UTC or local time.
@@ -269,6 +273,7 @@ model is used.
 
 **How the page knows the user:** only from a signed token, never from anything
 the browser sends (`src/adapters/web/time-zone-link-token.ts`).
+
 - Format: `base64url(payload).base64url(HMAC-SHA256)`, signed with
   `WEBHOOK_SECRET` plus a fixed prefix. No other secret is needed.
 - Two tokens: the **link** token works for **1 minute**. Opening the link gives
@@ -295,11 +300,11 @@ time, so choosing a language never calls a model.
 - Numbers, dates, times and the 🔁 repeat sentence are written in the reply
   language too. The event's title and location are never translated.
 
-| To… | Do this |
-|---|---|
-| Change a message | Edit the English, and the same id in all 15 JSON files, in the same commit. Nothing forces this. |
-| Add a message | Add the id to `BOT_MESSAGES` and to every JSON file |
-| Add a language | Add its code to `SUPPORTED_LANGUAGES` (`src/domain/user/supported-language.ts`), add its JSON file, and import it in `translation.ts` |
+| To…              | Do this                                                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Change a message | Edit the English, and the same id in all 15 JSON files, in the same commit. Nothing forces this.                                      |
+| Add a message    | Add the id to `BOT_MESSAGES` and to every JSON file                                                                                   |
+| Add a language   | Add its code to `SUPPORTED_LANGUAGES` (`src/domain/user/supported-language.ts`), add its JSON file, and import it in `translation.ts` |
 
 `tests/unit/i18n/translation.test.ts` fails until every language has every id,
 no old id is left, and every translation has the same `{0}` placeholders, HTML
@@ -314,6 +319,7 @@ Log events use OpenTelemetry names (ADR-9). The naming rules are in "Logging"
 in [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md#logging).
 
 **Where they go:**
+
 - Every event goes to the **`app-logs`** dataset in [Axiom](https://axiom.co)
   (`src/adapters/logging/axiom.ts`, region `us-east-1`: change it if your Axiom
   org is somewhere else).
@@ -324,6 +330,7 @@ in [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md#logging).
   the error is only printed. It never affects the reply.
 
 **One request is one log session:**
+
 - `runLogSession` (in `worker.ts`) gives every event of a request the same
   `traceId`. It uses `AsyncLocalStorage` (the `nodejs_als` flag in
   [wrangler.toml](wrangler.toml)), so parallel requests never mix.
@@ -345,37 +352,37 @@ token.
 
 **The events** (`INFO` unless noted):
 
-| Event | Attributes | When |
-|---|---|---|
-| `telegram.update_handled` | `telegram.command`, `telegram.duration_ms` | the end of every message |
-| `telegram.update_failed` (`ERROR`) | `exception.*` | something failed; the user got the general error |
-| `telegram.update_ignored` | `telegram.ignore_reason` | an update the bot does not use |
-| `telegram.reply_sent` | `telegram.reply_kind` | a reply was sent |
-| `telegram.send_failed` (`WARN`) | `telegram.method`, `http.response.status_code`, `telegram.error_description` | Telegram refused a reply (not a block) |
-| `router.models_listed`, `router.model_tried`, `router.model_answered` | `router.available_models`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.*` | the router's steps |
-| `router.model_failed` (`WARN`; `ERROR` for a bad request, a bad key or our bug) | `router.failure_kind`, `router.failure_detail`, `router.limit_window`, `router.retry_after_seconds` | a model gave no answer |
-| `router.no_model_answered` (`ERROR`) | | every model failed |
-| `extraction.completed` (`WARN` when the answer is not usable) | `extraction.message_text`, `extraction.model_answer`, `gen_ai.request.model`, `extraction.outcome`, `extraction.problem` | a message went to a model |
-| `quota.consumed`, `quota.refunded` | `quota.remaining` | a unit was used, or given back |
-| `time_zone_page.token_refused` (`WARN`) | `time_zone_page.token_purpose`, `time_zone_page.refusal_reason` | a `/tz` link or save token was refused |
-| `language_command.not_supported` | `language_command.language_text` | `/lang` with a language the bot does not have |
-| `user_activity.*` | see below | a user did something |
+| Event                                                                           | Attributes                                                                                                               | When                                             |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| `telegram.update_handled`                                                       | `telegram.command`, `telegram.duration_ms`                                                                               | the end of every message                         |
+| `telegram.update_failed` (`ERROR`)                                              | `exception.*`                                                                                                            | something failed; the user got the general error |
+| `telegram.update_ignored`                                                       | `telegram.ignore_reason`                                                                                                 | an update the bot does not use                   |
+| `telegram.reply_sent`                                                           | `telegram.reply_kind`                                                                                                    | a reply was sent                                 |
+| `telegram.send_failed` (`WARN`)                                                 | `telegram.method`, `http.response.status_code`, `telegram.error_description`                                             | Telegram refused a reply (not a block)           |
+| `router.models_listed`, `router.model_tried`, `router.model_answered`           | `router.available_models`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.*`                              | the router's steps                               |
+| `router.model_failed` (`WARN`; `ERROR` for a bad request, a bad key or our bug) | `router.failure_kind`, `router.failure_detail`, `router.limit_window`, `router.retry_after_seconds`                      | a model gave no answer                           |
+| `router.no_model_answered` (`ERROR`)                                            |                                                                                                                          | every model failed                               |
+| `extraction.completed` (`WARN` when the answer is not usable)                   | `extraction.message_text`, `extraction.model_answer`, `gen_ai.request.model`, `extraction.outcome`, `extraction.problem` | a message went to a model                        |
+| `quota.consumed`, `quota.refunded`                                              | `quota.remaining`                                                                                                        | a unit was used, or given back                   |
+| `time_zone_page.token_refused` (`WARN`)                                         | `time_zone_page.token_purpose`, `time_zone_page.refusal_reason`                                                          | a `/tz` link or save token was refused           |
+| `language_command.not_supported`                                                | `language_command.language_text`                                                                                         | `/lang` with a language the bot does not have    |
+| `user_activity.*`                                                               | see below                                                                                                                | a user did something                             |
 
 **User activity:** one event per thing a user does, e.g.
 `user_activity.time_zone_set`.
 
-| Activity | Attributes | When |
-|---|---|---|
-| `bot_started`, `help_requested`, `version_requested` | | `/start`, `/help`, `/ver` |
-| `models_checked` | `user_activity.outcome` (`ok`, `no_model`, `unexpected_answer`) | `/diag` |
-| `language_set` / `language_reset` | `user_activity.language` | `/lang <language>` / `/lang auto` |
-| `time_zone_link_sent`, `time_zone_page_opened` | | `/tz` with no exact zone, then the link was opened |
-| `time_zone_set` | `user_activity.time_zone`, `user_activity.via` (`command`, `page`) | a time zone was saved |
-| `unknown_command_sent` | `user_activity.command`, `user_activity.command_text` | e.g. `/settings dark mode` |
-| `event_requested` | `user_activity.outcome` (`created`, `no_event`, `repeat_declined`, `no_model`, `unusable_answer`, `no_text`); `user_activity.repeats` and `user_activity.all_day` when created | a message asked for an event |
-| `quota_used_up` | | a message was refused: no quota left |
-| `bot_blocked` | `user_activity.via` (`membership`, or `send_refused` when Telegram refused a send because of a block) | the user blocked the bot |
-| `bot_unblocked` | | the user unblocked or restarted the bot |
+| Activity                                             | Attributes                                                                                                                                                                     | When                                               |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `bot_started`, `help_requested`, `version_requested` |                                                                                                                                                                                | `/start`, `/help`, `/ver`                          |
+| `models_checked`                                     | `user_activity.outcome` (`ok`, `no_model`, `unexpected_answer`)                                                                                                                | `/diag`                                            |
+| `language_set` / `language_reset`                    | `user_activity.language`                                                                                                                                                       | `/lang <language>` / `/lang auto`                  |
+| `time_zone_link_sent`, `time_zone_page_opened`       |                                                                                                                                                                                | `/tz` with no exact zone, then the link was opened |
+| `time_zone_set`                                      | `user_activity.time_zone`, `user_activity.via` (`command`, `page`)                                                                                                             | a time zone was saved                              |
+| `unknown_command_sent`                               | `user_activity.command`, `user_activity.command_text`                                                                                                                          | e.g. `/settings dark mode`                         |
+| `event_requested`                                    | `user_activity.outcome` (`created`, `no_event`, `repeat_declined`, `no_model`, `unusable_answer`, `no_text`); `user_activity.repeats` and `user_activity.all_day` when created | a message asked for an event                       |
+| `quota_used_up`                                      |                                                                                                                                                                                | a message was refused: no quota left               |
+| `bot_blocked`                                        | `user_activity.via` (`membership`, or `send_refused` when Telegram refused a send because of a block)                                                                          | the user blocked the bot                           |
+| `bot_unblocked`                                      |                                                                                                                                                                                | the user unblocked or restarted the bot            |
 
 - A block arrives as a `my_chat_member` update: status `kicked`, then
   `member` on unblock.
@@ -394,10 +401,10 @@ token.
 
 **Other places to look:**
 
-| What | How |
-|---|---|
-| Live Worker logs | `npx wrangler tail --env dev --format pretty`. Add `--search "<text>"` to filter, or `--status error` for failed requests. New logs only: for older ones, use the dashboard's Logs page or Axiom. |
-| The last error of each model | `npx wrangler d1 execute noted-it-dev-usage --remote --env dev --command "SELECT model, lastErrorAest, lastError, lastSuccessAest FROM gemini_usage"` |
+| What                         | How                                                                                                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Live Worker logs             | `npx wrangler tail --env dev --format pretty`. Add `--search "<text>"` to filter, or `--status error` for failed requests. New logs only: for older ones, use the dashboard's Logs page or Axiom. |
+| The last error of each model | `npx wrangler d1 execute noted-it-dev-usage --remote --env dev --command "SELECT model, lastErrorAest, lastError, lastSuccessAest FROM gemini_usage"`                                             |
 
 For prod: use `--env prod` and `noted-it-prod-usage`. Test runs do not send to
 Axiom; their logs print in your terminal.
