@@ -5,6 +5,7 @@ import {
   setLogAttribute,
 } from "../../../../src/adapters/logging/log-session";
 import { Logger } from "../../../../src/adapters/logging/logger";
+import { flatRecordOf } from "./flat-record-of";
 
 interface AxiomRequest {
   url: string;
@@ -34,7 +35,7 @@ function stubAxiom(
       axiomRequests.push({
         url,
         headers: init.headers as Record<string, string>,
-        logEvents: JSON.parse(init.body as string),
+        logEvents: JSON.parse(init.body as string).map(flatRecordOf),
       });
       return respond();
     }),
