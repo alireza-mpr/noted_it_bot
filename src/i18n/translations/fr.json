@@ -10,7 +10,7 @@
   "LANG_CHANGE_HINT": "Pour la changer, envoyez /lang suivi d'un nom ou d'un code de langue, par exemple /lang Persian ou /lang fa. Pour revenir à la détection automatique à partir des paramètres Telegram, envoyez /lang auto.",
   "LINK_LABEL": "ici",
   "NO_AVAILABLE_MODEL_MESSAGE": "Désolé ! Tous les fournisseurs d'IA sont occupés pour le moment. Veuillez réessayer dans une minute.",
-  "NO_CALENDAR_EVENT_MESSAGE": "⚠️ Je n'ai pas pu en faire un événement de calendrier.",
+  "NO_CALENDAR_EVENT_MESSAGE": "🤷🏻‍♂️ Je n'ai pas pu en faire un événement de calendrier.",
   "NO_TEXT_MESSAGE": "⚠️ Désolé ! Je n'ai trouvé aucun texte dans votre message.",
   "PAGE_CHOOSE": "Non, en choisir un autre",
   "PAGE_CONFIRM": "Oui, utiliser ce fuseau horaire",

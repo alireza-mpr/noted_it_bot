@@ -10,7 +10,7 @@
   "LANG_CHANGE_HINT": "Değiştirmek için /lang komutunu bir dil adı veya koduyla birlikte gönderin, örneğin /lang Persian veya /lang fa. Telegram ayarlarından otomatik algılamaya dönmek için /lang auto gönderin.",
   "LINK_LABEL": "buraya",
   "NO_AVAILABLE_MODEL_MESSAGE": "Üzgünüm! Tüm yapay zekâ sağlayıcıları şu anda meşgul. Lütfen bir dakika sonra tekrar deneyin.",
-  "NO_CALENDAR_EVENT_MESSAGE": "⚠️ Bunu bir takvim etkinliğine dönüştüremedim.",
+  "NO_CALENDAR_EVENT_MESSAGE": "🤷🏻‍♂️ Bunu bir takvim etkinliğine dönüştüremedim.",
   "NO_TEXT_MESSAGE": "⚠️ Üzgünüm! Mesajınızda hiç metin bulamadım.",
   "PAGE_CHOOSE": "Hayır, başka birini seç",
   "PAGE_CONFIRM": "Evet, bu saat dilimini kullan",

@@ -10,7 +10,7 @@
   "LANG_CHANGE_HINT": "如需更改，请发送 /lang，后面加上语言名称或代码，例如 /lang Persian 或 /lang fa。若要恢复根据 Telegram 设置自动检测，请发送 /lang auto。",
   "LINK_LABEL": "这里",
   "NO_AVAILABLE_MODEL_MESSAGE": "抱歉！所有 AI 服务提供方目前都很忙。请一分钟后再试。",
-  "NO_CALENDAR_EVENT_MESSAGE": "⚠️ 我无法将其转换为日历事件。",
+  "NO_CALENDAR_EVENT_MESSAGE": "🤷🏻‍♂️ 我无法将其转换为日历事件。",
   "NO_TEXT_MESSAGE": "⚠️ 抱歉！我在你的消息中没有找到任何文字。",
   "PAGE_CHOOSE": "不，选择其他时区",
   "PAGE_CONFIRM": "是，使用此时区",

@@ -10,7 +10,7 @@
   "LANG_CHANGE_HINT": "Para mudar, envie /lang seguido do nome ou do código de um idioma, por exemplo /lang Persian ou /lang fa. Para voltar à detecção automática pelas configurações do Telegram, envie /lang auto.",
   "LINK_LABEL": "aqui",
   "NO_AVAILABLE_MODEL_MESSAGE": "Desculpe! Todos os provedores de IA estão ocupados agora. Tente novamente em um minuto.",
-  "NO_CALENDAR_EVENT_MESSAGE": "⚠️ Não consegui transformar isto em um evento de calendário.",
+  "NO_CALENDAR_EVENT_MESSAGE": "🤷🏻‍♂️ Não consegui transformar isto em um evento de calendário.",
   "NO_TEXT_MESSAGE": "⚠️ Desculpe! Não encontrei nenhum texto na sua mensagem.",
   "PAGE_CHOOSE": "Não, escolher outro",
   "PAGE_CONFIRM": "Sim, usar este fuso horário",

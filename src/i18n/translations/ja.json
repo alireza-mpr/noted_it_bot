@@ -10,7 +10,7 @@
   "LANG_CHANGE_HINT": "変更するには、/lang に続けて言語名またはコードを送ってください（例：/lang Persian または /lang fa）。Telegram の設定からの自動検出に戻すには、/lang auto を送ってください。",
   "LINK_LABEL": "こちら",
   "NO_AVAILABLE_MODEL_MESSAGE": "申し訳ありません！現在、すべての AI プロバイダーが混み合っています。1 分後にもう一度お試しください。",
-  "NO_CALENDAR_EVENT_MESSAGE": "⚠️ これをカレンダーの予定に変換できませんでした。",
+  "NO_CALENDAR_EVENT_MESSAGE": "🤷🏻‍♂️ これをカレンダーの予定に変換できませんでした。",
   "NO_TEXT_MESSAGE": "⚠️ 申し訳ありません！メッセージにテキストが見つかりませんでした。",
   "PAGE_CHOOSE": "いいえ、別のものを選ぶ",
   "PAGE_CONFIRM": "はい、このタイムゾーンを使う",
