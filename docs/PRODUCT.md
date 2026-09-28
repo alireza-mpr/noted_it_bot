@@ -101,6 +101,10 @@ Groq) read the events.
   5 messages that go to a model).
 - Commands do not use quota. If no model answers, the unit is given back.
   See [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
+- For individual users only, in a private chat with the bot. Groups and
+  channels are not supported. Of the membership updates, the bot reads only a
+  user blocking or unblocking it (Telegram's `my_chat_member`: `kicked`,
+  `member`).
 
 ### Commands
 | Command  | Purpose                                                        |

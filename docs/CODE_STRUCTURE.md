@@ -87,7 +87,8 @@ src/
     hash/             hashing a text
     html/             escaping text for HTML
     icalendar/        RFC 5545 text and date formats
-    json/             turning a value into JSON text, without throwing
+    json/             turning a value into JSON text, without throwing;
+                      reading typed fields from JSON
     text/             filling {0}, {1}, … in a text; cutting a long text
   domain/      pure rules, no input or output
     calendar-event/   CalendarEventDraft → a CalendarEvent, the calendars we
@@ -100,7 +101,8 @@ src/
   app/         use cases: one file per thing a user can do; connects domain,
                output and adapters
   adapters/    the edges
-    telegram/  webhook, Telegram client, sending replies
+    telegram/  reading updates, the webhook secret check, the Telegram
+               client, replies
     database/  SQL, table definitions, repositories (D1 today)
     models/    the model types, the router, extraction; no product names
       providers/  the only place that knows Gemini and Groq: their clients,
@@ -248,7 +250,7 @@ code, together with that area.
 | `telegram/messageHandlers/eventMessageHandler.ts` | `app/create-event-from-message.ts` | ⏳ |
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
 | `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (plus one line: never translate the title or the location) | ✅ |
-| `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/` | ⏳ |
+| `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/`: `telegram-update.ts` (`parseTelegramUpdate`), `webhook-auth.ts` (`isFromTelegram`), `telegram-client.ts`, `replier.ts` (`Replier`, `TelegramReplier`: sends only, the app writes the texts); the JSON field readers → `generic/json/json-fields.ts`; the webhook's `fetch` handler → the entry point in `app/` (step 5) | ✅ (`fetch` handler ⏳) |
 | `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | `adapters/database/d1-usage-store.ts`, `adapters/database/d1-user-settings-store.ts`, `adapters/database/batch-with-table.ts`; the port `domain/user/user-settings-store.ts`; `QUOTA_RESET_AFTER_MS` → `domain/quota/user-quota-policy.ts` | ✅ |
 | `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/d1-counted-model-usage-store.ts` (table `gemini_usage`), `adapters/database/d1-retry-after-model-usage-store.ts` (table `groq_usage`); `dateTimeAest` → `dateTimeTextIn` in `generic/date-time/time-zone.ts` | ✅ |
 | `providers/*` | `adapters/models/model.ts` (`ProviderConfig` → `Model`, `ProviderLimits` → `ModelLimits`), `model-result.ts`, `provider-client.ts`; `adapters/models/providers/` (`registry.ts` → `model-list.ts`, the clients, the answer parsers, `jsonSchema.ts` → `groq-json-schema.ts`) | ✅ |
@@ -285,7 +287,7 @@ after each commit.
 | 4d-1 | Adapters: the provider clients (Gemini, Groq), the model list and limits, the model result types | ✅ |
 | 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ✅ |
 | 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`); a missing title becomes "Event" in the reply language | ✅ |
-| 4e | Adapters: Telegram (the client, update types, the webhook, replies) | ⏳ |
+| 4e | Adapters: Telegram (reading updates, the webhook secret check, the client, replies) | ✅ |
 | 4f | Adapters: the web pages (the /tz page and its routes) | ⏳ |
 | 5 | App: one use case per file (create an event, set a language, set a time zone, …). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |

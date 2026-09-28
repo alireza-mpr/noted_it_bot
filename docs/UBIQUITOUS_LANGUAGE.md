@@ -14,7 +14,7 @@ this list is called the "ubiquitous language".
 
 | Word | Meaning | In code |
 |---|---|---|
-| Message | What a user sends or forwards to the bot: text, or a photo or file with a caption. | `messageText` |
+| Message | What a user sends or forwards to the bot: text, or a photo or file with a caption. | `IncomingMessage`, `messageText` |
 | Model answer | What a model returns for a message. Raw data, not parsed yet. | `ModelAnswer` |
 | Draft | An event as the message describes it. Its dates are still in the message's calendar, and the year can be missing. | `CalendarEventDraft` |
 | Create a calendar event | Turns a draft into a calendar event, or gives the reason why there is none. | `createCalendarEvent` → `CalendarEventResult` |
@@ -88,7 +88,10 @@ this list is called the "ubiquitous language".
 
 | Word | Meaning | In code |
 |---|---|---|
-| User | A Telegram user who talks to the bot. | `userId` |
+| User | A Telegram user who talks to the bot. | `TelegramUser`, `userId` |
+| Update | What Telegram sends the webhook for one event: a message, a block or unblock, or something the bot does not use. | `TelegramUpdate`, `parseTelegramUpdate` |
+| Blocked, unblocked | The user blocks or unblocks the bot in a private chat. Telegram sends this as a `my_chat_member` update with the status `kicked` or `member`. | `kind: "bot-blocked"`, `kind: "bot-unblocked"` |
+| Reply | What the bot sends back to a chat: a text, a text with a link button, or the calendar file with its caption. | `Replier`, `TelegramReplier` |
 | User settings | The language and time zone the user chose. `null` means not chosen. | `UserSettings` |
 | User settings store | Where the user settings are saved. A port. | `UserSettingsStore` |
 | Reply language | The language of the bot's messages: the user's choice, else Telegram's language, else English. | — |
