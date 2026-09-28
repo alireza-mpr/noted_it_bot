@@ -106,12 +106,13 @@ describe("extractDraft", () => {
   });
 
   it("says why an answer gives no event", async () => {
-    const tomorrowAnswerText = JSON.stringify({ calendar: null, date_kind: "relative", confidence: 0.9 });
+    // e.g. "this weekend": a relative date the model does not describe.
+    const thisWeekendAnswerText = JSON.stringify({ calendar: null, date_kind: "relative", confidence: 0.9 });
 
-    expect(await extractDraft(new FakeRouter(answerWithText(tomorrowAnswerText)), MESSAGE_TEXT)).toMatchObject({
+    expect(await extractDraft(new FakeRouter(answerWithText(thisWeekendAnswerText)), MESSAGE_TEXT)).toMatchObject({
       ok: false,
       reason: "no-event",
-      detail: "a relative date",
+      detail: "a relative date the bot does not read yet",
     });
   });
 });

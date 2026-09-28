@@ -16,7 +16,7 @@ this list is called the "ubiquitous language".
 |---|---|---|
 | Message | What a user sends or forwards to the bot: text, or a photo or file with a caption. | `IncomingMessage`, `messageText` |
 | Model answer | What a model returns for a message. Raw data, not parsed yet. | `ModelAnswer` |
-| Draft | An event as the message describes it. Its dates are still in the message's calendar, and the year can be missing. | `CalendarEventDraft` |
+| Draft | An event as the message describes it. Its dates are still in the message's calendar or relative to now, and the year can be missing. | `CalendarEventDraft` |
 | Create a calendar event | Turns a draft into a calendar event, or gives the reason why there is none. | `createCalendarEvent` → `CalendarEventResult` |
 | Event request | A message that asks the bot for a calendar event. The bot replies with the calendar file, or says why there is none. | `EventRequest`, `createEventFromMessage` |
 | Event creation context | What creating a calendar event needs besides the draft and its UID: the user time zone, now, and the floating time zone. | `EventCreationContext` |
@@ -38,6 +38,8 @@ this list is called the "ubiquitous language".
 | Weekday | A day of the week, as an iCalendar code (`MO` … `SU`). | `Weekday` |
 | Written date | A date as the message writes it. The year can be missing. It can have a written weekday. | `WrittenDate` |
 | Written weekday | The weekday the message writes next to a date (e.g. "Saturday 26 Sep"). | `WrittenDate.weekday` |
+| Relative date | A date the message gives relative to now: a number of days from today (e.g. "tomorrow"), or a weekday this week or next week (e.g. "next Friday"). Our code works out the date. See [EDGE_CASES.md](EDGE_CASES.md#relative-dates). | `RelativeDate`, `dateOfRelativeDate` |
+| Draft date | The start date of a draft: a written date or a relative date. | `DraftDate` |
 | Wrong guess notes | The caption notes about a guess that may be wrong: 🤔 wrong weekday, 💡 in the past. Only one-off events get them. | `WrongGuessNotes` |
 | Wrong weekday | A written weekday that doesn't match the date. The caption shows 🤔. | `wrongWeekday` |
 | Year rule | How a date without a year gets one. See [EDGE_CASES.md](EDGE_CASES.md#a-missing-year). | `pickYear`, `pickEndYear` |

@@ -3,10 +3,11 @@ import type { Weekday } from "../../../../src/generic/date-time/date-only";
 import type { CalendarEvent, EventUid } from "../../../../src/domain/calendar-event/calendar-event";
 import type {
   CalendarEventDraft,
-  WrittenDate,
+  DraftDate,
   WrittenEndDate,
 } from "../../../../src/domain/calendar-event/calendar-event-draft";
 import { createCalendarEvent, type CalendarEventResult } from "../../../../src/domain/calendar-event/create-calendar-event";
+import type { RelativeDate } from "../../../../src/domain/calendar-event/relative-date";
 import type { Repeat } from "../../../../src/domain/calendar-event/repeat";
 import { timeZoneNamed } from "../../../../src/generic/date-time/time-zone";
 
@@ -46,8 +47,14 @@ function draftWith(overrides: Partial<CalendarEventDraft> = {}): CalendarEventDr
   };
 }
 
-function writtenDate(month: number, day: number, year: number | null = null, weekday: Weekday | null = null): WrittenDate {
-  return { year, month, day, weekday };
+// Returns the date as the message writes it.
+function writtenDate(month: number, day: number, year: number | null = null, weekday: Weekday | null = null): DraftDate {
+  return { kind: "written", writtenDate: { year, month, day, weekday } };
+}
+
+// Returns a date relative to now, e.g. relativeDate({ kind: "days-from-today", days: 1 }) for "tomorrow".
+function relativeDate(relativeDate: RelativeDate): DraftDate {
+  return { kind: "relative", relativeDate };
 }
 
 function createAt(draft: CalendarEventDraft, now: Date): CalendarEventResult {
@@ -207,8 +214,45 @@ describe("the event's time zone", () => {
   });
 });
 
+describe("a relative date", () => {
+  const tonight = relativeDate({ kind: "days-from-today", days: 0 });
+
+  it("is counted from today, e.g. tonight on Monday 21 September", () => {
+    const calendarEvent = calendarEventOf(createAt(draftWith({ date: tonight }), MON_NOON));
+    expect(calendarEvent.date).toEqual({ year: 2026, month: 9, day: 21 });
+    expect(calendarEvent.inPast).toBe(false);
+    expect(calendarEvent.wrongWeekday).toBeNull();
+  });
+
+  it("is counted from today in the event's time zone", () => {
+    // 20:00 UTC on 26 Sep is already 27 Sep in Melbourne.
+    const now = new Date("2026-09-26T20:00:00Z");
+    expect(calendarEventOf(createAt(draftWith({ timeZone: MELBOURNE, date: tonight }), now)).date).toEqual({
+      year: 2026,
+      month: 9,
+      day: 27,
+    });
+    expect(calendarEventOf(createAt(draftWith({ timeZone: null, date: tonight }), now)).date).toEqual({
+      year: 2026,
+      month: 9,
+      day: 26,
+    });
+  });
+
+  it("finds next Friday in the week after today's", () => {
+    const nextFriday = relativeDate({ kind: "weekday", weekday: "FR", week: "next" });
+    expect(calendarEventOf(createAt(draftWith({ date: nextFriday }), MON_NOON)).date).toEqual({ year: 2026, month: 10, day: 2 });
+  });
+
+  it("starts a repeat, e.g. every Thursday from next week", () => {
+    const nextThursday = relativeDate({ kind: "weekday", weekday: "TH", week: "next" });
+    const draft = draftWith({ date: nextThursday, repeat: WEEKLY_ON_THURSDAY });
+    expect(calendarEventOf(createAt(draft, MON_NOON)).date).toEqual({ year: 2026, month: 10, day: 1 });
+  });
+});
+
 describe("a repeating event: the first date", () => {
-  const weekly = (overrides: Partial<CalendarEventDraft> = {}) => draftWith({ repeat: WEEKLY_ON_THURSDAY, ...overrides });
+  const weekly =(overrides: Partial<CalendarEventDraft> = {}) => draftWith({ repeat: WEEKLY_ON_THURSDAY, ...overrides });
 
   it("with no start date, is the next matching day from today", () => {
     const calendarEvent = calendarEventOf(createAt(weekly(), MON_NOON));

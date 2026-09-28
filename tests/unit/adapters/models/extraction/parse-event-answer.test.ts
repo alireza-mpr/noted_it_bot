@@ -12,6 +12,7 @@ const GAME_NIGHT_ANSWER: EventAnswer = {
   month: 9,
   day: 26,
   weekday: "SA",
+  relative_date: null,
   start_time: "18:00",
   end_time: "21:30",
   timezone_hint: null,
@@ -71,7 +72,7 @@ describe("parseEventAnswer", () => {
       title: "Game night",
       location: "Notting Hill Neighbourhood House",
       writtenInCalendar: "gregory",
-      date: { year: null, month: 9, day: 26, weekday: "SA" },
+      date: { kind: "written", writtenDate: { year: null, month: 9, day: 26, weekday: "SA" } },
       time: { kind: "timed", start: { hour: 18, minute: 0 }, end: { hour: 21, minute: 30 } },
       timeZone: null,
       repeat: null,
@@ -104,11 +105,6 @@ describe("parseEventAnswer", () => {
     expect(parsedAnswer({ ...GAME_NIGHT_ANSWER, end_time: "25:00" })).toMatchObject({ ok: false, reason: "no-event" });
   });
 
-  it("gives no event for a relative date, e.g. tomorrow: not supported yet", () => {
-    const tomorrowAnswer: EventAnswer = { ...GAME_NIGHT_ANSWER, calendar: null, date_kind: "relative", month: null, day: null };
-    expect(parsedAnswer(tomorrowAnswer)).toMatchObject({ ok: false, reason: "no-event", detail: "a relative date" });
-  });
-
   it("gives a one-off event no date unless the date is absolute", () => {
     expect(draftOf({ ...GAME_NIGHT_ANSWER, date_kind: "weekday" }).date).toBeNull();
   });
@@ -127,6 +123,81 @@ describe("parseEventAnswer", () => {
       ok: true,
       draft: { title: null, date: null, time: { kind: "all-day" }, timeZone: null, repeat: null },
     });
+  });
+});
+
+describe("parseEventAnswer, a relative date", () => {
+  // "Tonight dinner with Sam at 7pm".
+  const TONIGHT_ANSWER: EventAnswer = {
+    ...GAME_NIGHT_ANSWER,
+    title: "Dinner with Sam",
+    calendar: null,
+    date_kind: "relative",
+    month: null,
+    day: null,
+    weekday: null,
+    relative_date: { days_from_today: 0, weekday: null, which_week: null },
+    start_time: "19:00",
+    end_time: null,
+    location: null,
+  };
+
+  it("reads a number of days from today", () => {
+    expect(draftOf(TONIGHT_ANSWER).date).toEqual({ kind: "relative", relativeDate: { kind: "days-from-today", days: 0 } });
+    const dayAfterTomorrowAnswer = { ...TONIGHT_ANSWER, relative_date: { days_from_today: 2, weekday: null, which_week: null } };
+    expect(draftOf(dayAfterTomorrowAnswer).date).toEqual({ kind: "relative", relativeDate: { kind: "days-from-today", days: 2 } });
+  });
+
+  it("reads a weekday with which week it is in", () => {
+    const nextFridayAnswer: EventAnswer = { ...TONIGHT_ANSWER, relative_date: { days_from_today: null, weekday: "FR", which_week: "next" } };
+    expect(draftOf(nextFridayAnswer).date).toEqual({ kind: "relative", relativeDate: { kind: "weekday", weekday: "FR", week: "next" } });
+  });
+
+  it("reads the start of a repeat", () => {
+    const everyFridayFromTomorrowAnswer: EventAnswer = {
+      ...TONIGHT_ANSWER,
+      relative_date: { days_from_today: 1, weekday: null, which_week: null },
+      recurrence: { ...WEEKLY_ON_TUESDAY, weekdays: ["FR"] },
+    };
+    expect(draftOf(everyFridayFromTomorrowAnswer).date).toEqual({
+      kind: "relative",
+      relativeDate: { kind: "days-from-today", days: 1 },
+    });
+  });
+
+  it("gives no event for a relative date the model does not describe, e.g. this weekend", () => {
+    expect(parsedAnswer({ ...TONIGHT_ANSWER, relative_date: null })).toMatchObject({
+      ok: false,
+      reason: "no-event",
+      detail: "a relative date the bot does not read yet",
+    });
+  });
+
+  it("gives no event for days before today or after the day after tomorrow", () => {
+    for (const daysFromToday of [-1, 3]) {
+      const relativeDateAnswer = { days_from_today: daysFromToday, weekday: null, which_week: null };
+      expect(parsedAnswer({ ...TONIGHT_ANSWER, relative_date: relativeDateAnswer })).toMatchObject({ ok: false, reason: "no-event" });
+    }
+  });
+
+  it("gives no event for an unclear relative date", () => {
+    const unclearAnswers: EventAnswer["relative_date"][] = [
+      { days_from_today: 1, weekday: "FR", which_week: "this" },
+      { days_from_today: null, weekday: "FR", which_week: null },
+      { days_from_today: null, weekday: null, which_week: "next" },
+    ];
+    for (const relativeDateAnswer of unclearAnswers) {
+      expect(parsedAnswer({ ...TONIGHT_ANSWER, relative_date: relativeDateAnswer })).toMatchObject({
+        ok: false,
+        reason: "no-event",
+        detail: "an unclear relative date",
+      });
+    }
+  });
+
+  it("finds an answer unusable when which week is neither this nor next", () => {
+    const lastFridayJson = JSON.stringify({ ...TONIGHT_ANSWER, relative_date: { days_from_today: null, weekday: "FR", which_week: "last" } });
+    expect(parseEventAnswer(lastFridayJson)).toMatchObject({ ok: false, reason: "unusable-answer" });
   });
 });
 
@@ -199,7 +270,10 @@ describe("parseEventAnswer, repeats", () => {
 
   it("keeps the start date of a repeat", () => {
     const withStartDate = { ...YOGA_ANSWER, calendar: "gregorian", date_kind: "absolute" as const, month: 9, day: 27 };
-    expect(draftOf(withStartDate).date).toEqual({ year: null, month: 9, day: 27, weekday: null });
+    expect(draftOf(withStartDate).date).toEqual({
+      kind: "written",
+      writtenDate: { year: null, month: 9, day: 27, weekday: null },
+    });
   });
 
   it("gives no event for a repeat with no date kind", () => {

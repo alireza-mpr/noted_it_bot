@@ -14,8 +14,10 @@ Groq) read the events.
   bot uses the caption.
 - The model reads: title, date, weekday, start and end time, time zone,
   location, and how confident it is.
-- Only clear dates for now ("19 Sep, 8pm"). The bot does not guess relative
-  dates like "tomorrow".
+- **Relative dates:** "today", "tonight", "tomorrow", "the day after
+  tomorrow", "Friday" and "next Friday", counted from now. Other relative
+  dates (e.g. "in two weeks") give no event for now. See
+  [EDGE_CASES.md](EDGE_CASES.md#relative-dates).
 - **Dates in other calendars** (Solar Hijri / Persian, Hebrew, Buddhist,
   Indian national) are converted to Gregorian. All calendars follow the same
   rules. A plain "Hijri" is refused: it means a different calendar in
@@ -194,9 +196,10 @@ Every deploy registers the visible commands with Telegram, so they show in the
 - [ ] **Launch the Persian edition:** create @noted_it_fa_bot (and a dev
       bot) in BotFather, and set up the `dev-fa` and `prod-fa` GitHub
       Environments. The code and the deploys are ready (ADR-10).
-- [ ] Relative and weekday dates ("tomorrow", "next Friday"). This needs a
-      reliable reference date (the message time) and clear rules for unclear
-      cases.
+- [ ] More relative dates ("this weekend", "in two weeks", "end of the
+      month").
+- [ ] Date ranges as one event (e.g. "from 5 Oct, zinc tablets, until 10
+      Oct").
 - [ ] Several events in one message.
 - [ ] Monthly and yearly repeats in other calendars (for example "every 1st
       of the Persian month"). Their months do not match Gregorian months.

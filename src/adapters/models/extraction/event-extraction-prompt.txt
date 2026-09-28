@@ -7,19 +7,24 @@ Rules for the title and the location:
 - Never translate the title or the location: keep each one in the language and script the message writes it in, even when the message mixes languages (e.g. an English place name in a Persian message stays in English).
 
 Rules for the date and time:
-- Only extract explicit, unambiguous dates (e.g. "19 Sep"). Do not infer relative dates such as "tomorrow" or "next Friday" — for those, set date_kind accordingly and leave year/month/day null.
-- Set weekday only when the message names the day of the week of one specific date ("Saturday 26 September" -> "SA"), exactly as written, even if it doesn't match the date; otherwise leave it null. Days a repeating event falls on ("every Sunday") are not this field: they always go in recurrence.weekdays (see below).
+- For an explicit date (e.g. "19 Sep"), set date_kind to "absolute" and copy it into year/month/day. Leave relative_date null.
+- For a date relative to today, set date_kind to "relative", leave year/month/day null, and describe it in relative_date. Never work out the date yourself.
+  - "today", "tonight", "this evening" -> days_from_today 0; "tomorrow" (also "tomorrow night") -> 1; "the day after tomorrow" -> 2. Leave weekday and which_week null.
+  - A named weekday for one event: "Friday" or "this Friday" -> weekday "FR", which_week "this"; "next Friday" -> weekday "FR", which_week "next". Leave days_from_today null.
+  - Any other relative date (e.g. "this weekend", "in two weeks", "end of the month", "yesterday"): set date_kind to "relative" and relative_date to null.
+- Set weekday only when the message names the day of the week of one specific explicit date ("Saturday 26 September" -> "SA"), exactly as written, even if it doesn't match the date; otherwise leave it null. A weekday with no explicit date ("next Friday") goes in relative_date instead. Days a repeating event falls on ("every Sunday") are not this field: they always go in recurrence.weekdays (see below).
 - start_time and end_time are the times the message states for the event, in 24-hour HH:MM. If it states none, leave them null; do not guess.
 - Set timezone_hint to the IANA timezone the message indicates, from a timezone it states or a place it mentions. If it indicates none, leave it null.
 - Set calendar (eg Gregorian, Solar Hijri) to the calendar an explicit date in the message is written in: the start date or, for a repeating event, its end date. If the message writes no explicit date at all (a relative date such as "tomorrow", a weekday pattern with no start or end date, or no date), set calendar to null; the language the message is written in says nothing about the calendar. If a date is written and you are unsure which calendar it uses, make your best guess. Copy the year, month and day exactly as written (turn a month name into its number) and never convert them to Gregorian.
-- If no explicit date can be found at all, set date_kind to "none" — unless the message describes a repeating pattern (see below).
+- If the message gives no date at all, neither explicit nor relative, set date_kind to "none" — unless the message describes a repeating pattern (see below).
 
 Rules for recurrence:
 - Set "recurrence" only when the message explicitly says the event repeats, e.g. "every Sunday", "weekly", "every 2 weeks", "monthly on the 15th", "first Friday of each month", "daily", "every weekday". Words like "regular", "often" or "usually" do not count. Otherwise set recurrence to null.
 - A list of specific separate dates (e.g. "27 Sep and 4 Oct") is NOT a recurrence. Leave recurrence null.
 - Describe the pattern only. Do not calculate future dates.
 - If the message gives a start date ("starting 27 Sep, every Sunday"), put it in year/month/day as the first occurrence, with date_kind "absolute".
-- If the message gives a repeating pattern but no start date ("Yoga every Tuesday at 6pm"), set date_kind to "weekday" and leave year/month/day null. The pattern itself goes in "recurrence".
+- If the message gives a repeating pattern but no start date ("Yoga every Tuesday at 6pm"), set date_kind to "weekday" and leave year/month/day null. The pattern itself goes in "recurrence". date_kind "weekday" is only for repeating patterns: a single event on a named weekday ("dinner on Friday") is a relative date.
+- If a repeating event starts on a relative date ("every Friday, starting tomorrow"), set date_kind to "relative" and describe the start in relative_date.
 - frequency: "daily", "weekly", "monthly" or "yearly". interval is how many of that unit between occurrences: 1 for "every week", 2 for "every 2 weeks", "fortnightly" or "every other week". If a phrase like "biweekly" is ambiguous, pick the most likely meaning and lower your confidence.
 - weekdays: only when weekdays are stated ("every Mon and Wed" -> ["MO","WE"], "every weekday" -> ["MO","TU","WE","TH","FR"], "weekends" -> ["SA","SU"]). Do not work out the weekday from a stated start date; leave weekdays null in that case.
 - ordinal: only for monthly patterns tied to a weekday ("first Friday" -> ordinal 1 with weekdays ["FR"]; "last Friday" -> ordinal -1). Otherwise null.

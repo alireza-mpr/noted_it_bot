@@ -3,7 +3,7 @@ import {
   toGregorian,
 } from "../../generic/date-time/calendar-conversion";
 import type { CalendarId } from "./calendar";
-import type { DateOnly } from "../../generic/date-time/date-only";
+import type { DateOnly, Weekday } from "../../generic/date-time/date-only";
 import {
   localDateTimeIn,
   type IanaTimeZone,
@@ -12,10 +12,12 @@ import {
 import type { CalendarEvent, EventUid } from "./calendar-event";
 import type {
   CalendarEventDraft,
+  DraftDate,
   WrittenDate,
   WrittenEndDate,
 } from "./calendar-event-draft";
 import { firstDateOf } from "./first-date-rule";
+import { dateOfRelativeDate } from "./relative-date-rule";
 import type { Repeat, RepeatEnd } from "./repeat";
 import { repeatWorksInCalendar } from "./repeat-calendar-rule";
 import { repeatDeclineReason } from "./repeat-decline-rule";
@@ -74,9 +76,10 @@ function createOneOffEvent(
   if (draft.date === null) {
     return noEvent("no date");
   }
-  const gregorianDate = toGregorian(
+  const gregorianDate = gregorianDateOf(
     draft.writtenInCalendar,
-    dateWithYear(draft.writtenInCalendar, draft.date, today),
+    draft.date,
+    today,
   );
   if (gregorianDate === null) {
     return noEvent("the date does not exist");
@@ -87,7 +90,11 @@ function createOneOffEvent(
       ...eventDetails,
       date: gregorianDate,
       repeat: null,
-      ...wrongGuessNotesOfOneOffEvent(draft.date.weekday, gregorianDate, today),
+      ...wrongGuessNotesOfOneOffEvent(
+        writtenWeekdayOf(draft.date),
+        gregorianDate,
+        today,
+      ),
     },
   };
 }
@@ -105,21 +112,17 @@ function createRepeatingEvent(
     );
   }
 
-  const startDateInCalendar =
+  const startDate =
     draft.date === null
       ? null
-      : dateWithYear(draft.writtenInCalendar, draft.date, localNow.date);
-  const startDate =
-    startDateInCalendar === null
-      ? null
-      : toGregorian(draft.writtenInCalendar, startDateInCalendar);
-  if (startDateInCalendar !== null && startDate === null) {
+      : gregorianDateOf(draft.writtenInCalendar, draft.date, localNow.date);
+  if (draft.date !== null && startDate === null) {
     return noEvent("the start date does not exist");
   }
   const repeatEnd = toGregorianRepeatEnd(
     draft.writtenInCalendar,
     writtenRepeat.end,
-    startDateInCalendar ?? fromGregorian(draft.writtenInCalendar, localNow.date),
+    fromGregorian(draft.writtenInCalendar, startDate ?? localNow.date),
   );
   if (repeatEnd === null) {
     return noEvent("the end date does not exist");
@@ -149,6 +152,27 @@ function createRepeatingEvent(
       ...wrongGuessNotesOfRepeatingEvent(),
     },
   };
+}
+
+// Returns the Gregorian date of the draft's date, or null if a written date
+// does not exist. A relative date is counted from today.
+function gregorianDateOf(
+  writtenInCalendar: CalendarId,
+  draftDate: DraftDate,
+  today: DateOnly,
+): DateOnly | null {
+  return draftDate.kind === "relative"
+    ? dateOfRelativeDate(draftDate.relativeDate, today)
+    : toGregorian(
+        writtenInCalendar,
+        dateWithYear(writtenInCalendar, draftDate.writtenDate, today),
+      );
+}
+
+// Returns the weekday the message writes next to its date, e.g. "Saturday 26
+// Sep", or null. A relative weekday, e.g. "next Friday", is not a written one.
+function writtenWeekdayOf(draftDate: DraftDate): Weekday | null {
+  return draftDate.kind === "written" ? draftDate.writtenDate.weekday : null;
 }
 
 // Returns the written date with a year, in its own calendar.

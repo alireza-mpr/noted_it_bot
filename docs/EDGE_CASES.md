@@ -3,6 +3,7 @@
 Real messages are often incomplete. This file explains how the bot handles:
 - dates with no year,
 - dates in other calendars,
+- relative dates (e.g. "tonight", "next Friday"),
 - messages with no time zone.
 
 Each one is **one general rule**. The bot uses the same rule for every
@@ -102,6 +103,36 @@ year.
 
 20 January is a Monday in 2025, a Tuesday in 2026, and a Wednesday in 2027.
 
+### Relative dates
+
+A relative date (e.g. "tonight", "next Friday") is counted from **now**: the
+moment the bot gets the message. "Today" is today in the event's time zone
+(see [Time zones](#time-zones)). So 20:00 UTC on 26 Sep is already 27 Sep for
+an event in Melbourne.
+
+**The model classifies, our code counts.** The model only says which kind of
+relative date the message writes. It never works out the date: small models
+often get weekday math wrong, and a wrong date looks like a right one.
+
+| Message | Kind | Date, sent on Wednesday 30 Sep |
+|---|---|---|
+| "today", "tonight", "this evening" | 0 days from today | Wed 30 Sep |
+| "tomorrow", "tomorrow night" | 1 day from today | Thu 1 Oct |
+| "the day after tomorrow" | 2 days from today | Fri 2 Oct |
+| "Friday", "this Friday" | the next Friday, counting today | Fri 2 Oct |
+| "Wednesday" | the next Wednesday, counting today | Wed 30 Sep |
+| "next Friday" | Friday of the week after this one | Fri 9 Oct |
+| "next Wednesday" | Wednesday of the week after this one | Wed 7 Oct |
+
+- Weeks start on Monday. So on a Saturday or a Sunday, "Friday" and "next
+  Friday" are the same day, and on a Sunday "next Monday" is tomorrow.
+- A single event on a named weekday ("dinner on Friday") is a relative date. A
+  weekday that repeats ("every Friday") is a repeat.
+- A repeat can start on a relative date ("every Friday, starting tomorrow").
+- Any other relative date (e.g. "this weekend", "in two weeks", "end of the
+  month", "yesterday") gives no event.
+- A relative date with no time is an all-day event, like any other date.
+
 ### Not solved yet
 
 - Around New Year: "9 January" with no weekday, sent in December, gets the
@@ -109,6 +140,9 @@ year.
 - "29 February" with no year can land on a year that has no 29 February.
 - Hebrew leap years have an extra month. So a Hebrew month number late in the
   year can mean different months in different years.
+- In Iran, the week starts on Saturday. So for some Persian speakers, "next
+  Friday" said on a Saturday may mean a week later than the bot's date.
+- A date range (e.g. "from 5 Oct to 10 Oct") is not read as one event.
 
 ## Event time
 

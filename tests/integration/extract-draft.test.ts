@@ -21,7 +21,67 @@ const CASES: [messageText: string, expectedResult: object][] = [
     // "Tomorrow at 8pm: lunch at my mother-in-law's". A relative date writes
     // no calendar; Persian text does not make it Solar Hijri.
     "فردا ساعت ۸ شب: صرف نهار منزل مادرزن",
-    { ok: false, reason: "no-event", detail: "a relative date" },
+    {
+      ok: true,
+      draft: {
+        writtenInCalendar: "gregory",
+        date: { kind: "relative", relativeDate: { kind: "days-from-today", days: 1 } },
+        time: { kind: "timed", start: { hour: 20, minute: 0 } },
+        title: PERSIAN_TITLE,
+      },
+    },
+  ],
+  [
+    // A relative date with no time: an all-day event.
+    "Tonight dinner with Sam",
+    {
+      ok: true,
+      draft: {
+        date: { kind: "relative", relativeDate: { kind: "days-from-today", days: 0 } },
+        time: { kind: "all-day" },
+        repeat: null,
+      },
+    },
+  ],
+  [
+    // "Tonight dinner with Sara at 8".
+    "امشب ساعت ۸ شام با سارا",
+    {
+      ok: true,
+      draft: {
+        date: { kind: "relative", relativeDate: { kind: "days-from-today", days: 0 } },
+        time: { kind: "timed", start: { hour: 20, minute: 0 } },
+        title: PERSIAN_TITLE,
+      },
+    },
+  ],
+  [
+    // A single event on a named weekday is a relative date, not a repeat.
+    "Standup next Friday 10am",
+    {
+      ok: true,
+      draft: {
+        date: { kind: "relative", relativeDate: { kind: "weekday", weekday: "FR", week: "next" } },
+        time: { kind: "timed", start: { hour: 10, minute: 0 } },
+        repeat: null,
+      },
+    },
+  ],
+  [
+    "Dinner with Sam on Friday at 7pm",
+    {
+      ok: true,
+      draft: {
+        date: { kind: "relative", relativeDate: { kind: "weekday", weekday: "FR", week: "this" } },
+        time: { kind: "timed", start: { hour: 19, minute: 0 } },
+        repeat: null,
+      },
+    },
+  ],
+  [
+    // A relative date the bot does not read yet.
+    "Brunch with Sam in two weeks",
+    { ok: false, reason: "no-event" },
   ],
   [
     "Let's catch up 19 Sep, 8pm at the usual cafe",
@@ -29,7 +89,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
       ok: true,
       draft: {
         writtenInCalendar: "gregory",
-        date: { month: 9, day: 19 },
+        date: { kind: "written", writtenDate: { month: 9, day: 19 } },
         time: { kind: "timed", start: { hour: 20, minute: 0 } },
       },
     },
@@ -48,7 +108,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
       ok: true,
       draft: {
         writtenInCalendar: "gregory",
-        date: { year: null, month: 9, day: 27, weekday: "SU" },
+        date: { kind: "written", writtenDate: { year: null, month: 9, day: 27, weekday: "SU" } },
         time: { kind: "timed", start: { hour: 17, minute: 0 }, end: { hour: 19, minute: 0 } },
         // Nunawading is a Melbourne suburb, but the message never says
         // "Melbourne": some models place it, some play safe with null. Both
@@ -67,7 +127,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
       ok: true,
       draft: {
         writtenInCalendar: "gregory",
-        date: { year: null, month: 9, day: 26, weekday: "SA" },
+        date: { kind: "written", writtenDate: { year: null, month: 9, day: 26, weekday: "SA" } },
         time: { kind: "timed", start: { hour: 18, minute: 0 }, end: { hour: 21, minute: 30 } },
         title: PERSIAN_TITLE,
         // An English place name in a Persian message stays in English.
@@ -81,7 +141,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
     {
       ok: true,
       draft: {
-        date: { month: 9, day: 27 },
+        date: { kind: "written", writtenDate: { month: 9, day: 27 } },
         time: { kind: "timed", start: { hour: 17, minute: 0 }, end: { hour: 19, minute: 0 } },
         repeat: {
           pattern: { frequency: "weekly", interval: 1, weekdays: ["SU"] },
@@ -109,7 +169,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
     {
       ok: true,
       draft: {
-        date: { month: 10, day: 3 },
+        date: { kind: "written", writtenDate: { month: 10, day: 3 } },
         time: { kind: "timed", start: { hour: 14, minute: 0 } },
         repeat: { pattern: { frequency: "weekly", interval: 2 }, end: { kind: "after", times: 6 } },
       },
@@ -121,7 +181,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
     {
       ok: true,
       draft: {
-        date: { month: 12, day: 5 },
+        date: { kind: "written", writtenDate: { month: 12, day: 5 } },
         time: { kind: "timed", start: { hour: 19, minute: 0 } },
         repeat: {
           pattern: { frequency: "monthly", dayOfMonth: { kind: "weekday-of-month", week: 1, weekdays: ["FR"] } },

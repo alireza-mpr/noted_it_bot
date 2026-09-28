@@ -14,6 +14,7 @@ export interface EventAnswer {
   month: number | null;
   day: number | null;
   weekday: Weekday | null;
+  relative_date: RelativeDateAnswer | null;
   start_time: string | null;
   end_time: string | null;
   timezone_hint: string | null;
@@ -24,6 +25,15 @@ export interface EventAnswer {
 
 // Represents what kind of date the message writes.
 export type DateKind = "absolute" | "relative" | "weekday" | "none";
+
+// Represents a date relative to now, as the model describes it: a number of
+// days from today, or a weekday with which week it is in. The model never
+// works out the date itself; our code does.
+export interface RelativeDateAnswer {
+  days_from_today: number | null;
+  weekday: Weekday | null;
+  which_week: "this" | "next" | null;
+}
 
 // Represents a repeat as the model describes it.
 export interface RecurrenceAnswer {
@@ -55,6 +65,16 @@ export const EVENT_ANSWER_SCHEMA: ResponseSchema = {
     month: { type: "INTEGER", nullable: true },
     day: { type: "INTEGER", nullable: true },
     weekday: { type: "STRING", nullable: true, enum: WEEKDAYS },
+    relative_date: {
+      type: "OBJECT",
+      nullable: true,
+      properties: {
+        days_from_today: { type: "INTEGER", nullable: true },
+        weekday: { type: "STRING", nullable: true, enum: WEEKDAYS },
+        which_week: { type: "STRING", nullable: true, enum: ["this", "next"] },
+      },
+      propertyOrdering: ["days_from_today", "weekday", "which_week"],
+    },
 
     start_time: { type: "STRING", nullable: true },
     end_time: { type: "STRING", nullable: true },
@@ -111,6 +131,7 @@ export const EVENT_ANSWER_SCHEMA: ResponseSchema = {
     "month",
     "day",
     "weekday",
+    "relative_date",
     "start_time",
     "end_time",
     "timezone_hint",

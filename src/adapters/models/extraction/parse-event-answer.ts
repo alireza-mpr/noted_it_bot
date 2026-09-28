@@ -1,10 +1,12 @@
 import type { CalendarId } from "../../../domain/calendar-event/calendar";
 import type {
   CalendarEventDraft,
+  DraftDate,
   WrittenDate,
   WrittenEndDate,
 } from "../../../domain/calendar-event/calendar-event-draft";
 import { eventTimeOf } from "../../../domain/calendar-event/event-time-rule";
+import type { RelativeDate } from "../../../domain/calendar-event/relative-date";
 import type {
   MonthlyDay,
   Repeat,
@@ -30,6 +32,7 @@ import type {
   DateKind,
   EventAnswer,
   RecurrenceAnswer,
+  RelativeDateAnswer,
 } from "./event-answer-schema";
 
 const DATE_KINDS: readonly DateKind[] = [
@@ -49,6 +52,12 @@ const END_KINDS: readonly RecurrenceAnswer["end_kind"][] = [
   "until",
   "count",
 ];
+const WHICH_WEEKS: readonly NonNullable<RelativeDateAnswer["which_week"]>[] = [
+  "this",
+  "next",
+];
+// "the day after tomorrow": further relative days are not read yet.
+const MAX_DAYS_FROM_TODAY = 2;
 // e.g. "20:00", or "20:00:00": Gemini sometimes adds seconds.
 const TIME_TEXT_PATTERN = /^(\d{1,2}):(\d{2})(?::\d{2})?$/;
 
@@ -81,9 +90,12 @@ export function parseEventAnswer(modelAnswerText: string): DraftResult {
 
 function draftOf(eventAnswer: EventAnswer): DraftResult {
   const recurrence = eventAnswer.recurrence;
-  if (eventAnswer.date_kind === "relative") {
-    // e.g. "tomorrow": not supported yet.
-    return noEvent("a relative date");
+  const relativeDateResult =
+    eventAnswer.date_kind === "relative"
+      ? relativeDateResultOf(eventAnswer.relative_date)
+      : null;
+  if (relativeDateResult !== null && !relativeDateResult.ok) {
+    return noEvent(relativeDateResult.detail);
   }
   if (recurrence !== null && eventAnswer.date_kind === "none") {
     return noEvent("a repeat with no date");
@@ -123,7 +135,10 @@ function draftOf(eventAnswer: EventAnswer): DraftResult {
       title: eventAnswer.title,
       location: eventAnswer.location,
       writtenInCalendar: calendarResult.calendarId,
-      date: writtenDateOf(eventAnswer),
+      date:
+        relativeDateResult === null
+          ? writtenDraftDateOf(eventAnswer)
+          : { kind: "relative", relativeDate: relativeDateResult.relativeDate },
       time: eventTimeOf(
         optionalTimeOfDayOf(eventAnswer.start_time),
         optionalTimeOfDayOf(eventAnswer.end_time),
@@ -165,15 +180,44 @@ function writesDate(eventAnswer: EventAnswer): boolean {
   ].some((dateNumber) => dateNumber !== null);
 }
 
-// Returns the written date, or null if there is none: a one-off event needs an absolute date, and any date needs a month and a day.
-function writtenDateOf(eventAnswer: EventAnswer): WrittenDate | null {
+// Returns the written date, or null if there is none: a one-off event needs an
+// absolute date, and any date needs a month and a day.
+function writtenDraftDateOf(eventAnswer: EventAnswer): DraftDate | null {
   const { month, day } = eventAnswer;
   const isOneOffWithoutAbsoluteDate =
     eventAnswer.recurrence === null && eventAnswer.date_kind !== "absolute";
   if (isOneOffWithoutAbsoluteDate || month === null || day === null) {
     return null;
   }
-  return { year: eventAnswer.year, month, day, weekday: eventAnswer.weekday };
+  const writtenDate: WrittenDate = {
+    year: eventAnswer.year,
+    month,
+    day,
+    weekday: eventAnswer.weekday,
+  };
+  return { kind: "written", writtenDate };
+}
+
+// Returns the relative date the model describes, or why the bot cannot read
+// it: e.g. "this weekend" (none described), or both a number of days and a
+// weekday. See "Relative dates" in docs/EDGE_CASES.md.
+function relativeDateResultOf(
+  relativeDateAnswer: RelativeDateAnswer | null,
+): { ok: true; relativeDate: RelativeDate } | { ok: false; detail: string } {
+  if (relativeDateAnswer === null) {
+    return { ok: false, detail: "a relative date the bot does not read yet" };
+  }
+  const { days_from_today: daysFromToday, weekday, which_week: whichWeek } =
+    relativeDateAnswer;
+  if (daysFromToday !== null && weekday === null && whichWeek === null) {
+    return daysFromToday >= 0 && daysFromToday <= MAX_DAYS_FROM_TODAY
+      ? { ok: true, relativeDate: { kind: "days-from-today", days: daysFromToday } }
+      : { ok: false, detail: `a relative date ${daysFromToday} days from today` };
+  }
+  if (daysFromToday === null && weekday !== null && whichWeek !== null) {
+    return { ok: true, relativeDate: { kind: "weekday", weekday, week: whichWeek } };
+  }
+  return { ok: false, detail: "an unclear relative date" };
 }
 
 function optionalTimeOfDayOf(timeText: string | null): TimeOfDay | null {
@@ -311,6 +355,7 @@ function noEvent(detail: string): DraftResult {
 function readEventAnswer(answerJson: unknown): EventAnswer {
   const answerRecord = readRecord(answerJson, "the answer");
   const recurrenceRecord = readRecordOrNull(answerRecord, "recurrence");
+  const relativeDateRecord = readRecordOrNull(answerRecord, "relative_date");
   return {
     title: readStringOrNull(answerRecord, "title"),
     calendar: readStringOrNull(answerRecord, "calendar"),
@@ -319,6 +364,10 @@ function readEventAnswer(answerJson: unknown): EventAnswer {
     month: readIntegerOrNull(answerRecord, "month"),
     day: readIntegerOrNull(answerRecord, "day"),
     weekday: readWeekdayOrNull(answerRecord, "weekday"),
+    relative_date:
+      relativeDateRecord === null
+        ? null
+        : readRelativeDateAnswer(relativeDateRecord),
     start_time: readStringOrNull(answerRecord, "start_time"),
     end_time: readStringOrNull(answerRecord, "end_time"),
     timezone_hint: readStringOrNull(answerRecord, "timezone_hint"),
@@ -341,6 +390,19 @@ function readRecurrenceAnswer(recurrenceRecord: JsonRecord): RecurrenceAnswer {
     until_month: readIntegerOrNull(recurrenceRecord, "until_month"),
     until_day: readIntegerOrNull(recurrenceRecord, "until_day"),
     count: readIntegerOrNull(recurrenceRecord, "count"),
+  };
+}
+
+function readRelativeDateAnswer(
+  relativeDateRecord: JsonRecord,
+): RelativeDateAnswer {
+  return {
+    days_from_today: readIntegerOrNull(relativeDateRecord, "days_from_today"),
+    weekday: readWeekdayOrNull(relativeDateRecord, "weekday"),
+    which_week:
+      (relativeDateRecord.which_week ?? null) === null
+        ? null
+        : readOneOf(relativeDateRecord, "which_week", WHICH_WEEKS),
   };
 }
 

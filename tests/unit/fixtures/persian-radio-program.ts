@@ -21,6 +21,7 @@ export const GEMINI_3_1_FLASH_LITE_RADIO_EVENT: EventAnswer = {
   month: 9,
   day: 23,
   weekday: null,
+  relative_date: null,
   start_time: "20:00",
   end_time: null,
   timezone_hint: "Australia/Melbourne",
