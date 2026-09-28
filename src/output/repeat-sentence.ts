@@ -13,7 +13,7 @@ import {
 } from "../generic/intl/localized-time-span";
 import { fillPlaceholders } from "../generic/text/fill-placeholders";
 import type { BotMessageId } from "../i18n/bot-message";
-import type { SupportedLanguage } from "../i18n/supported-language";
+import type { SupportedLanguage } from "../domain/user/supported-language";
 import { translate } from "../i18n/translation";
 import { formatDateWithYear, formatWeekdayName } from "./localized-date-time";
 

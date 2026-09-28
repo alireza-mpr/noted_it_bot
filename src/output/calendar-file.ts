@@ -7,7 +7,7 @@ import {
   formatIcsUtcDateTime,
 } from "../generic/icalendar/ics-date-time";
 import { escapeIcsText, foldIcsLine } from "../generic/icalendar/ics-text";
-import type { SupportedLanguage } from "../i18n/supported-language";
+import type { SupportedLanguage } from "../domain/user/supported-language";
 import { eventTitleOf } from "./event-title";
 import { rruleOf } from "./rrule";
 

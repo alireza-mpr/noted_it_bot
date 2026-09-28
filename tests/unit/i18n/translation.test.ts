@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BOT_MESSAGES, type BotMessageId } from "../../../src/i18n/bot-message";
-import { SUPPORTED_LANGUAGES } from "../../../src/i18n/supported-language";
+import { SUPPORTED_LANGUAGES } from "../../../src/domain/user/supported-language";
 import { TRANSLATIONS, translate } from "../../../src/i18n/translation";
 
 const BOT_MESSAGE_IDS = Object.keys(BOT_MESSAGES) as BotMessageId[];

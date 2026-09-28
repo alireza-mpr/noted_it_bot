@@ -33,6 +33,15 @@ describe("D1UserSettingsStore", () => {
     expect(await userSettingsStore.read(USER_ID)).toEqual({ language: null, timeZone: "Asia/Tehran" });
   });
 
+  it("reads a stored language the bot does not reply in as no language", async () => {
+    await userSettingsStore.read(USER_ID);
+    await TEST_DB.prepare("INSERT INTO user_preference (userId, lang, timezone) VALUES (?, 'xx', NULL)")
+      .bind(USER_ID)
+      .run();
+
+    expect(await userSettingsStore.read(USER_ID)).toEqual({ language: null, timeZone: null });
+  });
+
   it("reads a stored name that is not a time zone as no time zone", async () => {
     await userSettingsStore.read(USER_ID);
     await TEST_DB.prepare("INSERT INTO user_preference (userId, lang, timezone) VALUES (?, NULL, 'Mars/Olympus')")

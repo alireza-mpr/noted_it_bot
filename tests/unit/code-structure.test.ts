@@ -7,7 +7,7 @@ const ALLOWED_IMPORTS: Record<string, string[]> = {
   generic: ["generic"],
   domain: ["domain", "generic"],
   output: ["output", "domain", "i18n", "generic"],
-  i18n: ["i18n"],
+  i18n: ["i18n", "domain"],
   config: ["config"],
   adapters: ["adapters", "domain", "output", "i18n", "config", "generic"],
 };

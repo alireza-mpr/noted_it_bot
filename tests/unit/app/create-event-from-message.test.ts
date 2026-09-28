@@ -11,7 +11,7 @@ import {
 import type { QuotaReservation, QuotaResult, UsageStore } from "../../../src/domain/quota/usage-store";
 import { UserQuotaPolicy } from "../../../src/domain/quota/user-quota-policy";
 import { timeZoneNamed, type IanaTimeZone } from "../../../src/generic/date-time/time-zone";
-import type { SupportedLanguage } from "../../../src/i18n/supported-language";
+import type { SupportedLanguage } from "../../../src/domain/user/supported-language";
 import { translate } from "../../../src/i18n/translation";
 import type { CalendarFile } from "../../../src/output/calendar-file";
 import { axiomEventsOf } from "../adapters/logging/axiom-events-of";

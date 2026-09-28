@@ -1,5 +1,5 @@
 import { BOT_MESSAGES, type BotMessageId } from "./bot-message";
-import type { SupportedLanguage } from "./supported-language";
+import type { SupportedLanguage } from "../domain/user/supported-language";
 import ar from "./translations/ar.json";
 import de from "./translations/de.json";
 import es from "./translations/es.json";

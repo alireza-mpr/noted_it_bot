@@ -1,3 +1,7 @@
+import {
+  parseLanguageCode,
+  type SupportedLanguage,
+} from "../../domain/user/supported-language";
 import type { UserSettings } from "../../domain/user/user-settings";
 import type { UserSettingsStore } from "../../domain/user/user-settings-store";
 import {
@@ -42,13 +46,16 @@ export class D1UserSettingsStore implements UserSettingsStore {
     );
     const userPreferenceRow = d1Result.results[0] ?? null;
     return {
-      language: userPreferenceRow?.lang ?? null,
+      language: languageOf(userPreferenceRow?.lang ?? null),
       timeZone: timeZoneOf(userPreferenceRow?.timezone ?? null),
     };
   }
 
   // Sets the user's language. null means "use Telegram's language".
-  async setLanguage(userId: number, language: string | null): Promise<void> {
+  async setLanguage(
+    userId: number,
+    language: SupportedLanguage | null,
+  ): Promise<void> {
     await this.batch(
       this.d1Database.prepare(SET_USER_LANG).bind(userId, language),
     );
@@ -74,6 +81,12 @@ export class D1UserSettingsStore implements UserSettingsStore {
 interface UserPreferenceRow {
   lang: string | null;
   timezone: string | null;
+}
+
+// Returns the stored language, or null if there is none or the bot does not
+// reply in it.
+function languageOf(languageCode: string | null): SupportedLanguage | null {
+  return languageCode === null ? null : parseLanguageCode(languageCode);
 }
 
 // Returns the stored time zone, or null if there is none or it is not a time

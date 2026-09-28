@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Repeat } from "../../../src/domain/calendar-event/repeat";
 import type { DateOnly } from "../../../src/generic/date-time/date-only";
-import type { SupportedLanguage } from "../../../src/i18n/supported-language";
+import type { SupportedLanguage } from "../../../src/domain/user/supported-language";
 import { repeatSentenceOf } from "../../../src/output/repeat-sentence";
 import { calendarEventWith } from "./calendar-event-with";
 

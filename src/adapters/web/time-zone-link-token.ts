@@ -11,7 +11,7 @@ import {
 import {
   parseLanguageCode,
   type SupportedLanguage,
-} from "../../i18n/supported-language";
+} from "../../domain/user/supported-language";
 
 const MAX_TOKEN_LENGTH = 1024;
 const MAX_NAME_LENGTH = 64;

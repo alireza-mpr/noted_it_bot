@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLanguageCode } from "../../../src/i18n/supported-language";
+import { parseLanguageCode } from "../../../../src/domain/user/supported-language";
 
 describe("parseLanguageCode", () => {
   it("ignores the region, the script and the casing", () => {

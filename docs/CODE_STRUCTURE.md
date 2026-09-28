@@ -96,7 +96,8 @@ src/
     calendar-event/   CalendarEventDraft → a CalendarEvent, the calendars we
                       accept, the year rule, repeats
     quota/            the daily quota rules (user tiers later)
-    user/             the user's settings: language and time zone
+    user/             the user's settings: language and time zone; the languages
+                      the bot replies in
   output/      pure formats made from domain values
                (.ics file, Google Calendar link, caption texts, dates in a language)
   i18n/        the bot's messages and their translations (data and lookup only)
@@ -136,7 +137,7 @@ Telegram bot, so the product is the job.
 | `generic/` | `generic/` only |
 | `domain/` | `domain/`, `generic/` |
 | `output/` | `domain/`, `i18n/`, `generic/` |
-| `i18n/` | nothing (only its own data) |
+| `i18n/` | `domain/` (e.g. `SupportedLanguage`) |
 | `app/` | `domain/`, `output/`, `i18n/`, `adapters/`, `config/`, `generic/` |
 | `adapters/` | `domain/`, `output/`, `i18n/`, `config/`, `generic/`, other adapters |
 | `config/` | nothing |
@@ -246,7 +247,7 @@ code, together with that area.
 | date formatting in a language (in `calendarEvent.ts`) | `output/localized-date-time.ts` | ✅ |
 | `time/formatWait.ts` | `generic/intl/localized-time-span.ts` (`formatTimeUntil`: hours and minutes in the reply language, not "2h 5m" in English) | ✅ |
 | `interactiveMessages/messages.ts`, `translation/translate.ts`, `translation/translations/*` | `i18n/bot-message.ts`, `i18n/translation.ts`, `i18n/translations/*` | ✅ |
-| `translation/language.ts` | `i18n/supported-language.ts` (the list, `parseLanguageCode`); the `/lang` name parsing and language names → with `/lang` in step 5 | ✅ (`/lang` part ⏳) |
+| `translation/language.ts` | `domain/user/supported-language.ts` (the list, `parseLanguageCode`: a value object, so it is in the domain); the `/lang` name parsing and language names → with `/lang` in step 5 | ✅ (`/lang` part ⏳) |
 | `translation/placeholders.ts` | `generic/text/fill-placeholders.ts` | ✅ |
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts`, the quota part of `updateHandler.ts` | `app/create-event-from-message.ts` (`createEventFromMessage`); the quota line → `output/quota-line.ts` | ✅ |

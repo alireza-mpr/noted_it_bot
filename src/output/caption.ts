@@ -3,7 +3,7 @@ import { weekdayOf } from "../generic/date-time/date-only";
 import { escapeHtml } from "../generic/html/escape-html";
 import { fillPlaceholders } from "../generic/text/fill-placeholders";
 import type { BotMessageId } from "../i18n/bot-message";
-import type { SupportedLanguage } from "../i18n/supported-language";
+import type { SupportedLanguage } from "../domain/user/supported-language";
 import { translate } from "../i18n/translation";
 import { eventTitleOf } from "./event-title";
 import { googleCalendarLinkOf } from "./google-calendar-link";

@@ -1,7 +1,7 @@
 import { toBase64Url } from "../../generic/encoding/base64-url";
 import { escapeHtml } from "../../generic/html/escape-html";
 import type { BotMessageId } from "../../i18n/bot-message";
-import type { SupportedLanguage } from "../../i18n/supported-language";
+import type { SupportedLanguage } from "../../domain/user/supported-language";
 import { translate } from "../../i18n/translation";
 import { TIME_ZONE_CITIES } from "./time-zone-cities";
 import TIME_ZONE_PAGE_CSS from "./time-zone-page.css";

@@ -1,5 +1,5 @@
 import type { CalendarEvent } from "../domain/calendar-event/calendar-event";
-import type { SupportedLanguage } from "../i18n/supported-language";
+import type { SupportedLanguage } from "../domain/user/supported-language";
 import { translate } from "../i18n/translation";
 
 // Returns the event's title, or "Event" in the language when the message

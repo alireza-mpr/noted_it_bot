@@ -1,6 +1,6 @@
 import { formatNumber } from "../generic/intl/localized-number";
 import { fillPlaceholders } from "../generic/text/fill-placeholders";
-import type { SupportedLanguage } from "../i18n/supported-language";
+import type { SupportedLanguage } from "../domain/user/supported-language";
 import { translate } from "../i18n/translation";
 
 // Returns the line that says how many requests the user has left today, in
