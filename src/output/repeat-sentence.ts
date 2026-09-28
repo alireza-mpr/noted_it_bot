@@ -6,25 +6,25 @@ import type {
   WeekOfMonth,
 } from "../domain/calendar-event/repeat";
 import type { DateOnly, Weekday } from "../generic/date-time/date-only";
+import { formatNumber } from "../generic/intl/localized-number";
+import {
+  formatTimeSpan,
+  type TimeSpanUnit,
+} from "../generic/intl/localized-time-span";
 import { fillPlaceholders } from "../generic/text/fill-placeholders";
 import type { BotMessageId } from "../i18n/bot-message";
 import type { SupportedLanguage } from "../i18n/supported-language";
 import { translate } from "../i18n/translation";
 import { formatDateWithYear, formatWeekdayName } from "./localized-date-time";
-import {
-  formatNumber,
-  formatTimeSpan,
-  type TimeUnit,
-} from "./localized-number";
 
-const EVERY_ONE_UNIT: Record<TimeUnit, BotMessageId> = {
+const EVERY_ONE_UNIT: Record<RepeatUnit, BotMessageId> = {
   day: "REPEAT_EVERY_DAY",
   week: "REPEAT_EVERY_WEEK",
   month: "REPEAT_EVERY_MONTH",
   year: "REPEAT_EVERY_YEAR",
 };
 
-const EVERY_N_UNITS: Record<TimeUnit, BotMessageId> = {
+const EVERY_N_UNITS: Record<RepeatUnit, BotMessageId> = {
   day: "REPEAT_EVERY_N_DAYS",
   week: "REPEAT_EVERY_N_WEEKS",
   month: "REPEAT_EVERY_N_MONTHS",
@@ -146,17 +146,20 @@ function endPhraseOf(
   }
 }
 
+// Represents a unit of time that a repeat counts in.
+type RepeatUnit = Extract<TimeSpanUnit, "day" | "week" | "month" | "year">;
+
 // Returns e.g. "every day" or "every 3 days".
 function everyPhraseOf(
-  timeUnit: TimeUnit,
+  repeatUnit: RepeatUnit,
   interval: number,
   language: SupportedLanguage,
 ): string {
   return interval === 1
-    ? translate(EVERY_ONE_UNIT[timeUnit], language)
+    ? translate(EVERY_ONE_UNIT[repeatUnit], language)
     : textOf(
-        EVERY_N_UNITS[timeUnit],
-        [formatTimeSpan(interval, timeUnit, language)],
+        EVERY_N_UNITS[repeatUnit],
+        [formatTimeSpan(interval, repeatUnit, language)],
         language,
       );
 }

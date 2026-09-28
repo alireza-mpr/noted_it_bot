@@ -88,6 +88,7 @@ src/
     hash/             hashing a text
     html/             escaping text for HTML
     icalendar/        RFC 5545 text and date formats
+    intl/             numbers and spans of time in a language (Intl)
     json/             turning a value into JSON text, without throwing;
                       reading typed fields from JSON
     text/             filling {0}, {1}, … in a text; cutting a long text
@@ -235,20 +236,20 @@ code, together with that area.
 | `RECURRENCE_MIN_CONFIDENCE` in `extractedEvents/recurrence.ts` | `MIN_REPEAT_CONFIDENCE` in `domain/calendar-event/repeat-decline-rule.ts` | ✅ |
 | `extractedEvents/eventUid.ts` | `domain/calendar-event/event-uid-rule.ts`, `generic/hash/sha256-hex.ts` | ✅ |
 | `policy/userQuotaPolicy.ts` | `domain/quota/user-quota-policy.ts`, with the `UsageStore` port in `domain/quota/usage-store.ts` | ✅ |
-| `policy/userQuotaPolicyLogger.ts` | the quota use case in `app/` logs the line with a `Logger` (step 5) | ⏳ |
+| `policy/userQuotaPolicyLogger.ts` | dropped: `user_activity.quota_used_up` already records the same fact | ✅ |
 | the user's language and time zone (`repositories/userPreferenceRepository.ts`) | `domain/user/user-settings.ts` (type) | ✅ |
 | `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/calendar-file.ts`, `generic/icalendar/` | ✅ |
 | `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ✅ |
-| `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts`, `output/localized-number.ts`; `telegramHtml.ts` → `generic/html/escape-html.ts` | ✅ |
+| `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts`, `generic/intl/localized-number.ts`; `telegramHtml.ts` → `generic/html/escape-html.ts` | ✅ |
 | `extractedEvents/recurrence.ts` (RRULE) | `output/rrule.ts` | ✅ |
 | `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/repeat-sentence.ts` | ✅ |
 | date formatting in a language (in `calendarEvent.ts`) | `output/localized-date-time.ts` | ✅ |
-| `time/formatWait.ts` | not decided yet (the quota refusal message) | ⏳ |
+| `time/formatWait.ts` | `generic/intl/localized-time-span.ts` (`formatTimeUntil`: hours and minutes in the reply language, not "2h 5m" in English) | ✅ |
 | `interactiveMessages/messages.ts`, `translation/translate.ts`, `translation/translations/*` | `i18n/bot-message.ts`, `i18n/translation.ts`, `i18n/translations/*` | ✅ |
 | `translation/language.ts` | `i18n/supported-language.ts` (the list, `parseLanguageCode`); the `/lang` name parsing and language names → with `/lang` in step 5 | ✅ (`/lang` part ⏳) |
 | `translation/placeholders.ts` | `generic/text/fill-placeholders.ts` | ✅ |
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
-| `telegram/messageHandlers/eventMessageHandler.ts` | `app/create-event-from-message.ts` | ⏳ |
+| `telegram/messageHandlers/eventMessageHandler.ts`, the quota part of `updateHandler.ts` | `app/create-event-from-message.ts` (`createEventFromMessage`); the quota line → `output/quota-line.ts` | ✅ |
 | `telegram/commands/*` | `app/commands/*` | ⏳ |
 | `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (plus one line: never translate the title or the location) | ✅ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/`: `telegram-update.ts` (`parseTelegramUpdate`), `webhook-auth.ts` (`isFromTelegram`), `telegram-client.ts`, `replier.ts` (`Replier`, `TelegramReplier`: sends only, the app writes the texts); the JSON field readers → `generic/json/json-fields.ts`; the webhook's `fetch` handler → the entry point in `app/` (step 5) | ✅ (`fetch` handler ⏳) |
@@ -290,7 +291,10 @@ after each commit.
 | 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`); a missing title becomes "Event" in the reply language | ✅ |
 | 4e | Adapters: Telegram (reading updates, the webhook secret check, the client, replies) | ✅ |
 | 4f | Adapters: the web pages (the /tz page, its link token, the city list) | ✅ |
-| 5 | App: one use case per file (create an event, set a language, set a time zone, …). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ⏳ |
+| 5a | App: create an event from a message (quota, the "reading your message" notice, extraction, the calendar event, the caption and file, the refund). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ✅ |
+| 5b | App: the commands `/start`, `/ver`, `/diag`, `/lang`. On `/start`, log one `reply_language.chosen` event with the inputs and the result: the user's `/lang` choice, Telegram's raw `language_code`, whether it is supported, the chosen language and its source (`user_choice`, `telegram`, `english_fallback`). This helps find out why users start the bot but never try it. | ⏳ |
+| 5c | App: set a time zone (the `/tz` command, the `/tz` page route, the `/tz/save` route) | ⏳ |
+| 5d | App: handle an update, and the entry point (routing, the webhook secret check, the log session, ADR-8). New rule `domain/user/reply-language-rule.ts`: `replyLanguageOf(userSettings, telegramLanguageCode)` returns the language and its source. Every event of an update gets `telegram.user_language_code`, `telegram.reply_language` and `telegram.reply_language_source`. | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README | ⏳ |
 
 ## How the rules are checked

@@ -18,6 +18,7 @@ this list is called the "ubiquitous language".
 | Model answer | What a model returns for a message. Raw data, not parsed yet. | `ModelAnswer` |
 | Draft | An event as the message describes it. Its dates are still in the message's calendar, and the year can be missing. | `CalendarEventDraft` |
 | Create a calendar event | Turns a draft into a calendar event, or gives the reason why there is none. | `createCalendarEvent` → `CalendarEventResult` |
+| Event request | A message that asks the bot for a calendar event. The bot replies with the calendar file, or says why there is none. | `EventRequest`, `createEventFromMessage` |
 | Event creation context | What creating a calendar event needs besides the draft and its UID: the user time zone, now, and the floating time zone. | `EventCreationContext` |
 | Calendar event | An event created from a draft: Gregorian dates, each with a year. Ready for output. | `CalendarEvent` |
 | No event | Creating the calendar event found no usable date. | `reason: "no-event"` |
@@ -111,7 +112,7 @@ this list is called the "ubiquitous language".
 | Refund | Give a unit back, when no model answered. In docs for readers: "give back". | `refund` |
 | Reservation | What is needed to refund a unit exactly. | `QuotaReservation` |
 | Quota reset | The daily quota is full again 24 hours after the last use. | `QUOTA_RESET_AFTER_MS` |
-| Retry time | When a user with no quota left can try again. | `retryAt` |
+| Retry time | When a user with no quota left can try again. The reply says how long that is, in the reply language. | `retryAt`, `formatTimeUntil` |
 | Quota policy | The quota rules for a user (tiers later). | `UserQuotaPolicy` |
 | Usage store | Where the quota usage is saved. A port. | `UsageStore` |
 

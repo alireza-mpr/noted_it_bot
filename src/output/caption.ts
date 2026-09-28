@@ -13,7 +13,7 @@ import {
   formatShortDate,
   formatWeekdayName,
 } from "./localized-date-time";
-import { formatNumber } from "./localized-number";
+import { quotaLineOf } from "./quota-line";
 import { repeatSentenceOf } from "./repeat-sentence";
 
 // Returns the caption sent with the calendar file, in Telegram HTML: the
@@ -30,13 +30,7 @@ export function captionOf(
     ...notesOf(calendarEvent, language),
   ];
   if (remainingQuota !== null) {
-    captionParts.push(
-      translatedText(
-        "USER_DAILY_QUOTA_REMAINING",
-        [formatNumber(remainingQuota, language)],
-        language,
-      ),
-    );
+    captionParts.push(quotaLineOf(remainingQuota, language));
   }
   return captionParts.join("\n\n");
 }

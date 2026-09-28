@@ -4,18 +4,17 @@ import type { QuotaReservation, QuotaResult, UsageStore } from "./usage-store";
 // ADR-1 in ARCHITECTURE_DECISIONS.md.
 export const QUOTA_RESET_AFTER_MS = 24 * 60 * 60 * 1000;
 
-// Represents the quota rules for a user (e.g. tiers, later). Create one per
-// request.
+// Represents the quota rules for a user: how many messages a day (tiers,
+// later). Create one per request.
 export class UserQuotaPolicy {
-  constructor(private readonly usageStore: UsageStore) {}
+  constructor(
+    private readonly usageStore: UsageStore,
+    private readonly dailyQuota: number,
+  ) {}
 
   // Consumes one unit of the user's daily quota, if one is left.
-  tryConsume(
-    userId: number,
-    dailyQuota: number,
-    now: Date,
-  ): Promise<QuotaResult> {
-    return this.usageStore.tryConsume(userId, dailyQuota, now);
+  tryConsume(userId: number, now: Date): Promise<QuotaResult> {
+    return this.usageStore.tryConsume(userId, this.dailyQuota, now);
   }
 
   // Refunds a unit, for a message that no model answered.
