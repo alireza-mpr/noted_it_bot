@@ -146,7 +146,7 @@ Every deploy registers the visible commands with Telegram, so they show in the
   - **prod** (`@noted_it_bot`)
 - CI on every push: typecheck, then tests against the real Gemini API.
 - **dev** deploys on every push to `main`. The version is
-  `0.2.{run}-beta-{commit}`, and the deploy is tagged with the same string.
+  `1.0.{run}-beta-{commit}`, and the deploy is tagged with the same string.
 - **prod** deploys only when someone starts it by hand, from a `v…` tag. Its
   `/ver` shows the tag. `wrangler rollback` gives a fast rollback.
 - Secrets are in GitHub Environments. The README explains setup, promotion

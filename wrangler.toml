@@ -14,7 +14,7 @@ enabled = true
 [env.dev]
 name = "noted-it-dev-bot"
 [env.dev.vars]
-APP_VERSION = "0.2.0-dev-local"
+APP_VERSION = "1.0.0-dev-local"
 [[env.dev.d1_databases]]
 binding = "USAGE_DB"
 database_name = "noted-it-dev-usage"
@@ -24,7 +24,7 @@ remote = true
 [env.prod]
 name = "prod"
 [env.prod.vars]
-APP_VERSION = "0.2.0-dev-local"
+APP_VERSION = "1.0.0-dev-local"
 [[env.prod.d1_databases]]
 binding = "USAGE_DB"
 database_name = "noted-it-prod-usage"

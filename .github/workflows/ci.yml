@@ -65,7 +65,7 @@ jobs:
 
       - name: Compute version
         id: version
-        run: echo "version=0.2.${{ github.run_number }}-beta-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+        run: echo "version=1.0.${{ github.run_number }}-beta-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to Cloudflare Workers (dev)
         uses: cloudflare/wrangler-action@v3

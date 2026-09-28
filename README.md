@@ -123,7 +123,7 @@ request runs only the first):
   `CLOUDFLARE_ACCOUNT_ID`.
 - **`deploy-dev`**: runs only when `build` passes, and only on `main`.
   - After a successful deploy, it pushes a git tag with the exact version that
-    `/ver` shows (e.g. `v0.2.42-beta-abc1234`). A failed deploy adds no tag.
+    `/ver` shows (e.g. `v1.0.42-beta-abc1234`). A failed deploy adds no tag.
   - To deploy even when tests fail (e.g. the dev Gemini quota is used up): run
     the CI workflow by hand on `main` in the Actions tab, and tick **Deploy to
     dev even if the tests fail**.
@@ -142,11 +142,10 @@ deliberate click.
 
 1. Make sure `main` has everything you want. Let `deploy-dev` check it.
 2. Pick the tag to deploy. Every dev deploy already has one
-   (`v0.2.N-beta-<commit>`). Or make your own (stay in `0.x.y` while the bot
-   is in Beta):
+   (`v1.0.N-beta-<commit>`). Or make your own, e.g. for a release:
    ```bash
-   git tag v0.3.0
-   git push origin v0.3.0
+   git tag v1.0.0
+   git push origin v1.0.0
    ```
    A tag alone deploys nothing.
 3. Go to **Actions** → **Deploy** → **Run workflow**.
