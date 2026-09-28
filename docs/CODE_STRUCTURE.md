@@ -211,7 +211,7 @@ The attribute names every area shares:
 
 | Idea | Attribute |
 |---|---|
-| The user | `user.id`, `user.name` (the Telegram username), `user.full_name` (the first name and the last name) |
+| The user | `user.id`, `user.name` (the Telegram username), `user.full_name` (the first name and the last name), all set by `setUserLogAttributes` |
 | The chat | `telegram.chat.id` |
 | An error | `exception.type`, `exception.message`, `exception.stacktrace` |
 | An HTTP status | `http.response.status_code` |
@@ -251,7 +251,7 @@ code, together with that area.
 | `translation/placeholders.ts` | `generic/text/fill-placeholders.ts` | ✅ |
 | `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` | ⏳ |
 | `telegram/messageHandlers/eventMessageHandler.ts`, the quota part of `updateHandler.ts` | `app/create-event-from-message.ts` (`createEventFromMessage`); the quota line → `output/quota-line.ts` | ✅ |
-| `telegram/commands/*` | `app/commands/`: `start-bot.ts`, `show-version.ts`, `check-models.ts` (`/diag`), `set-language.ts` (`/lang`); `/tz` in step 5c | ✅ (`/tz` ⏳) |
+| `telegram/commands/*` | `app/commands/`: `start-bot.ts`, `show-version.ts`, `check-models.ts` (`/diag`), `set-language.ts` (`/lang`), `set-time-zone.ts` (`/tz`) | ✅ |
 | `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (plus one line: never translate the title or the location) | ✅ |
 | `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/`: `telegram-update.ts` (`parseTelegramUpdate`), `webhook-auth.ts` (`isFromTelegram`), `telegram-client.ts`, `replier.ts` (`Replier`, `TelegramReplier`: sends only, the app writes the texts); the JSON field readers → `generic/json/json-fields.ts`; the webhook's `fetch` handler → the entry point in `app/` (step 5) | ✅ (`fetch` handler ⏳) |
 | `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | the user aggregate (step 4g): `domain/user/user.ts`, `user-profile.ts`, `user-repository.ts` (port); `domain/quota/quota-usage.ts`, `daily-quota-rule.ts` (the quota rule, moved out of the SQL); `adapters/database/d1-user-repository.ts` (one `users` table); `app/update-user.ts` (load, save, retry) | ✅ |
@@ -260,7 +260,7 @@ code, together with that area.
 | `router/*`, `quotaLimit/*` | `adapters/models/router.ts` (`generate` → `ask`, `MeteredProvider` → `RoutedProvider`), `router-log.ts` (OpenTelemetry events), `model-usage-store.ts` (`UsageRepository` → `ModelUsageStore`); the usage windows → private in `d1-counted-model-usage-store.ts`; `createRouter` → `app/` (step 5) | ✅ (`createRouter` ⏳) |
 | `prompts/diag_ping.txt` | `PING_PROMPT` in `app/commands/check-models.ts` | ✅ |
 | `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
-| `web/*` | `adapters/web/`: `time-zone-link-token.ts` (`tzToken.ts`; the token's JSON is unchanged, so links already sent keep working), `time-zone-page.ts` (`tzPage.ts`), `time-zone-page.html` and `.css` (unchanged), `time-zone-cities.ts` (`tzCities.ts`); the base64url helpers → `generic/encoding/base64-url.ts`; the routes (`tzRoutes.ts`) → the "set a time zone" use case in `app/` (step 5) | ✅ (routes ⏳) |
+| `web/*` | `adapters/web/`: `time-zone-link-token.ts` (`tzToken.ts`; the token's JSON is unchanged, so links already sent keep working), `time-zone-page.ts` (`tzPage.ts`), `time-zone-page.html` and `.css` (unchanged), `time-zone-cities.ts` (`tzCities.ts`); the base64url helpers → `generic/encoding/base64-url.ts`; the routes (`tzRoutes.ts`) → `app/time-zone-page.ts` (`handleTzPage` → `openTimeZonePage`, `handleTzSave` → `saveTimeZoneFromPage`), with the save shared with `/tz` in `app/save-user-time-zone.ts`; the save body → `adapters/web/time-zone-save-request.ts`; `languageFromHeader` → `adapters/web/request-language.ts`; `setLogField` for the user → `adapters/logging/user-log-attributes.ts` | ✅ |
 | `appConfig/appConfig.ts`, `env.ts` | `config/app-config.ts` (`appConfig` → `APP_CONFIG`, `defaultTimezone` → `floatingTimeZoneName`), `config/env.ts` | ✅ |
 | `buildCalendarEvent` (used only by tests) | a helper in `tests/` | ⏳ |
 | `text-modules.d.ts`, `node-modules.d.ts` | stay in `src/` | ✅ |
@@ -295,7 +295,7 @@ after each commit.
 | 4g | The user aggregate: one `users` row with the profile, the settings and the quota usage; the quota rule in the domain; optimistic concurrency with a `version` (ADR-3). Done after 5a. | ✅ |
 | 5a | App: create an event from a message (quota, the "reading your message" notice, extraction, the calendar event, the caption and file, the refund). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ✅ |
 | 5b | App: the commands `/start`, `/ver`, `/diag`, `/lang`. The rule `domain/user/reply-language-rule.ts`: `replyLanguageOf(user)` returns the language and its source (`user-choice`, `telegram`, `english-fallback`). `/lang` alone shows the reply language and how to change it. | ✅ |
-| 5c | App: set a time zone (the `/tz` command, the `/tz` page route, the `/tz/save` route) | ⏳ |
+| 5c | App: set a time zone (the `/tz` command, the `/tz` page route, the `/tz/save` route) | ✅ |
 | 5d | App: handle an update, and the entry point (routing, the webhook secret check, the log session, ADR-8). Every event of an update gets `telegram.user_language_code`, `telegram.reply_language` and `telegram.reply_language_source`. So `user_activity.bot_started` shows how the reply language was chosen, to find out why users start the bot but never try it. | ⏳ |
 | 6 | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README. Prod: right before the deploy, copy `user_preference` and `user_usage` into the new `users` table. | ⏳ |
 

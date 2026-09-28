@@ -5,14 +5,16 @@ import type { CalendarFile } from "../../../src/output/calendar-file";
 // Represents a replier that keeps what it sends.
 export class FakeReplier implements Replier {
   readonly texts: string[] = [];
+  readonly linkButtons: LinkButton[] = [];
   readonly calendarFiles: { calendarFile: CalendarFile; htmlCaption: string }[] = [];
 
   async sendText(text: string): Promise<void> {
     this.texts.push(text);
   }
 
-  async sendTextWithLinkButton(text: string, _linkButton: LinkButton): Promise<void> {
+  async sendTextWithLinkButton(text: string, linkButton: LinkButton): Promise<void> {
     this.texts.push(text);
+    this.linkButtons.push(linkButton);
   }
 
   async sendCalendarFile(calendarFile: CalendarFile, htmlCaption: string): Promise<void> {
