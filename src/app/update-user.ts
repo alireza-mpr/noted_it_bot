@@ -3,7 +3,7 @@ import { isSameProfile, type UserProfile } from "../domain/user/user-profile";
 import type { UserRepository } from "../domain/user/user-repository";
 
 // A burst of parallel updates from one user makes saves lose races, but only
-// while quota units are left; see ADR-3 in ARCHITECTURE_DECISIONS.md.
+// while quota units are left; see ADR-3 in ARCHITECTURE_DECISIONS_REGISTRY.md.
 const MAX_SAVE_ATTEMPTS = 10;
 
 // Represents a change to a user: the changed user, or null when there is

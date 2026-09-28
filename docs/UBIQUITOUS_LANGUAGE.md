@@ -158,7 +158,7 @@ this list is called the "ubiquitous language".
 | Entity | An object with an identity that stays the same when its content changes. Its identity is one of its fields. | `CalendarEvent` (identity: `uid`) |
 | Value object | A small value with no identity, only its content (e.g. a date, a time zone). Its parse function is its only constructor, and lives next to it. | e.g. `IanaTimeZone` |
 | Factory | Creates a complex object from several inputs, using rules. | `createCalendarEvent` |
-| Port | An interface that the inside declares for something it needs from outside. | e.g. `UsageStore` |
+| Port | An interface that the inside declares for something it needs from outside. | e.g. `UserRepository`, `ModelUsageStore` |
 | Store | A port where the model usage is saved. Not a DDD repository: it runs atomic commands (e.g. count an answer), not "load, change, save". | e.g. `ModelUsageStore` |
 | Repository | A port that loads and saves a whole aggregate. | e.g. `UserRepository` |
 | Aggregate | An entity and the value objects it owns, loaded and saved together, so its rules hold. The entity is the aggregate root. | e.g. `User` |

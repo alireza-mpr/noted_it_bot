@@ -57,7 +57,7 @@ ON CONFLICT(model) DO UPDATE SET
 
 // Represents model usage stored in D1 as a retry time: a model is used up
 // until the time its last 429 gave. Which limit it hit does not matter. See
-// ADR-4 in ARCHITECTURE_DECISIONS.md.
+// ADR-4 in ARCHITECTURE_DECISIONS_REGISTRY.md.
 export class D1RetryAfterModelUsageStore implements ModelUsageStore {
   constructor(
     private readonly d1Database: D1Database,

@@ -16,8 +16,10 @@ Groq) read the events.
   location, and how confident it is.
 - Only clear dates for now ("19 Sep, 8pm"). The bot does not guess relative
   dates like "tomorrow".
-- **Dates in other calendars** (for example Solar Hijri / Persian, Hebrew,
-  Lunar Hijri) are converted to Gregorian. All calendars follow the same rules.
+- **Dates in other calendars** (Solar Hijri / Persian, Hebrew, Buddhist,
+  Indian national) are converted to Gregorian. All calendars follow the same
+  rules. A plain "Hijri" is refused: it means a different calendar in
+  different countries.
 - **A date with no year:** if the message states the weekday ("Saturday 26
   Sep"), the bot picks the year where that weekday fits: this year, next year,
   or last year if the date was in the last two months. Otherwise it uses the
@@ -76,11 +78,11 @@ Groq) read the events.
   line, how to change it.
 - Dates and times in the summary follow the reply language. They are always
   Gregorian.
-- **A reply is fully in the reply language** (in the new code, from the
-  rewrite on): numbers, dates, times and the 🔁 repeat line too. Only the
-  event's own content (the title, the location) and time zone IDs (e.g.
-  "Australia/Melbourne") stay as they are. The old code wrote the repeat line
-  in English and the quota number in Latin digits.
+- **A reply is fully in the reply language:** numbers, dates, times and the
+  🔁 repeat line too. Only the event's own content (the title, the location)
+  and time zone IDs (e.g. "Australia/Melbourne") stay as they are. We learnt
+  this from a Persian user's screenshot: an English repeat line and a number
+  in Latin digits made the Persian reply look broken.
 - **The event is never translated.** The user forwards a message and expects
   the same event in the calendar. The title and the location stay in the
   language and script of the message, even when it mixes languages (e.g. an
@@ -104,7 +106,7 @@ Groq) read the events.
   so a new user doesn't feel limited. A user who used it up is still told,
   with the time to wait.
 - Commands do not use quota. If no model answers, the unit is given back.
-  See [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
+  See [The daily quota in detail](ARCHITECTURE_DECISIONS_REGISTRY.md#the-daily-quota-in-detail).
 - For individual users only, in a private chat with the bot. Groups and
   channels are not supported. Of the membership updates, the bot reads only a
   user blocking or unblocking it (Telegram's `my_chat_member`: `kicked`,
@@ -128,13 +130,12 @@ Every deploy registers the visible commands with Telegram, so they show in the
   one error can never block the message queue. The user sees a general error.
   The details go to the logs.
 - Workers Logs are on. Every log event also goes to Axiom, with the user's
-  id, username and first name.
+  id, username and full name.
 - Messages (the text, the model's answer, and the model) are logged in Axiom.
 - User actions are logged as `user activity` events: commands (unknown ones
   too, with the text after them), language and time zone changes, event
   requests, quota refusals, and blocking or unblocking the bot.
-- The bot stores each user in one D1 row (from the new code on): the
-  Telegram username, first and last name and app language, the chosen
+- The bot stores each user in one D1 row: the Telegram username, first and last name and app language, the chosen
   language and time zone, and the quota usage. When a user started, and what
   they did, is in the logs.
 
@@ -162,7 +163,8 @@ Every deploy registers the visible commands with Telegram, so they show in the
     message.
   - Try a cheap model first. Use a stronger one only if confidence is low, or
     the answer does not match the schema.
-  - Log the model and token count of each call, to measure savings.
+  - Measure the savings with the model and token count that every call
+    already logs (`router.model_answered`).
   - Check the extra "thinking" tokens on tasks that do not need them.
   - Add tests to make sure quality stays the same on cheaper models.
 - [ ] **Check the first prod release** with the new version scheme (tag →
@@ -170,6 +172,13 @@ Every deploy registers the visible commands with Telegram, so they show in the
       `@noted_it_bot` by hand.
 
 ### Product
+- [ ] **Why do users start the bot but never try it?** Compare
+      `user_activity.bot_started` with the user's first
+      `user_activity.event_requested`, by reply language and its source.
+      Ideas to test: trust, the first reply's length, and the reply language
+      (e.g. a Persian speaker with an English Telegram app gets English).
+- [ ] Show the daily quota again (`APP_CONFIG.showDailyQuota`) once usage
+      grows.
 - [ ] Relative and weekday dates ("tomorrow", "next Friday"). This needs a
       reliable reference date (the message time) and clear rules for unclear
       cases.
@@ -185,5 +194,3 @@ Every deploy registers the visible commands with Telegram, so they show in the
 - [ ] A real approval step before prod. This needs a paid GitHub plan for a
       private repo. For now, the manual start is the guard.
 - [ ] Clean up dev tags. Every dev deploy adds one.
-- [ ] More tests: the message handler flow, translation placeholders
-      (repeats and `.ics` output already have unit tests).

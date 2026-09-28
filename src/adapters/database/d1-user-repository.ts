@@ -48,7 +48,7 @@ WHERE userId = ? AND version = ?`;
 
 // Represents the users stored in D1, one row per user. A save writes only if
 // nobody changed the user since it was loaded (optimistic concurrency). See
-// ADR-2 and ADR-3 in ARCHITECTURE_DECISIONS.md.
+// ADR-2 and ADR-3 in ARCHITECTURE_DECISIONS_REGISTRY.md.
 export class D1UserRepository implements UserRepository {
   constructor(private readonly d1Database: D1Database) {}
 

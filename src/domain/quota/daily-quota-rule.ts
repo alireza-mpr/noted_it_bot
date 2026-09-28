@@ -22,7 +22,8 @@ export type ConsumeResult =
   | { ok: false; retryAt: Date };
 
 // Consumes one unit of the daily quota, if one is left. The quota is full
-// again 24 hours after the last use. See ADR-1 in ARCHITECTURE_DECISIONS.md.
+// again 24 hours after the last use. See ADR-1 in
+// ARCHITECTURE_DECISIONS_REGISTRY.md.
 export function consumeUnit(
   quotaUsage: QuotaUsage,
   unitsPerDay: number,
@@ -52,7 +53,7 @@ export function consumeUnit(
 // that no model answered. If no other unit was used since, the usage goes
 // back exactly to how it was, so the reset time does not move. Otherwise one
 // unit is given back, up to the daily quota. See ADR-3 in
-// ARCHITECTURE_DECISIONS.md.
+// ARCHITECTURE_DECISIONS_REGISTRY.md.
 export function refundUnit(
   quotaUsage: QuotaUsage,
   quotaReservation: QuotaReservation,

@@ -45,11 +45,6 @@ Follow [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md) for every change:
   types, then exported functions (the main one first), then private functions
   and types.
 
-The project is being rewritten. The old code is in `src/legacy/`; do not
-change it except to fix a live bug. New code goes to its folder in that doc.
-Rewrite one area per commit, with its tests ported from the old ones, and
-update its status in the "What replaces what" table.
-
 ## Comments
 
 | Kind | Where | Form |
@@ -100,13 +95,16 @@ update its status in the "What replaces what" table.
 
 - Every Telegram handler answers 200 after the auth check, even when something
   fails inside. See ADR-8 in
-  [docs/ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md).
+  [docs/ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md).
 
 ## Other docs
 
 - [README.md](README.md): setup, tests, CI/CD and deployment.
 - [docs/PRODUCT.md](docs/PRODUCT.md): features, and what comes next.
-- [docs/ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md): why the main parts work the way they do.
+- [docs/ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md): why the main parts work the way they do; the quota and its D1 cost.
 - [docs/EDGE_CASES.md](docs/EDGE_CASES.md): the general rules for dates, calendars and time zones.
-- [docs/USER_QUOTA_DESIGN.md](docs/USER_QUOTA_DESIGN.md): the quota and its D1 cost.
 - [docs/UBIQUITOUS_LANGUAGE.md](docs/UBIQUITOUS_LANGUAGE.md): the words we use, and the words we don't.
+
+Docs describe the current bot. Keep what was learnt (edge cases, user
+behaviour, technical challenges); leave out history (old code, what replaced
+what, finished migrations).

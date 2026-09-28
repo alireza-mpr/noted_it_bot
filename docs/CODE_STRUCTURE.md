@@ -1,14 +1,10 @@
 # Code Structure
 
-This file sets the rules for how the code is organised. All new code must
-follow it.
-
-**The code is being rewritten.** The old code is in `src/legacy/`. It keeps
-running the bot until the new code replaces it. Then `src/legacy/` is deleted.
-The table in [What replaces what](#what-replaces-what) shows the progress.
+This file sets the rules for how the code is organised. All code must follow
+it.
 
 The decision and the other options are in ADR-7 of
-[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md).
+[ARCHITECTURE_DECISIONS_REGISTRY.md](ARCHITECTURE_DECISIONS_REGISTRY.md).
 
 ## The idea in one sentence
 
@@ -71,9 +67,9 @@ adapters".
    | Principle | What it means here |
    |---|---|
    | **S**ingle responsibility | One idea per module (principle 2). One job per function. |
-   | **O**pen/closed | Add new behaviour by adding code, not by changing working code (e.g. a new provider is a new adapter behind the same port; user tiers change only the quota policy). |
-   | **L**iskov substitution | Every implementation of a port keeps the port's promises (e.g. a fake `UsageStore` in tests behaves like the D1 one). |
-   | **I**nterface segregation | Ports are small: only what the caller needs (e.g. `UsageStore` has two methods). |
+   | **O**pen/closed | Add new behaviour by adding code, not by changing working code (e.g. a new provider is a new adapter behind the same port; a new command is a new file in `app/commands/`). |
+   | **L**iskov substitution | Every implementation of a port keeps the port's promises (e.g. `InMemoryUserRepository` in the tests refuses a stale save, like the D1 one). |
+   | **I**nterface segregation | Ports are small: only what the caller needs (e.g. `UserRepository` has two methods). |
    | **D**ependency inversion | The inside declares ports, adapters implement them, and `app/` connects them (principle 3). |
 
 ## Folders
@@ -170,7 +166,7 @@ implements it, and `app/` connects the two.
 | What | Casing | Example |
 |---|---|---|
 | Variables, functions, fields | camelCase | `calendarEventResult`, `pickYear`, `wrongWeekday` |
-| Types, interfaces, classes | PascalCase | `CalendarEvent`, `UserQuotaPolicy` |
+| Types, interfaces, classes | PascalCase | `CalendarEvent`, `UserRepository` |
 | Constants at module level | UPPER_SNAKE_CASE | `MIN_REPEAT_CONFIDENCE` |
 | `kind` and `reason` values | kebab-case | `"from-message"`, `"repeat-declined"` |
 | Files and folders | kebab-case | `calendar-event/create-calendar-event.ts` |
@@ -194,7 +190,7 @@ fails in CI.
 ### Logging
 
 Log events use OpenTelemetry (OTel) names. See ADR-9 in
-[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md).
+[ARCHITECTURE_DECISIONS_REGISTRY.md](ARCHITECTURE_DECISIONS_REGISTRY.md).
 
 | Part | Rule | Example |
 |---|---|---|
@@ -219,98 +215,14 @@ The attribute names every area shares:
 | The reply language, and how it was chosen | `telegram.reply_language`, `telegram.reply_language_source`, `telegram.user_language_code` |
 | The message text and the model answer | `extraction.message_text`, `extraction.model_answer` |
 
-## What replaces what
-
-Paths are under `src/`. Status: ✅ done, ⏳ to do.
-
-The old tests are the specification. Each area's tests are ported to the new
-code, together with that area.
-
-| Old code (`legacy/`) | New code | Status |
-|---|---|---|
-| `time/dateOnly.ts` | `generic/date-time/date-only.ts`, `generic/date-time/time-of-day.ts`; `nowIn` → `localDateTimeIn` in `generic/date-time/time-zone.ts`; `parseTime` → `timeOfDayOf` in `adapters/models/extraction/parse-event-answer.ts` | ✅ |
-| `time/timezone.ts`, `time/canonicalTimezone.ts` | `generic/date-time/time-zone.ts` (`parseTimeZoneName`), `domain/user/user-time-zone-rule.ts` (`parseUserTimeZoneName`) | ✅ |
-| `extractedEvents/toGregorian.ts` | `generic/date-time/calendar-conversion.ts`, `domain/calendar-event/calendar.ts` (`CalendarId`), `domain/calendar-event/year-rule.ts` (`pickYear`, `pickEndYear`), `domain/calendar-event/create-calendar-event.ts` (the dates of an event); the calendar names the model uses → `adapters/models/extraction/calendar-names.ts` | ✅ |
-| `extractedEvents/extractedEvent.ts` | `domain/calendar-event/calendar-event-draft.ts`, `domain/calendar-event/event-time.ts`, `domain/calendar-event/event-time-rule.ts` (one hour with no end time); turning the model's answer into a draft → `adapters/models/extraction/parse-event-answer.ts` | ✅ |
-| `extractedEvents/eventPlan.ts` | `domain/calendar-event/calendar-event.ts`, `event-time-zone.ts`, `time-zone-order-rule.ts`, `wrong-guess-rule.ts`, `create-calendar-event.ts` (all in `domain/calendar-event/`) | ✅ |
-| `extractedEvents/recurrence.ts` (rules) | `repeat.ts`, `first-date-rule.ts`, `repeat-decline-rule.ts`, `repeat-calendar-rule.ts` (all in `domain/calendar-event/`) | ✅ |
-| `RECURRENCE_MIN_CONFIDENCE` in `extractedEvents/recurrence.ts` | `MIN_REPEAT_CONFIDENCE` in `domain/calendar-event/repeat-decline-rule.ts` | ✅ |
-| `extractedEvents/eventUid.ts` | `domain/calendar-event/event-uid-rule.ts`, `generic/hash/sha256-hex.ts` | ✅ |
-| `policy/userQuotaPolicy.ts` | `domain/quota/user-quota-policy.ts`, with the `UsageStore` port in `domain/quota/usage-store.ts` | ✅ |
-| `policy/userQuotaPolicyLogger.ts` | dropped: `user_activity.quota_used_up` already records the same fact | ✅ |
-| the user's language and time zone (`repositories/userPreferenceRepository.ts`) | `domain/user/user-settings.ts` (type) | ✅ |
-| `extractedEvents/calendarEvent.ts` (`.ics` part) | `output/calendar-file.ts`, `generic/icalendar/` | ✅ |
-| `extractedEvents/calendarEvent.ts` (link part) | `output/google-calendar-link.ts` | ✅ |
-| `extractedEvents/calendarEvent.ts` (caption texts), the caption in `eventMessageHandler.ts` | `output/caption.ts`, `generic/intl/localized-number.ts`; `telegramHtml.ts` → `generic/html/escape-html.ts` | ✅ |
-| `extractedEvents/recurrence.ts` (RRULE) | `output/rrule.ts` | ✅ |
-| `extractedEvents/recurrence.ts` (the English repeat sentence) | `output/repeat-sentence.ts` | ✅ |
-| date formatting in a language (in `calendarEvent.ts`) | `output/localized-date-time.ts` | ✅ |
-| `time/formatWait.ts` | `generic/intl/localized-time-span.ts` (`formatTimeUntil`: hours and minutes in the reply language, not "2h 5m" in English) | ✅ |
-| `interactiveMessages/messages.ts`, `translation/translate.ts`, `translation/translations/*` | `i18n/bot-message.ts`, `i18n/translation.ts`, `i18n/translations/*` | ✅ |
-| `translation/language.ts` | `domain/user/supported-language.ts` (the list, `parseLanguageCode`: a value object, so it is in the domain); `resolveLanguage` → `parseLanguageName` and `getLanguageDisplayName` → `languageNameOf`, in `i18n/language-name.ts`; the choice of the reply language (in `updateHandler.ts`) → `domain/user/reply-language-rule.ts` | ✅ |
-| `translation/placeholders.ts` | `generic/text/fill-placeholders.ts` | ✅ |
-| `telegram/messageHandlers/updateHandler.ts` | `app/handle-update.ts` (`handleUpdate`); `readUserSettings` → `loadUserOfUpdate` and `replyLanguageOf`; matching the commands (`isLangCommand`, `isTzCommand`, `=== "/start"`) → `parseBotCommand` in `adapters/telegram/bot-command.ts` | ✅ |
-| `telegram/messageHandlers/eventMessageHandler.ts`, the quota part of `updateHandler.ts` | `app/create-event-from-message.ts` (`createEventFromMessage`); the quota line → `output/quota-line.ts` | ✅ |
-| `telegram/commands/*` | `app/commands/`: `start-bot.ts`, `show-help.ts` (new), `show-version.ts`, `check-models.ts` (`/diag`), `set-language.ts` (`/lang`), `set-time-zone.ts` (`/tz`) | ✅ |
-| `extractedEvents/extractEvent.ts`, `event_schema.ts`, `prompts/event_extract.txt` | `adapters/models/extraction/`: `extract-draft.ts` (`extractEvent` → `extractDraft`), `event-answer-schema.ts`, `event-extraction-prompt.txt` (plus one line: never translate the title or the location) | ✅ |
-| `telegram/telegramWebhook.ts`, `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts`, `replier.ts` | `adapters/telegram/`: `telegram-update.ts` (`parseTelegramUpdate`), `webhook-auth.ts` (`isFromTelegram`), `telegram-client.ts`, `replier.ts` (`Replier`, `TelegramReplier`: sends only, the app writes the texts); the JSON field readers → `generic/json/json-fields.ts`; the webhook's `fetch` handler → the entry point `app/worker.ts` | ✅ |
-| `db/*/userUsage*`, `db/*/userPreference*`, `repositories/userUsageRepository.ts`, `repositories/userPreferenceRepository.ts` | the user aggregate (step 4g): `domain/user/user.ts`, `user-profile.ts`, `user-repository.ts` (port); `domain/quota/quota-usage.ts`, `daily-quota-rule.ts` (the quota rule, moved out of the SQL); `adapters/database/d1-user-repository.ts` (one `users` table); `app/update-user.ts` (load, save, retry) | ✅ |
-| `db/*/geminiUsage*`, `db/*/groqUsage*`, `repositories/geminiUsageRepository.ts`, `repositories/groqUsageRepository.ts`, `time/dateTimeAest.ts` | `adapters/database/d1-counted-model-usage-store.ts` (table `gemini_usage`), `adapters/database/d1-retry-after-model-usage-store.ts` (table `groq_usage`); `dateTimeAest` → `dateTimeTextIn` in `generic/date-time/time-zone.ts` | ✅ |
-| `providers/*` | `adapters/models/model.ts` (`ProviderConfig` → `Model`, `ProviderLimits` → `ModelLimits`), `model-result.ts`, `provider-client.ts`; `adapters/models/providers/` (`registry.ts` → `model-list.ts`, the clients, the answer parsers, `jsonSchema.ts` → `groq-json-schema.ts`) | ✅ |
-| `router/*`, `quotaLimit/*` | `adapters/models/router.ts` (`generate` → `ask`, `MeteredProvider` → `RoutedProvider`), `router-log.ts` (OpenTelemetry events), `model-usage-store.ts` (`UsageRepository` → `ModelUsageStore`); the usage windows → private in `d1-counted-model-usage-store.ts`; `createRouter` → `routedProvidersOf` in `adapters/models/providers/routed-providers.ts` (only `providers/` knows Gemini and Groq), and `new Router(…)` in `app/worker.ts` | ✅ |
-| `prompts/diag_ping.txt` | `PING_PROMPT` in `app/commands/check-models.ts` | ✅ |
-| `logging/*` | `adapters/logging/`: `log-event.ts`, `logger.ts`, `log-session.ts`, `axiom.ts`, `user-activity.ts` (`Activity` → `UserActivity`, `logActivity` → `logUserActivity`), with OpenTelemetry names (see [Logging](#logging)); `truncate` → `generic/text/truncate-text.ts`, `safeStringify` → `generic/json/safe-json-stringify.ts` | ✅ |
-| `web/*` | `adapters/web/`: `time-zone-link-token.ts` (`tzToken.ts`; the token's JSON is unchanged, so links already sent keep working), `time-zone-page.ts` (`tzPage.ts`), `time-zone-page.html` and `.css` (unchanged), `time-zone-cities.ts` (`tzCities.ts`); the base64url helpers → `generic/encoding/base64-url.ts`; the routes (`tzRoutes.ts`) → `app/time-zone-page.ts` (`handleTzPage` → `openTimeZonePage`, `handleTzSave` → `saveTimeZoneFromPage`), with the save shared with `/tz` in `app/save-user-time-zone.ts`; the save body → `adapters/web/time-zone-save-request.ts`; `languageFromHeader` → `adapters/web/request-language.ts`; `setLogField` for the user → `adapters/logging/user-log-attributes.ts` | ✅ |
-| `appConfig/appConfig.ts`, `env.ts` | `config/app-config.ts` (`appConfig` → `APP_CONFIG`, `defaultTimezone` → `floatingTimeZoneName`), `config/env.ts` | ✅ |
-| `buildCalendarEvent` (used only by tests) | dropped: the new tests build events with `calendarEventWith` (`tests/unit/output/calendar-event-with.ts`) or run the rules directly | ✅ |
-| `text-modules.d.ts`, `node-modules.d.ts` | stay in `src/` | ✅ |
-
-## Order of the work
-
-The new code is built **beside** the old code. The old code keeps running
-until the last step, so the bot is never half broken, and the work can stop
-after any step. Rewrite one area per commit, with its tests. All tests pass
-after each commit.
-
-| Step | What | Status |
-|---|---|---|
-| 0 | The folder skeleton, and the import-rule test | ✅ |
-| 1 | The domain model: the types for dates, time zones, events, repeats, the quota and user settings. `null` only where a value is optional by nature (principle 7). | ✅ |
-| 2 | The domain rules, as pure functions: creating a calendar event from a draft, calendars, the year rule, repeats, the quota | ✅ |
-| 3a | Output: the calendar file (`.ics`) | ✅ |
-| 3b | Output: the Google Calendar link | ✅ |
-| 3c-1 | Output: dates and times in the reply language | ✅ |
-| 3c-2 | Output: the repeat sentence, in English (as in the old code) | ✅ |
-| 3c-3 | i18n: the message texts, the translations, and the lookup | ✅ |
-| 3c-4 | Output: the repeat sentence in the reply language, with stored templates (a bug fix: no English inside a non-English reply) | ✅ |
-| 3c-5 | Output: the caption, with numbers in the reply language (a bug fix: "9974" in a Farsi reply) | ✅ |
-| 4a | Config: `APP_CONFIG` and `Env` | ✅ |
-| 4b | Adapters: logging (the logger, the log session, Axiom, user activity) | ✅ |
-| 4c | Adapters: the database for users (the quota usage and the user settings); replaced by 4g | ✅ |
-| 4d-1 | Adapters: the provider clients (Gemini, Groq), the model list and limits, the model result types | ✅ |
-| 4d-2 | Adapters: the model usage (windows, the `gemini_usage` and `groq_usage` stores) and the router | ✅ |
-| 4d-3 | Adapters: extraction (the prompt, the answer schema, the model answer → `CalendarEventDraft`); a missing title becomes "Event" in the reply language | ✅ |
-| 4e | Adapters: Telegram (reading updates, the webhook secret check, the client, replies) | ✅ |
-| 4f | Adapters: the web pages (the /tz page, its link token, the city list) | ✅ |
-| 4g | The user aggregate: one `users` row with the profile, the settings and the quota usage; the quota rule in the domain; optimistic concurrency with a `version` (ADR-3). Done after 5a. | ✅ |
-| 5a | App: create an event from a message (quota, the "reading your message" notice, extraction, the calendar event, the caption and file, the refund). `UserQuotaPolicy` decides the daily quota itself (from `APP_CONFIG` now, from the user's tier later), so the app calls `tryConsume(userId, now)`. | ✅ |
-| 5b | App: the commands `/start`, `/ver`, `/diag`, `/lang`. The rule `domain/user/reply-language-rule.ts`: `replyLanguageOf(user)` returns the language and its source (`user-choice`, `telegram`, `english-fallback`). `/lang` alone shows the reply language and how to change it. | ✅ |
-| 5c | App: set a time zone (the `/tz` command, the `/tz` page route, the `/tz/save` route) | ✅ |
-| 5d | App: handle an update, and the entry point (routing, the webhook secret check, the log session, ADR-8). Every event of an update gets `telegram.user_language_code`, `telegram.reply_language` and `telegram.reply_language_source`. So `user_activity.bot_started` shows how the reply language was chosen, to find out why users start the bot but never try it. | ✅ |
-| 5e | App: a short `/start` (a welcome with the first name, one example to try, a pointer to `/help`) and a new `/help` (how the bot works, what you can set, the daily quota). An unknown command is logged with the text after it (`user_activity.command_text`). The daily quota is a named type, `DailyQuota` in `domain/quota/daily-quota.ts` (`{ kind: "off" }` instead of `null`). `APP_CONFIG.showDailyQuota` (off for now) hides the quota in replies, except when it is used up; the quota is now 10. | ✅ |
-| 6a | Tests: check every case of the old tests against the new ones, port the 4 that were missing, port the live and the manual tests (`extract-draft`, `quota-fill`), and delete the old tests | ✅ |
-| 6b | Point `wrangler.toml` `main` at the new entry point, delete the old code, and update the README. Add `/help` to the `/` menu in `ci.yml` and `deploy.yml` (not before: the old code has no `/help`). | ⏳ |
-| 6c | Prod: right before the deploy, copy `user_preference` and `user_usage` into the new `users` table. | ⏳ |
-
 ## How the rules are checked
 
 - **Import rule:** a unit test (`tests/unit/code-structure.test.ts`) reads every
   source file. It fails if a file in `generic/`, `domain/`, `output/`,
   `i18n/`, `config/` or `adapters/` imports from a folder that the "Who may import whom" table
   does not allow.
-- **Casing:** the same test fails if a folder or file outside `legacy/` is not
-  kebab-case.
+- **Casing:** the same test fails if a folder or file is not kebab-case.
 - **Types:** `npm run typecheck` in CI.
-- **Behaviour:** every step keeps all unit and live tests passing.
+- **Behaviour:** every commit keeps all unit and live tests passing.
 - **Review:** the project `CLAUDE.md` tells Claude Code to follow this file for
   every change.

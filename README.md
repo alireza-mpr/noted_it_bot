@@ -2,8 +2,8 @@
 
 A Telegram bot that runs on Cloudflare Workers.
 
-You forward it a message with an event (a photo with a caption works too). It
-replies with:
+You forward it a message with an event (a photo with a caption works too), or
+type one. It replies with:
 - a one-tap "add to Google Calendar" link,
 - an `.ics` file for Apple Calendar, Outlook, and others.
 
@@ -15,45 +15,45 @@ There are two environments:
 | prod | `@noted_it_bot`     | `prod`             | its own account    | by hand, from a `v…` tag (see [Deploy to prod](#deploy-to-prod)) |
 
 More docs:
-- [docs/PRODUCT.md](docs/PRODUCT.md): features and backlog.
-- [docs/ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md): the main design decisions.
-- [docs/EDGE_CASES.md](docs/EDGE_CASES.md): missing years, other calendars, missing time zones.
-- [docs/USER_QUOTA_DESIGN.md](docs/USER_QUOTA_DESIGN.md): the daily quota and its D1 cost.
+
+| Doc | What is in it |
+|---|---|
+| [docs/PRODUCT.md](docs/PRODUCT.md) | Features, what users do, and the backlog |
+| [docs/EDGE_CASES.md](docs/EDGE_CASES.md) | The rules for dates, calendars, repeats and time zones, and the real messages behind them |
+| [docs/ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md) | Why the main parts work the way they do; the daily quota and what each message costs in D1 |
+| [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md) | How the code is organised, and the coding and logging rules |
+| [docs/UBIQUITOUS_LANGUAGE.md](docs/UBIQUITOUS_LANGUAGE.md) | The words we use in code and docs |
 
 ## Commands
 
 | Command  | What it does |
 |----------|--------------|
-| `/start` | Intro message, with the daily quota |
-| `/lang`  | Set the reply language (`/lang fa`, `/lang Persian`). `/lang auto` goes back to the Telegram language. `/lang` alone explains how to use it. |
-| `/tz`    | Set your time zone on a web page (the button works for 1 minute). `/tz Australia/Melbourne` (an exact zone name) is applied at once. Does not use quota. |
+| `/start` | A short welcome, with one example to try |
+| `/help`  | How the bot works, what you can set, and the daily quota (when it is shown) |
+| `/lang`  | Set the reply language (`/lang fa`, `/lang Persian`). `/lang auto` goes back to the Telegram language. `/lang` alone shows the current one. |
+| `/tz`    | Set your time zone on a web page (the button works for 1 minute). `/tz Australia/Melbourne` (an exact zone name) is applied at once. |
 | `/ver`   | Show the running version |
-| `/diag`  | Check the Gemini connection. It works, but it is not in Telegram's `/` menu on purpose. |
+| `/diag`  | Check that the models answer. It is not in Telegram's `/` menu on purpose. |
 
-Any other message is treated as an event and sent to the model.
+Commands never use quota. Any other message is treated as an event and sent to
+a model. An unknown command (e.g. `/settings`) gets no reply, but it is logged.
 
 ## How it works
 
-Telegram calls the Worker's URL (a webhook) for every message. There is no
+Telegram calls the Worker's URL (a webhook) for every update. There is no
 polling and no server that runs all the time.
 
-**The entry point** is [src/legacy/telegram/telegramWebhook.ts](src/legacy/telegram/telegramWebhook.ts)
-(`main` in `wrangler.toml`). It is small on purpose. It:
-1. checks that the request comes from Telegram (a shared secret token),
-2. prepares the shared parts (the quota policy, the router, the Telegram client),
-3. passes the message to `updateHandler`.
+| Step | File |
+|---|---|
+| The entry point: one log session per request. `GET /tz` and `POST /tz/save` go to the time zone page. Any other `POST` is the webhook: a wrong secret gets 401, and everything else gets 200 (ADR-8). | `src/app/worker.ts` |
+| One update: a message, a block or unblock, or something the bot ignores. For a message, it loads the user, picks the reply language, then runs the command or creates the event. It never throws: a failure gets a general error reply. | `src/app/handle-update.ts` |
+| The commands, one file each | `src/app/commands/` |
+| An event from a message: the quota, the model, the calendar event, the reply, and the refund when no model answers | `src/app/create-event-from-message.ts` |
+| Loading and saving a user, with a retry when two updates race (ADR-3) | `src/app/update-user.ts` |
 
-**The rest of the Telegram code** is in `src/legacy/telegram/`:
-
-| File | What it does |
-|------|--------------|
-| `messageHandlers/updateHandler.ts` | The flow for one message. It reads the user's language and time zone, then `handleMessage` runs a command, or sends anything else to event extraction (behind the [daily quota](#daily-quota)). It never throws: errors go to the chat, because Telegram retries failed requests and that would block the queue. |
-| `commands/` | One file per command (`startCommandHandler.ts`, `langCommandHandler.ts`, `tzCommandHandler.ts`, …). Each is a plain function that takes only what it needs. To add a command, add a file and one `if` in `handleMessage`. |
-| `messageHandlers/eventMessageHandler.ts` | The event flow: extract the event, log it, decline unclear repeats, build the calendar event and the caption, send the `.ics` file. |
-| `replier.ts` | The one place that translates a message, fills its `{0}` placeholders, and sends it. Every reply uses it. |
-| `telegramClient.ts`, `telegramTypes.ts`, `telegramHtml.ts` | The Telegram API: `sendMessage`, `sendDocument`, types, HTML escaping. |
-
-`Env` is in `src/legacy/env.ts`. `extractEvent` is in `src/legacy/extractedEvents/extractEvent.ts`.
+The rest of `src/` follows one rule: pure rules in `domain/` and `output/`,
+input and output only in `adapters/`, and `app/` connects them. See
+[docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md).
 
 ## Local dev
 
@@ -67,7 +67,9 @@ npx wrangler secret put AXIOM_TOKEN --env dev    # optional locally: without it,
 npx wrangler dev --env dev
 ```
 
-`wrangler dev` gives you a URL. Point the Telegram webhook at it:
+`wrangler dev` gives you a URL. Point the Telegram webhook at it, **with the
+secret token**. A `setWebhook` call without `secret_token` clears Telegram's
+secret, and then every webhook call fails with 401.
 
 ```bash
 curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
@@ -77,20 +79,24 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
 
 ## Tests
 
-- **Unit tests** (`tests/unit/`) run offline. Run them with
-  `npx vitest run tests/unit`.
-- **Live tests** (`tests/integration/extractEvent.test.ts`) call the real
-  Gemini API through the real router. Each case is a message and the JSON we
-  expect. The check is partial (`toMatchObject`), so you only list the fields
-  you care about.
+| Kind | Where | How to run |
+|---|---|---|
+| Unit tests, offline | `tests/unit/` (the same folders as `src/`) | `npx vitest run tests/unit` |
+| Live tests: real messages through the real router and models | `tests/integration/extract-draft.test.ts` | part of `npm test` |
+| Manual: fills the Gemini quota on purpose, to check that the router moves on | `tests/manual/quota-fill.test.ts` | `npm run test:quota-fill` (never in CI) |
+
 - All tests run inside the Workers runtime (`@cloudflare/vitest-plugin`).
+- The live tests check only the fields they list (`toMatchObject`). A failed
+  model moves on to the next one, so a test fails only if no model answers.
+- `tests/unit/code-structure.test.ts` checks the import rule and the file
+  name casing.
 
 **Databases in tests:**
 - The dev D1 database is a **remote binding** (`remote = true` in
-  [wrangler.toml](wrangler.toml)). So tests read and write the real dev
-  database, locally and in CI.
-- The one exception is `TEST_DB`, a local D1 declared in `vitest.config.ts`.
-  The repository tests use it to run real SQL without touching dev.
+  [wrangler.toml](wrangler.toml)). So tests that use it read and write the real
+  dev database, locally and in CI.
+- `TEST_DB` is a local D1, declared in `vitest.config.ts`. The database tests
+  use it to run real SQL without touching dev.
 
 **Running all tests** needs these values (the same ones CI sets):
 
@@ -105,8 +111,8 @@ npm ci && npm run typecheck && npm test
 - `vitest.config.ts` reads `GEMINI_API_KEY` and `GROQ_API_KEY` from the
   environment, or from your local `secrets/dev.json`. It stops at once if
   `GEMINI_API_KEY` is missing.
-- Full runs are slower (every D1 call goes over the network). They also use
-  the dev Gemini quota, which the dev bot shares.
+- Full runs are slower (every remote D1 call goes over the network). They also
+  use the dev Gemini quota, which the dev bot shares.
 
 ## CI/CD
 
@@ -117,17 +123,16 @@ request runs only the first):
   `CLOUDFLARE_ACCOUNT_ID`.
 - **`deploy-dev`**: runs only when `build` passes, and only on `main`.
   - After a successful deploy, it pushes a git tag with the exact version that
-    `/ver` shows (for example `v0.2.42-beta-abc1234`). A failed deploy adds no
-    tag.
-  - To deploy even when tests fail (for example, the dev Gemini quota is used
-    up): run the CI workflow by hand on `main` in the Actions tab, and tick
-    **Deploy to dev even if the tests fail**.
+    `/ver` shows (e.g. `v0.2.42-beta-abc1234`). A failed deploy adds no tag.
+  - To deploy even when tests fail (e.g. the dev Gemini quota is used up): run
+    the CI workflow by hand on `main` in the Actions tab, and tick **Deploy to
+    dev even if the tests fail**.
 
 **`.github/workflows/deploy.yml`** (`deploy-prod`) **never runs by itself.** You
 start it by hand, and only from a `v…` tag. See [Deploy to prod](#deploy-to-prod).
 
 Every deploy uses `wrangler` to deploy its own Worker. Then it points that
-environment's Telegram webhook and command list at it.
+environment's Telegram webhook and `/` menu (`setMyCommands`) at it.
 
 ### Deploy to prod
 
@@ -148,9 +153,10 @@ deliberate click.
 4. In the branch list, pick the tag (not `main`).
 5. Click **Run workflow**. Only `deploy-prod` runs, on exactly that commit.
 
-**Before a prod deploy, check for database changes.** If the new code needs a
-D1 schema change, run it on prod first. Otherwise the old table can break the
-new code (this happened once with `/lang`).
+**Before a prod deploy, check for database changes.** If a release needs a D1
+change, make it on prod first. Otherwise an old table can break the
+release. This happened once: `/lang` failed on prod because a column there was
+still `NOT NULL`.
 
 ### Roll back
 
@@ -169,7 +175,7 @@ committed).
 | Secret                  | Where it comes from |
 |-------------------------|---------------------|
 | `BOT_TOKEN`             | the token in `secrets/{dev,prod}.json` |
-| `WEBHOOK_SECRET`        | a random string, one per environment (for example `openssl rand -hex 32`) |
+| `WEBHOOK_SECRET`        | a random string, one per environment (e.g. `openssl rand -hex 32`). It also signs the `/tz` links. |
 | `WORKER_URL`            | `https://<worker-name>.<your-subdomain>.workers.dev` (you see it after the first deploy) |
 | `GEMINI_API_KEY`        | your Gemini API key |
 | `GROQ_API_KEY`          | your Groq API key |
@@ -183,444 +189,216 @@ committed).
   its own Cloudflare token and account id. (An Environment secret replaces a
   repository secret with the same name.)
 
-## Features in detail
+## Storage (D1)
 
-### Languages
+One D1 database per environment (binding `USAGE_DB`). Every table is created
+on first use: each query runs together with its `CREATE TABLE IF NOT EXISTS`.
 
-**The list.** The bot replies in 16 languages: English and
-`fa ar es fr de it pt ru tr zh ja ko hi nl pl` (`SUPPORTED_LANGUAGES` in
-`src/legacy/translation/language.ts`). Other languages fall back to English.
+| Table | One row per | What it holds | Code |
+|---|---|---|---|
+| `users` | user | The Telegram profile (username, first and last name, app language), the chosen language and time zone, the quota usage, and a `version` for races (ADR-3) | `src/adapters/database/d1-user-repository.ts` |
+| `gemini_usage` | Gemini model | Requests and tokens in the current minute, requests in the current day, the last error and the last success | `src/adapters/database/d1-counted-model-usage-store.ts` |
+| `groq_usage` | Groq model | When the model can be tried again, the daily request count Groq reports, the last error and the last success | `src/adapters/database/d1-retry-after-model-usage-store.ts` |
 
-**Which language.** The user's `/lang` choice, if any. Otherwise Telegram's
-`message.from.language_code` (`pt-BR` becomes `pt`, and so on).
+- In `users`, `NULL` means "not chosen" (the language, the time zone) or "never
+  used" (the quota). What a user did, and when, is in the logs, not in D1.
+- `*Aest` columns are times in Australian Eastern time, for reading by hand.
 
-**Translations are made ahead of time** (see ADR-6 in the
-[decision registry](docs/ARCHITECTURE_DECISIONS.md)):
-- The English text is the `MESSAGES` object in
-  `src/legacy/interactiveMessages/messages.ts`.
-- Each language has one file, `src/legacy/translation/translations/<lang>.json`. It
-  maps each message id (`START_MESSAGE`, `TZ_LINK_MESSAGE`, …) to its
-  translation.
-- Code uses messages only by id (type `MessageId`). So a message that is not
-  in the catalog does not compile.
-- `translateStatic` (`src/legacy/translation/translate.ts`) looks up the id. No reply
-  calls a model to translate. So nobody can spend the LLM quota by switching
-  languages.
-- The repeat sentence under an event ("Repeats every 2 weeks on Monday and
-  Wednesday, until Jan 5, 2027") is **not translated**. It is part of the event,
-  like the title. `describeRecurrence` (`src/legacy/extractedEvents/recurrence.ts`)
-  always writes it in English.
+To create the databases, then paste their ids into `wrangler.toml`:
 
-**To change a message:** edit the English in `messages.ts`. Then update the same
-id in all 15 JSON files, in the same commit. Nothing forces this: the old
-translations stay until you change them.
-
-**To add a message:** add a new id to `MESSAGES` and to every JSON file.
-`tests/unit/translations.test.ts` fails until:
-- every language has every id,
-- no old id is left,
-- every translation has the same `{0}` placeholders, HTML tags, emoji and
-  `/lang` / `/tz` command names as the English.
-
-**To add a language:** add its code to `SUPPORTED_LANGUAGES`, add a JSON file,
-and import it in `src/legacy/translation/translations/index.ts`.
-
-The translations were written by an AI assistant. Native speakers have not
-reviewed them yet.
-
-**`/lang <language>`** accepts:
-- a code (`fa`, `pt-BR`),
-- the English name (`Persian`),
-- the language's own name (`فارسی`, `Deutsch`).
-
-It is matched in code, with no model (see `resolveLanguage`). An unsupported
-language gets a reply that lists the supported ones.
-
-**Storage.** The `user_preference` table in the `USAGE_DB` D1 database
-(`src/legacy/db/sql/userPreference.ts`, `src/legacy/repositories/userPreferenceRepository.ts`):
-
-| Column     | Meaning |
-|------------|---------|
-| `userId`   | primary key |
-| `lang`     | `NULL` means "use the Telegram language" (`/lang auto` sets `NULL`) |
-| `timezone` | set by `/tz`; `NULL` until the user picks one |
-
-Both are read in one query at the start of every message. The table is created
-on first use, like the other tables.
-
-### Time zones
-
-**Which zone an event uses**, in this order:
-1. the zone the message states or suggests (the model's `timezone_hint`);
-2. otherwise, the user's `/tz` zone;
-3. otherwise, no zone: **floating** time. The `.ics` has no `TZID`, and the
-   Google link has local times and no `ctz`. Every calendar shows the time as
-   written, in its own zone.
-
-In cases 2 and 3, the caption tells the user and points to `/tz`
-(`TZ_USER_NOTE`, `TZ_FLOATING_NOTE`). All-day events get no note: their date
-does not depend on a zone.
-
-**"Today"** (used to pick a missing year and for the past-date note) still
-needs a zone: the one above, or `appConfig.defaultTimezone` (`UTC`, in
-[appConfig.ts](src/legacy/appConfig/appConfig.ts)) for floating times.
-
-See [docs/EDGE_CASES.md](docs/EDGE_CASES.md) for why there is no default zone.
-
-### Setting the time zone (`/tz`)
-
-Guessing a zone from a place name is not reliable (one country can have many
-zones). So `/tz` uses a small web page, served by the Worker itself. No model is
-used.
-
-1. `/tz` replies with a button that links to `https://<worker>/tz?token=…`. The
-   link uses the address of Telegram's request, so there is no URL to set up.
-2. The page (`src/legacy/web/tzPage.ts`, markup in `src/legacy/web/tzPage.html`):
-   - reads the device's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`),
-   - shows it with the local time and a **Yes, use this time zone** button,
-   - or lets the user search all zones (`Intl.supportedValuesOf('timeZone')`).
-3. **The search** also finds:
-   - each zone's plain name in the user's language ("Eastern Time", from `Intl`),
-   - well-known cities in English (`src/legacy/web/tzCities.ts`: "Washington" finds
-     America/New_York).
-
-   It ignores case and accents, and shows exact matches first. The page is in
-   the user's language, right-to-left for Persian and Arabic.
-4. Saving sends a `POST` to `/tz/save`. It checks the zone with `Intl`, stores it
-   in `user_preference.timezone`, and sends a confirmation to the chat.
-
-`/tz australia/melbourne` (an exact zone name) is applied at once, without the page. Any
-other text after `/tz` just gets the link.
-
-**How the page knows the user.** Only from a signed token, never from anything
-the browser sends (`src/legacy/web/tzToken.ts`):
-- Format: `base64url(payload).base64url(HMAC-SHA256)`, signed with
-  `WEBHOOK_SECRET` plus a domain prefix. No new secret is needed.
-- Payload: `{uid, username, firstName, lang, purpose, exp}`. `username` and
-  `firstName` are only for the logs.
-- Two tokens:
-  - the **link** token (`purpose: "open"`) works for **1 minute**;
-  - opening the link gives the page a **save** token (`purpose: "save"`) that
-    works for **10 minutes**. So a leaked link is useless after a minute, but a
-    user who searches for a while is not cut off.
-- A token cannot do the other token's job. Changes are detected. A token must
-  be spelled exactly as it was signed.
-- A missing, forged, expired or wrong token gets a `403`, and touches neither
-  D1 nor Telegram.
-- The page uses a new CSP nonce per response, `Cache-Control: no-store`,
-  `Referrer-Policy: no-referrer`, and cannot be framed.
-- A save token can be used again until it expires. It can only change the
-  user's own row.
-
-**Tests:** `tests/unit/tzToken.test.ts`, `tzRoutes.test.ts`, `tzCommand.test.ts`
-and `tzCities.test.ts`. To see the real page: run `npx wrangler dev`, send `/tz`
-to the bot, and open the link.
-
-### Dates, calendars and repeats
-
-**From the model's answer to the calendar file**, in two steps:
-1. `planEvent` (`src/legacy/extractedEvents/eventPlan.ts`) checks the model's answer
-   once. It returns an `EventPlan` (Gregorian dates with years, the times, the
-   time zone, the repeat), or the reason why there is no event.
-   - Dates in any calendar are converted by `toGregorianDates`
-     (`src/legacy/extractedEvents/toGregorian.ts`). A missing year is picked by one
-     rule (`pickYear`, in the same file). The full rules are in
-     [docs/EDGE_CASES.md](docs/EDGE_CASES.md).
-2. `renderCalendarEvent` (`src/legacy/extractedEvents/calendarEvent.ts`) turns the plan
-   into the `.ics` file, the Google link and the caption parts. It checks
-   nothing: the plan is already checked.
-
-Dates use one type everywhere: `DateOnly` (`src/legacy/time/dateOnly.ts`).
-
-**Repeats** ("every Thursday 7:30pm", "every 2 weeks until 29 Nov", "first
-Friday of the month"):
-- The model returns a `recurrence` object (see
-  `src/legacy/extractedEvents/event_schema.ts`). It only describes the pattern.
-- Our code does all the date work: the first date, the end date, and the
-  checks (`src/legacy/extractedEvents/recurrence.ts`). The result is an `RRULE` in the
-  `.ics` file.
-- A repeat with no end date has no end.
-- A repeat that is invalid, or has low confidence (`RECURRENCE_MIN_CONFIDENCE`,
-  0.7), is declined with a message. It is not guessed.
-- The Google link also has the rule (`recur=RRULE:...`). Google's **web**
-  calendar uses it. Google's **phone app ignores it** and adds one event. So for
-  repeats, the `.ics` file is the reliable way. The caption and `/start` say so.
-
-### Daily quota
-
-The bot is open to everyone. The daily quota per user stops abuse:
-- Only messages that go to a model use a unit.
-- If no model answers, the unit is given back.
-- Commands never use quota.
-
-The details and the D1 cost of each kind of message are in
-[docs/USER_QUOTA_DESIGN.md](docs/USER_QUOTA_DESIGN.md).
+```bash
+npx wrangler d1 create noted-it-dev-usage
+npx wrangler d1 create noted-it-prod-usage
+```
 
 ## Models and routing
 
-The free Gemini plan has limits per model. So the bot counts each model's usage
-and picks the next model that still has room. Today, event extraction and
-`/diag` use the models.
+The free Gemini plan has small limits per model. So the bot counts each
+model's usage and tries the next model that still has room (ADR-4). Event
+extraction and `/diag` use the models.
 
-**The router.** The bot never calls Gemini directly. It calls the `Router`
-(`src/legacy/router/router.ts`):
-- Its one public method is
-  `generate({systemPrompt?, userPrompt, temperature?, responseSchema?})`.
-- `telegramWebhook.ts` builds it once with `createRouter(env)`, and passes it to
-  `updateHandler`. From there it goes to `extractEvent(router, text)` and to
-  `/diag`.
-- The router has a list of **providers**. Each provider is a pair:
-  - a **provider client** (`GeminiClient`, `GroqClient`) that makes one call to
-    one model;
-  - a **usage repository** (`src/legacy/repositories/geminiUsageRepository.ts`,
-    `groqUsageRepository.ts`) that says which models are available, and stores
-    usage and errors in D1.
-- The router tries a provider's available models in order, then the next
-  provider. Today: Gemini, then Groq. To add a provider, add one more pair in
-  `createRouter`.
-
-**What happens on each result:**
+- The bot never calls a provider directly. It calls `Router.ask`
+  (`src/adapters/models/router.ts`).
+- The router tries each provider's available models in order: Gemini's, then
+  Groq's (`routedProvidersOf` in `src/adapters/models/providers/routed-providers.ts`).
+  The models, their limits and their order are in
+  `src/adapters/models/providers/model-list.ts`.
+- Only `src/adapters/models/providers/` knows the names Gemini and Groq.
 
 | Result | What the router does |
-|--------|----------------------|
-| Success | Records usage (`rpm`, `rpd` +1, tokens added to `tpm`) in one upsert. |
-| 429 (rate limit) | Marks the model as used up for the minute or the day (Groq: until its `retry-after`), then tries the next model. |
-| 503, or no answer in 12 seconds (Gemini) | Records the error, then tries the next model. |
-| Any other error (other 4xx/5xx, empty answer) | Records the error, then tries the next model. |
-| 401 or 403 (bad API key) | Records the error, then skips the whole provider. |
+|---|---|
+| An answer | Records the usage, and returns the answer |
+| 429 (rate limit) | Marks the model as used up for the minute or the day (Groq: until its `retry-after`, else 60 seconds), then tries the next model |
+| 503, or no answer in 12 seconds | Records the error, then tries the next model |
+| Any other error (other 4xx or 5xx, an empty answer) | Records the error, then tries the next model |
+| 401 or 403 (a bad API key) | Records the error, then skips the whole provider |
 
-- Nothing is reserved before a call. So two requests at the same moment can
-  both take the last free slot. The 429 corrects the count.
-- Each upsert is one atomic statement.
+When every model fails, `ask` returns the last failure. Its `kind` is one of
+`rate-limited`, `unavailable`, `bad-request`, `unauthorized`, `empty-answer`,
+`server-error` or `internal`. `/diag` shows it, e.g. "Models: Broken
+(rate-limited)".
 
-**Gemini's limits:**
+**What we learnt about Gemini's limits:**
 - **The day ends at midnight Pacific time.** Google's docs say: "Requests per
-  day (RPD) quotas reset at midnight Pacific time." So the day key is the
-  `America/Los_Angeles` date (`src/legacy/quotaLimit/quotaWindows.ts`). Do not change
-  it to UTC or local time.
+  day (RPD) quotas reset at midnight Pacific time." So the day is the
+  `America/Los_Angeles` date. Do not change it to UTC or local time.
 - **Limits count per project, not per key.** More keys in the same project add
   nothing. Limits are per model, so each model is counted on its own.
 - **The minute window is assumed to be fixed** (Google does not say). Counters
   use the UTC minute. A 429 corrects any drift.
-- **The limits** (`limits`) are in `src/legacy/providers/registry.ts`, copied from the
-  AI Studio free-plan table. The try order is the order in that file.
+- **Nothing is reserved before a call.** So two requests at the same moment can
+  both take the last free slot. The 429 corrects the count.
 
-**Storage.** One row per model in the `gemini_usage` table (D1, binding
-`USAGE_DB`). Groq uses `groq_usage`, which only stores when to try again.
+## The `/tz` page
 
-| Column | Meaning |
-|--------|---------|
-| `model` | the model name |
-| `day`, `minute` | the current windows |
-| `rpm`, `tpm`, `rpd` | requests per minute, tokens per minute, requests per day |
-| `aestTime` | the last write, in Australian Eastern time |
-| `lastError`, `lastErrorAest` | the model's last error, and when. Kept until the next error. |
-| `lastSuccessAest` | the last success. If it is after `lastErrorAest`, the model has recovered. |
+Guessing a zone from a place name is not reliable: one country can have many
+zones (ADR-5). So `/tz` uses a small web page, served by the Worker itself. No
+model is used.
 
-- Old windows reset on the next write. A model with no row counts as unused.
-- The table is created on first use (each query runs with
-  `CREATE TABLE IF NOT EXISTS`, `src/legacy/db/schema/geminiUsageTable.ts`). All SQL is
-  in `src/legacy/db/sql/geminiUsage.ts`.
-- To create the databases, then paste their ids into `wrangler.toml`:
-  ```bash
-  npx wrangler d1 create noted-it-dev-usage
-  npx wrangler d1 create noted-it-prod-usage
-  ```
+1. `/tz` replies with a button that links to `https://<worker>/tz?token=…`. The
+   link uses the address of Telegram's request, so there is no URL to set up.
+2. The page reads the device's zone and shows it with the local time and a
+   **Yes, use this time zone** button. Or the user searches all zones.
+3. **The search** also finds each zone's plain name in the user's language
+   ("Eastern Time", from `Intl`), and well-known cities in English
+   (`src/adapters/web/time-zone-cities.ts`: "Washington" finds
+   America/New_York). It ignores case and accents, and shows exact matches
+   first. The page is in the user's language, right-to-left for Persian and
+   Arabic.
+4. Saving sends a `POST` to `/tz/save`. It checks the zone, saves it, and sends
+   a confirmation to the chat.
 
-**The result type.** `generate` returns a `ProviderSuccess`
-(`{ok: true, model, text, totalTokens}`) or a `ProviderFailure`
-(`{ok: false, kind, httpStatus?, detail}`):
+**How the page knows the user:** only from a signed token, never from anything
+the browser sends (`src/adapters/web/time-zone-link-token.ts`).
+- Format: `base64url(payload).base64url(HMAC-SHA256)`, signed with
+  `WEBHOOK_SECRET` plus a fixed prefix. No other secret is needed.
+- Two tokens: the **link** token works for **1 minute**. Opening the link gives
+  the page a **save** token that works for **10 minutes**. So a leaked link is
+  useless after a minute, but a user who searches for a while is not cut off.
+- A token cannot do the other token's job. Any change is detected. A token
+  must be spelled exactly as it was signed.
+- A missing, forged, expired or wrong token gets a `403`, and touches neither
+  D1 nor Telegram.
+- Every page gets a new CSP nonce, `Cache-Control: no-store` and
+  `Referrer-Policy: no-referrer`, and cannot be framed.
 
-| `kind` | Meaning |
-|--------|---------|
-| `rateLimited` | a 429, or no model under its limits. Also has `quotaLimitScope`: `minute` or `day`. |
-| `unavailable` | 503 |
-| `badRequest` | other 4xx |
-| `unauthorized` | 401 or 403 |
-| `serverError` | other 5xx |
-| `emptyResponse` | 200 with no text (for example, a safety block) |
-| `internal` | an error in our code |
+To see the real page: run `npx wrangler dev`, send `/tz` to the bot, and open
+the link.
 
-When all models fail, `kind` is the one from the last attempt. `extractEvent`
-passes the failure on and logs it. `/diag` shows it (for example
-`Gemini: Broken (unauthorized)`).
+## Translations
 
-**Tests:**
-- `tests/integration/extractEvent.test.ts` runs real messages through the real
-  router. A failed model moves on to the next one. The test fails only if no
-  model answers.
-- `tests/unit/geminiResponse.test.ts` checks the parser with a real 503
-  response (`tests/unit/fixtures/gemini503Unavailable.ts`).
+The bot replies in 16 languages (ADR-6). Every text is translated ahead of
+time, so choosing a language never calls a model.
+
+- The English texts: `BOT_MESSAGES` in `src/i18n/bot-message.ts`.
+- One file per language: `src/i18n/translations/<language>.json`, imported in
+  `src/i18n/translation.ts`.
+- Numbers, dates, times and the 🔁 repeat sentence are written in the reply
+  language too. The event's title and location are never translated.
+
+| To… | Do this |
+|---|---|
+| Change a message | Edit the English, and the same id in all 15 JSON files, in the same commit. Nothing forces this. |
+| Add a message | Add the id to `BOT_MESSAGES` and to every JSON file |
+| Add a language | Add its code to `SUPPORTED_LANGUAGES` (`src/domain/user/supported-language.ts`), add its JSON file, and import it in `translation.ts` |
+
+`tests/unit/i18n/translation.test.ts` fails until every language has every id,
+no old id is left, and every translation has the same `{0}` placeholders, HTML
+tags, emoji and `/lang`, `/tz` and `/help` commands as the English.
+
+The translations were written by an AI assistant. Native speakers have not
+reviewed them yet.
 
 ## Logs
 
-### Axiom
+Log events use OpenTelemetry names (ADR-9). The naming rules are in "Logging"
+in [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md#logging).
 
-Every log line goes to the **`app-logs`** dataset in [Axiom](https://axiom.co).
-- The `Logger` in `src/legacy/logging/logger.ts` does this. The dataset, region and
-  service name are in `src/legacy/logging/axiomConfig.ts`. The region is `us-east-1`:
-  change it if your Axiom org is somewhere else.
-- There are no direct `console.*` calls in `src/`. Everything uses a `Logger`.
-  It prints one JSON line to the console (so Workers Logs still has it), and
-  also sends the event to Axiom.
-
-**How to log:**
-- Create a logger with `new Logger("<name>")`. The name becomes the event's
-  `source`. Some classes (for example `RouterLog`) take a `Logger`
-  as a parameter.
-- Put data in fields, not in the message:
-  `logger.error("threw", describeError(err))`,
-  `logger.info("extracted", { model, tokens })`.
-- **The message is a fixed sentence.** Write `"daily quota exhausted"` with a
-  `userId` field, not `"daily quota exhausted for user 42"`. Then you can group
-  messages and filter by field (`where userId == 42`).
-- Do not use these names for fields: `message`, `source`, `level`, `seq`,
-  `correlation_id`, `service`, `version`, `_time`. They belong to the event.
-
-**One request = one `correlation_id`.**
-- `runLogSession` (called in the webhook's `fetch`) makes one UUID per request.
-  It keeps it in `AsyncLocalStorage` (the `nodejs_als` flag in
-  [wrangler.toml](wrangler.toml)), so parallel requests never mix ids.
-- Every event of that request has it. After the message is read, every event
-  also has `userId`, `username` (`null` if the user has none: Telegram usernames
-  are optional), `firstName` (every account has one) and `chatId`.
-- To see one request's whole story:
-  ```
-  ['app-logs'] | where correlation_id == "<id>" | sort by _time asc, seq asc
-  ```
-
-**Time and order:**
-- The logger sets `_time` when it logs the line. Axiom uses it as the event time.
-- Workers freeze the clock until the next I/O. So several lines can have the
-  same `_time`.
-- `seq` counts events within a request (1, 2, 3, …). Always sort by `_time`
-  and `seq`.
-
-**Sending:**
-- Events are collected during the request and sent as one batch after the
-  response (`ctx.waitUntil`). So logging adds one request to Axiom, and no
-  delay for the user.
-- Each event has `_time`, `seq`, `level`, `source`, `message`,
-  `correlation_id`, `service`, `version`, plus its own fields.
-- Text longer than 10,000 characters is cut.
+**Where they go:**
+- Every event goes to the **`app-logs`** dataset in [Axiom](https://axiom.co)
+  (`src/adapters/logging/axiom.ts`, region `us-east-1`: change it if your Axiom
+  org is somewhere else).
+- Every event is also printed to the console as one JSON line, so Workers Logs
+  keeps a copy. There are no direct `console.*` calls in `src/`: everything
+  uses a `Logger`.
 - Without `AXIOM_TOKEN` (local runs, tests), nothing is sent. If Axiom fails,
   the error is only printed. It never affects the reply.
-- The logs include message text: what users send, and what models answer.
 
-**What a request logs** (`info` unless noted):
+**One request is one log session:**
+- `runLogSession` (in `worker.ts`) gives every event of a request the same
+  `traceId`. It uses `AsyncLocalStorage` (the `nodejs_als` flag in
+  [wrangler.toml](wrangler.toml)), so parallel requests never mix.
+- The events are sent to Axiom as one batch, after the response
+  (`waitUntil`). So logging adds no delay for the user.
+- Workers freeze the clock until the next I/O, so several events can have the
+  same `_time`. `log_session.seq` counts the events of a request (1, 2, 3, …).
+  Always sort by `_time`, then `log_session.seq`.
+- Texts longer than 10,000 characters are cut.
+- Every printed line counts toward the Workers Logs limit (200,000 lines per
+  day on the free plan, then 1% sampling).
 
-| `message` | Fields | When |
-|-----------|--------|------|
-| `update received` | `command`, `lang` | start of every message |
-| `quota consumed` | `remainingQuota` | one unit used |
-| `daily quota exhausted` (warn) | `userId` | no quota left |
-| `quota refunded` | `remainingQuota` | no model answered, so the unit was given back |
-| `available models` / `attempting model` / `model succeeded` | `models`, `model`, `tokens` | router steps (warn or error for rate limits, 503s and failures) |
-| `extracted` | `sourceText`, `event` | the extracted event |
-| `provider response received` | `receivedMessage`, `providerResponse`, `model` | the message log (see below) |
-| `user activity` | `activity`, … | see [User activity](#user-activity) |
-| `diag check completed` | `check`, `healthy` | `/diag` |
-| `reply sent` | `type` (`text`/`document`), `lang`, `filename` | after a reply is sent |
-| `telegram send failed` (warn) | `method`, `status`, `description` | Telegram refused a reply (not a block) |
-| `update processed` | `outcome` (`ok`/`error`), `durationMs` | end of every message |
+**Every event of a message** also has: `user.id`, `user.name` (the Telegram
+username: optional, so it can be `null`), `user.full_name`, `telegram.chat.id`,
+`telegram.user_language_code`, `telegram.reply_language` and
+`telegram.reply_language_source` (`user_choice`, `telegram` or
+`english_fallback`). The `/tz` page's events get the user from the signed
+token.
 
-A normal request logs about 5 to 12 events. Each one is also printed, so it
-counts toward the Workers Logs limit (200,000 lines per day on the free plan,
-then 1% sampling).
+**The events** (`INFO` unless noted):
 
-### Message log
+| Event | Attributes | When |
+|---|---|---|
+| `telegram.update_handled` | `telegram.command`, `telegram.duration_ms` | the end of every message |
+| `telegram.update_failed` (`ERROR`) | `exception.*` | something failed; the user got the general error |
+| `telegram.update_ignored` | `telegram.ignore_reason` | an update the bot does not use |
+| `telegram.reply_sent` | `telegram.reply_kind` | a reply was sent |
+| `telegram.send_failed` (`WARN`) | `telegram.method`, `http.response.status_code`, `telegram.error_description` | Telegram refused a reply (not a block) |
+| `router.models_listed`, `router.model_tried`, `router.model_answered` | `router.available_models`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.*` | the router's steps |
+| `router.model_failed` (`WARN`; `ERROR` for a bad request, a bad key or our bug) | `router.failure_kind`, `router.failure_detail`, `router.limit_window`, `router.retry_after_seconds` | a model gave no answer |
+| `router.no_model_answered` (`ERROR`) | | every model failed |
+| `extraction.completed` (`WARN` when the answer is not usable) | `extraction.message_text`, `extraction.model_answer`, `gen_ai.request.model`, `extraction.outcome`, `extraction.problem` | a message went to a model |
+| `quota.consumed`, `quota.refunded` | `quota.remaining` | a unit was used, or given back |
+| `time_zone_page.token_refused` (`WARN`) | `time_zone_page.token_purpose`, `time_zone_page.refusal_reason` | a `/tz` link or save token was refused |
+| `language_command.not_supported` | `language_command.language_text` | `/lang` with a language the bot does not have |
+| `user_activity.*` | see below | a user did something |
 
-`/start` tells users "I may keep your messages to fix bugs". So every message
-that goes to event extraction is logged in Axiom as a
-`provider response received` event:
-- `receivedMessage`: the text as received,
-- `providerResponse`: the model's answer,
-- `model`: the model that answered (`null` if none did),
-- and the request's `userId`, `username` and `firstName`.
+**User activity:** one event per thing a user does, e.g.
+`user_activity.time_zone_set`.
 
-There is no other store for messages. Axiom keeps them as long as the dataset
-keeps its data.
-
-### User activity
-
-Every user action is one `user activity` event, with an `activity` field
-(`src/legacy/logging/activityLog.ts`). It also has the request's `userId`, `username`,
-`firstName` and `chatId`.
-
-| `activity` | Extra fields | When |
-|------------|--------------|------|
-| `start`, `ver`, `diag` | | the command was sent |
-| `lang_set` / `lang_reset` | `language` | `/lang <language>` / `/lang auto` |
-| `tz_link_sent`, `tz_page_opened` | | `/tz` without a zone, then the link was opened |
-| `tz_set` | `timezone`, `via` (`command` or `page`) | a time zone was saved |
-| `event_requested` | `outcome` (`created`, `declined`, `no_event`, `no_model`, `no_text`); `recurring` and `allDay` when created | a message went to event extraction |
-| `quota_exhausted` | | a message was refused: no quota left |
-| `bot_blocked` | `via` (`membership`, or `send_refused` when Telegram refused a send with 403 "blocked") | the user blocked the bot |
+| Activity | Attributes | When |
+|---|---|---|
+| `bot_started`, `help_requested`, `version_requested` | | `/start`, `/help`, `/ver` |
+| `models_checked` | `user_activity.outcome` (`ok`, `no_model`, `unexpected_answer`) | `/diag` |
+| `language_set` / `language_reset` | `user_activity.language` | `/lang <language>` / `/lang auto` |
+| `time_zone_link_sent`, `time_zone_page_opened` | | `/tz` with no exact zone, then the link was opened |
+| `time_zone_set` | `user_activity.time_zone`, `user_activity.via` (`command`, `page`) | a time zone was saved |
+| `unknown_command_sent` | `user_activity.command`, `user_activity.command_text` | e.g. `/settings dark mode` |
+| `event_requested` | `user_activity.outcome` (`created`, `no_event`, `repeat_declined`, `no_model`, `unusable_answer`, `no_text`); `user_activity.repeats` and `user_activity.all_day` when created | a message asked for an event |
+| `quota_used_up` | | a message was refused: no quota left |
+| `bot_blocked` | `user_activity.via` (`membership`, or `send_refused` when Telegram refused a send because of a block) | the user blocked the bot |
 | `bot_unblocked` | | the user unblocked or restarted the bot |
 
-- Blocking arrives as a `my_chat_member` update: status `kicked`, then `member`
-  on unblock.
+- A block arrives as a `my_chat_member` update: status `kicked`, then
+  `member` on unblock.
 - If a user deletes the chat without blocking, Telegram sends nothing. The bot
   cannot see it.
-- The `/tz` page and `/tz/save` are separate web requests. Their events get
-  `userId`, `username` and `firstName` from the signed token.
 
-Examples:
+**Example queries** (APL needs quotes around names with dots):
+
 ```
-['app-logs'] | where message == "user activity" and userId == 42 | sort by _time asc
-['app-logs'] | where activity == "bot_blocked" | summarize count() by bin(_time, 1d)
+['app-logs'] | where traceId == "<id>" | sort by _time asc, ['log_session.seq'] asc
+['app-logs'] | where ['user.id'] == 42 and eventName startswith "user_activity." | sort by _time asc
+['app-logs'] | where eventName == "user_activity.bot_started" | summarize count() by ['telegram.reply_language_source']
+['app-logs'] | where eventName == "user_activity.unknown_command_sent" | summarize count() by ['user_activity.command']
+['app-logs'] | where severityText == "ERROR" | sort by _time desc
 ```
 
-### Other places to look
+**Other places to look:**
 
-| What | Where | How to see it |
-|------|-------|---------------|
-| Router steps | Workers Logs (console) | Dashboard → Workers & Pages → the Worker → Logs. Live: `npx wrangler tail --env dev --format pretty` |
-| Last error per model | D1 table `gemini_usage` | `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError, lastSuccessAest FROM gemini_usage"` |
+| What | How |
+|---|---|
+| Live Worker logs | `npx wrangler tail --env dev --format pretty`. Add `--search "<text>"` to filter, or `--status error` for failed requests. New logs only: for older ones, use the dashboard's Logs page or Axiom. |
+| The last error of each model | `npx wrangler d1 execute noted-it-dev-usage --remote --env dev --command "SELECT model, lastErrorAest, lastError, lastSuccessAest FROM gemini_usage"` |
 
 For prod: use `--env prod` and `noted-it-prod-usage`. Test runs do not send to
 Axiom; their logs print in your terminal.
-
-**Searching:**
-- **Live Worker logs:** `npx wrangler tail --env dev --search "unavailable"`
-  shows only lines with that text. Add `--status error` for failed requests, or
-  `--format json` to use `jq`. This shows new logs only. For older logs, use
-  the Logs page in the dashboard, or Axiom.
-- **D1 is real SQL**, so you can use `LIKE`:
-  `npx wrangler d1 execute noted-it-dev-usage --remote --command "SELECT model, lastErrorAest, lastError FROM gemini_usage WHERE lastError LIKE '%503%'"`
-
-## One-time migrations (already done)
-
-These steps are kept for reference. The time zone change is done in both
-environments.
-
-**`user_preference.timezone` allows `NULL`.** It used to be `NOT NULL`, and
-`/lang` filled in a default. SQLite cannot change that rule in place, so the
-table was rebuilt once (dev), or dropped and recreated by the code (prod):
-
-```bash
-npx wrangler d1 execute noted-it-dev-usage --remote --env dev --command "CREATE TABLE user_preference_new (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT); INSERT INTO user_preference_new (userId, lang, timezone) SELECT userId, lang, timezone FROM user_preference; DROP TABLE user_preference; ALTER TABLE user_preference_new RENAME TO user_preference;"
-```
-
-**Old KV namespaces are no longer used.** The bot used KV for translated repeat
-sentences (`I18N`), the language choice (`USER_LANG`), and the message log
-(`MESSAGE_LOG`). All three bindings are gone. You can delete the namespaces:
-`npx wrangler kv namespace list`, then
-`npx wrangler kv namespace delete --namespace-id <id>`.
-
-To copy old language choices from `USER_LANG` into D1 (needs `jq`; group chats
-and invalid codes are skipped):
-
-```bash
-NS=<USER_LANG_NAMESPACE_ID>
-{
-  echo "CREATE TABLE IF NOT EXISTS user_preference (userId INTEGER NOT NULL PRIMARY KEY, lang TEXT, timezone TEXT);"
-  npx wrangler kv key list --namespace-id "$NS" --remote | jq -r '.[].name | select(test("^chat:[0-9]+$"))' | while read -r key; do
-    lang=$(npx wrangler kv key get --namespace-id "$NS" --remote "$key")
-    if [[ "$lang" =~ ^[a-z]{2,3}(-[A-Z]{2})?$ ]]; then
-      echo "INSERT INTO user_preference (userId, lang, timezone) VALUES (${key#chat:}, '$lang', NULL) ON CONFLICT(userId) DO UPDATE SET lang = excluded.lang;"
-    fi
-  done
-} > user_preference.sql
-npx wrangler d1 execute noted-it-dev-usage --remote --file user_preference.sql   # and noted-it-prod-usage for prod
-```

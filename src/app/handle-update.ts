@@ -62,7 +62,7 @@ export interface UpdateContext {
 // Handles one update from Telegram: a message, the user blocking or unblocking
 // the bot, or an update the bot does not use. Never throws: an error is
 // logged, and the user gets a general error reply. See ADR-8 in
-// ARCHITECTURE_DECISIONS.md.
+// ARCHITECTURE_DECISIONS_REGISTRY.md.
 export async function handleUpdate(
   telegramUpdate: TelegramUpdate,
   updateContext: UpdateContext,

@@ -72,7 +72,7 @@ ON CONFLICT(model) DO UPDATE SET
 // Represents model usage stored in D1 as counts: requests and tokens in the
 // current minute, and requests in the current day, per model. A model at one
 // of its limits is used up until that minute or day ends. See ADR-4 in
-// ARCHITECTURE_DECISIONS.md.
+// ARCHITECTURE_DECISIONS_REGISTRY.md.
 export class D1CountedModelUsageStore implements ModelUsageStore {
   constructor(
     private readonly d1Database: D1Database,

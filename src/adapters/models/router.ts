@@ -27,7 +27,7 @@ export interface RoutedProvider {
 }
 
 // Represents the router: tries the models in order until one answers. See
-// ADR-4 in ARCHITECTURE_DECISIONS.md.
+// ADR-4 in ARCHITECTURE_DECISIONS_REGISTRY.md.
 export class Router {
   constructor(private readonly routedProviders: readonly RoutedProvider[]) {}
 

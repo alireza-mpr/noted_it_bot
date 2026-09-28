@@ -53,7 +53,8 @@ async function responseTo(request: Request, env: Env): Promise<Response> {
   );
   await handleUpdate(telegramUpdate, updateContextOf(env, origin, now));
   // Telegram gets 200 even when handling the update failed, so one update
-  // never blocks the ones after it. See ADR-8 in ARCHITECTURE_DECISIONS.md.
+  // never blocks the ones after it. See ADR-8 in
+  // ARCHITECTURE_DECISIONS_REGISTRY.md.
   return new Response("OK");
 }
 

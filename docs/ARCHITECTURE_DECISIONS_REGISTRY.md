@@ -1,7 +1,8 @@
 # Architecture Decision Registry
 
 This file lists the main design decisions of Noted, and why we made them.
-The D1 costs we measured are in [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
+The daily quota's rules and what each message costs in D1 are in
+[The daily quota in detail](#the-daily-quota-in-detail), after the decisions.
 
 ## Requirements
 
@@ -17,8 +18,10 @@ The D1 costs we measured are in [USER_QUOTA_DESIGN.md](USER_QUOTA_DESIGN.md).
 - **FR4 — Replies in the user's language.** 16 languages. The bot uses the
   Telegram language. The user can change it with the `/lang` command.
 - **FR5 — Time zone per user.** The user sets it with the `/tz` command.
-- **FR6 — Visible daily quota.** `/start` shows the daily quota. Every answer
-  shows how many requests are left.
+- **FR6 — A fair daily quota.** Each user can send a fixed number of messages
+  per day to a model. The replies can show the quota and the requests left
+  (`APP_CONFIG.showDailyQuota`). A user who used the quota up is always told
+  why, and when to try again.
 
 ### Non-functional
 
@@ -83,11 +86,12 @@ refused message must be as cheap as possible.
 **Decision.** Check the quota on the user read at the start of the update.
 If nothing is left, stop, with no write. The user row (profile, settings and
 quota usage, see ADR-3) is read once per update anyway, for the reply
-language. Before the rewrite, the quota was a second read on its own table.
+language. A quota in its own table would cost a second read on every message.
 
 **Trade-offs.**
-- A refused message costs 1 read and 0 writes (before: 2 reads).
-- An allowed message costs 1 read and 1 write (before: 2 reads and 1 write).
+- A refused message costs 1 read and 0 writes.
+- An allowed message costs 2 reads and 1 write for the user row: the load,
+  and the save (an `UPDATE` reads the row it changes).
 
 ### ADR-3 — Reserve quota, give it back if no model answers
 
@@ -108,7 +112,7 @@ language. Before the rewrite, the quota was a second read on its own table.
 
 | Option | Good | Bad |
 |---|---|---|
-| A conditional upsert, with the rule in SQL (`WHERE remaining > 0`); used before the rewrite | One statement, no retries | The quota rule is split between SQL and code |
+| A conditional upsert, with the rule in SQL (`WHERE remaining > 0`) | One statement, no retries | The quota rule is split between SQL and code |
 | Optimistic concurrency on one user row | The whole quota rule is pure, in the domain | A save that loses a race is tried again |
 
 **Decision.**
@@ -128,8 +132,10 @@ language. Before the rewrite, the quota was a second read on its own table.
 - A test sends 10 messages at once to D1, with 5 units left. Exactly 5 get
   through.
 - Races only happen while units are left: at most once per user per day. A
-  burst of 10 with 5 units left costs about 85 rows read and 5 written. Every
-  later burst that day costs 10 rows read and no write (before: 20).
+  burst of 10 with 5 units left costs 85 rows read and 5 written for the
+  user row: every lost race costs a read for the refused save and a read to
+  load the user again. Every later burst that day costs 10 rows read and no
+  write.
 - When all models are down, every message gets its unit back. So the quota
   stops nobody during that time.
 
@@ -228,11 +234,11 @@ English text.
 
 ### ADR-7 — Pure rules in the middle, input and output at the edges
 
-**Problem.** The code had no single structure. Some folders were grouped by
-technical layer (`repositories/`, `providers/`), others by feature
-(`extractedEvents/`, `telegram/`). Some files mixed several jobs: for example,
-`calendarEvent.ts` held the `.ics` rules, the Google link, and the Telegram
-caption texts. So the core logic was hard to find.
+**Problem.** The hard parts of this bot are rules: dates, calendars, repeats,
+time zones, the quota. When folders are grouped partly by technical layer and
+partly by feature, and one file mixes several jobs (e.g. the `.ics` rules, the
+Google link and the caption texts in one file), those rules are hard to find
+and hard to test.
 
 **Options**
 
@@ -240,19 +246,18 @@ caption texts. So the core logic was hard to find.
 |---|---|---|
 | OOP as the main style (classes with behaviour, inheritance) | Familiar | Not the usual style in TypeScript. Adds classes where plain functions are enough. |
 | Full DDD (aggregates, bounded contexts, domain events) | Strong model for large systems | Far too heavy for a bot of about 5,000 lines |
-| Keep the current mix | No work | The problem stays and grows |
-| Functional core, imperative shell, with separation of concerns and light "ports and adapters" | Fits the problem: the hard parts are pure rules. Easy to test. Usual style in TypeScript. | Needs a one-time move of many files |
+| Group by feature only | Easy to find a feature | Rules and input/output mix again inside each feature |
+| Functional core, imperative shell, with separation of concerns and light "ports and adapters" | Fits the problem: the hard parts are pure rules. Easy to test. Usual style in TypeScript. | More, smaller files |
 
 **Decision.** Pure rules in `domain/` and `output/`. Input and output only in
 `adapters/`. `app/` connects them. `domain/` and `output/` never import from
 `app/` or `adapters/`. Two ideas are taken from DDD: shared words across code
-and docs, and a domain model made of types. The full rules, the target place of
-every file, and the order of the work are in
+and docs, and a domain model made of types. The full rules are in
 [CODE_STRUCTURE.md](CODE_STRUCTURE.md).
 
 **Trade-offs.**
-- The move touches many files. It is done in small steps, and file moves are
-  never mixed with logic changes.
+- A small feature can touch several folders, e.g. a new command needs a
+  message text, a use case and a line in `handle-update.ts`.
 - A unit test checks the import rule, so the structure cannot drift silently.
 
 ### ADR-8 — Always answer Telegram with 200 after the auth check
@@ -287,8 +292,8 @@ queue stayed stuck until it was cleared by hand.
 **Problem.**
 - The bot runs on free plans with hard daily limits (NFR1, NFR2). We must see
   when a limit gets close, before users do.
-- The old log names were free text, with mixed casing and several names for
-  one idea. A reworded message broke queries without any error.
+- Free-text log names, with mixed casing and several names for one idea,
+  break queries without any error when a message is reworded.
 
 **Options**
 
@@ -318,14 +323,13 @@ queue stayed stuck until it was cleared by hand.
   `['user.id']`.
 - Some OTel names (`user.*`, `gen_ai.*`) are still "development" in OTel, so
   they may change.
-- The logs hold message texts and user names. `/start` tells users (see
-  [PRODUCT.md](PRODUCT.md)).
+- The logs hold message texts and user names.
 - Every printed line counts toward the Workers Logs limit (200k lines per day
   on the free plan).
 
-**What to monitor (draft).** The event names come from each area when it is
-rewritten (steps 4c–5). The limits for alerts are first guesses: set them
-after a few weeks of normal traffic.
+**What to monitor (draft).** The limits for alerts are first guesses: set
+them after a few weeks of normal traffic. The event names are listed in
+"Logs" in the [README](../README.md#logs).
 
 | Risk | What to watch | Where | Alert when |
 |---|---|---|---|
@@ -338,3 +342,123 @@ after a few weeks of normal traffic.
 - How many Axiom monitors does our plan allow, and where should alerts go
   (e.g. email, or a Telegram message to the owner)?
 - Should the bot stop taking new users when a daily limit gets close?
+
+---
+
+## The daily quota in detail
+
+Each user can send a fixed number of messages per day to a model:
+`APP_CONFIG.dailyQuota` (now 10). `APP_CONFIG.showDailyQuota` decides whether
+the replies mention it. It is off for now, so a new user does not feel
+limited. The decisions behind the quota are ADR-1 to ADR-3.
+
+### Rules
+
+- **Only messages that go to a model use quota.** These never do: commands
+  (including unknown ones) and messages with no text.
+- **No answer, no quota.** If no model answers (all failed, or none was
+  available), the unit is given back. An answer that is not usable at all
+  (e.g. not JSON) is given back too.
+- **An answer that gives no event still uses the unit**, e.g. an unclear
+  repeat, or a message with no date.
+- **The quota is full again 24 hours after the last use**
+  (`QUOTA_RESET_AFTER_MS`). A unit given back puts the usage back exactly as
+  it was, `lastUsedAt` too, if no other unit was used since. So an unanswered
+  message does not move the reset time.
+- **A user with no quota left gets a reply every time** ("try again in …"). It
+  costs no D1 write. Telegram limits how fast one chat can send.
+- If the bot crashes after taking a unit, the unit is not given back.
+
+### Flow of one message
+
+In `src/app/handle-update.ts` and `src/app/create-event-from-message.ts`:
+
+1. Load the user (`loadUserOfUpdate`). A new user, or a changed Telegram name,
+   is saved.
+2. Commands and messages with no text are answered. No quota is used.
+3. Take a unit (`consumeUnit`, saved with `updateUser`). If none is left,
+   refuse, with no write. If another message of the same user saved first,
+   load the user again and try again.
+4. Call the router: Gemini's models in order, then Groq's.
+5. If no model gave a usable answer, give the unit back (`refundUnit`). It
+   starts from the user saved in step 3, so it needs no load first.
+
+### D1 cost per message
+
+The rows read and written for one event message, by path. The model tables
+have one row per model: 7 for Gemini, 2 for Groq.
+
+| Path | Rows read | Rows written |
+|---|---|---|
+| A command, or a message with no text | 1 | 0 |
+| **A user with no quota left** | **1** | **0** |
+| **Success: the first model answers** | **10** | **2** |
+| **Success after other models** (the worst case: all 7 Gemini models and the first Groq model are rate-limited, the second Groq model answers) | **28** | **18** |
+| No model: none available (all are marked as used up, so none is called) | 12 | 2 |
+| No model: every model is called and rate-limited (the worst case) | 30 | 20 |
+
+On top of these:
+- a new user, or a changed Telegram name: 1 read and 1 write, once;
+- `/lang`, and `/tz` with a zone, save the user: 1 read and 1 write;
+- a save that loses a race: 2 reads (the refused save, and the load again).
+
+**Where the rows go:**
+
+| Step | Read | Written |
+|---|---|---|
+| Load the user | 1 | 0 |
+| Save the user (create, take a unit, give it back, change a setting) | 1 | 1 |
+| A save that loses a race | 1 | 0 |
+| List the available Gemini models (reads the whole table) | 7 | 0 |
+| List the available Groq models (reads the whole table) | 2 | 0 |
+| A model answers (record the usage) | 1 | 1 |
+| A model is rate-limited (mark it as used up, and record the error) | 2 | 2 |
+| A model fails in another way (record the error) | 1 | 1 |
+
+More models means more reads to list them, and more writes in the worst case.
+
+### Capacity
+
+**The plans:**
+- **D1 Free:** 5M rows read and 100k rows written per day.
+- **Workers Paid ($5/month):** includes D1 with 25B rows read and 50M rows
+  written per month. That is about 1.6M writes per day.
+- On both plans, writes run out long before reads.
+
+| Path | Messages per day, free D1 writes | Messages per day, paid D1 writes (~1.6M/day) |
+|---|---|---|
+| Success, first model (2 writes) | ~50,000 | ~820,000 |
+| Success, worst case (18 writes) | ~5,500 | ~91,000 |
+| No model, worst case (20 writes) | ~5,000 | ~82,000 |
+| A user with no quota left | no writes; about 5M per day (reads) | no real limit |
+
+Example: in the worst case (18 writes per message), the free plan supports
+about 550 users per day who each use all 10 requests.
+
+**Worker requests usually run out first.**
+- Workers Free allows 100k requests per day.
+- Every Telegram update is one request: answered, refused, or ignored.
+- Workers Paid includes 10M requests per month, with no daily limit. More
+  requests cost extra per million.
+
+### Known risks
+
+- **Giving back units makes the no-model path unlimited.** While all models
+  are down, every message gets its unit back. So the quota stops no one.
+  - Each such message costs 12 reads and 2 writes (20 writes if every model
+    is called and fails).
+  - At 2 writes each, about 50k messages per day use up the free D1 writes.
+- **Every new account gets a full quota.** Many new Telegram accounts can cost
+  1 write each to create the user, then model calls and 2 to 18 writes per
+  message, until each account runs out.
+- **Every message costs 1 read** (the user load), even a refused one.
+
+### How we measured
+
+- We used the local D1 of the Workers test runtime. It uses the same SQLite
+  engine as production.
+- We ran each step of the D1 adapters on tables with one row per model, and
+  added up `meta.rows_read` and `meta.rows_written` of each result.
+- To check this in production: look at the D1 analytics in the Cloudflare
+  dashboard, or log `meta.rows_read` and `meta.rows_written` of the D1
+  results for a day.
