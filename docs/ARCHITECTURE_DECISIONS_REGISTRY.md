@@ -307,13 +307,15 @@ queue stayed stuck until it was cleared by hand.
 
 **Decision.**
 - Every log event uses the OTel log record's field names (`severityText`,
-  `eventName`, `traceId`, `scope.name`) and OTel attribute names (e.g.
+  `eventName`, `scope.name`) and OTel attribute names (e.g.
   `user.id`, `exception.message`). The rules are in "Logging" in
   [CODE_STRUCTURE.md](CODE_STRUCTURE.md#logging).
 - Our own names start with our area (e.g. `telegram.chat.id`), never with an
   OTel namespace. We do not add an app prefix: only this bot writes to the
   dataset, and `service.name` names it.
-- One request is one log session with one `traceId`. Its events are sent to
+- The trace id is `trace_id`: OTel's name for it in logs that are not sent
+  with OTLP ("Trace Context in non-OTLP Log Formats").
+- One request is one log session with one `trace_id`. Its events are sent to
   the `app-logs` dataset in Axiom in one batch, after the response. Every
   event is also printed to the console, so Workers Logs keeps a copy.
 - Because the names are OTel names, a later switch to Cloudflare's OTel export

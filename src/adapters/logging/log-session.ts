@@ -63,7 +63,7 @@ export function recordLogEvent(
     severityText: level.toUpperCase(),
     severityNumber: SEVERITY_NUMBERS[level],
     eventName,
-    traceId: logSession.traceId,
+    trace_id: logSession.traceId,
     "scope.name": scopeName,
     "service.name": SERVICE_NAME,
     "service.version": logSession.appVersion,

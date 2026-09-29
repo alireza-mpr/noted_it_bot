@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe("Logger", () => {
-  it("prints every line to the console as JSON carrying the same traceId", async () => {
+  it("prints every line to the console as JSON carrying the same trace_id", async () => {
     const logger = new Logger<string>("test-scope");
     let traceId: string | null = null;
 
@@ -38,12 +38,12 @@ describe("Logger", () => {
       eventName: "test.one",
       "scope.name": "test-scope",
       "gen_ai.request.model": "m1",
-      traceId,
+      trace_id: traceId,
     });
-    expect(new Set(printedEvents.map((printedEvent) => printedEvent.traceId))).toEqual(new Set([traceId]));
+    expect(new Set(printedEvents.map((printedEvent) => printedEvent.trace_id))).toEqual(new Set([traceId]));
   });
 
-  it("prints a line outside a log session, without seq or traceId", () => {
+  it("prints a line outside a log session, without seq or trace_id", () => {
     new Logger<string>("t").info("test.outside", { "user.id": 42 });
 
     expect(JSON.parse(consoleLines[0].line)).toEqual({

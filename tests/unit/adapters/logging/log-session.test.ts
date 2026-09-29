@@ -56,7 +56,7 @@ afterEach(() => {
 });
 
 describe("runLogSession", () => {
-  it("sends every event of one session in a single batch sharing one traceId", async () => {
+  it("sends every event of one session in a single batch sharing one trace_id", async () => {
     const axiomRequests = stubAxiom();
     const executionContext = fakeExecutionContext();
     const logger = new Logger<string>("test-scope");
@@ -74,7 +74,7 @@ describe("runLogSession", () => {
     expect(logEvents.map((logEvent) => logEvent.eventName)).toEqual(["test.first", "test.second", "test.third"]);
     expect(logEvents.map((logEvent) => logEvent.severityText)).toEqual(["INFO", "WARN", "ERROR"]);
     expect(logEvents.map((logEvent) => logEvent.severityNumber)).toEqual([9, 13, 17]);
-    expect(new Set(logEvents.map((logEvent) => logEvent.traceId)).size).toBe(1);
+    expect(new Set(logEvents.map((logEvent) => logEvent.trace_id)).size).toBe(1);
     expect(logEvents[1]).toMatchObject({
       "scope.name": "test-scope",
       "gen_ai.request.model": "m1",
@@ -102,7 +102,7 @@ describe("runLogSession", () => {
     expect(axiomRequests[0].headers["Content-Type"]).toBe("application/json");
   });
 
-  it("keeps concurrent sessions apart, each with its own traceId", async () => {
+  it("keeps concurrent sessions apart, each with its own trace_id", async () => {
     const axiomRequests = stubAxiom();
     const executionContext = fakeExecutionContext();
     const logger = new Logger<string>("t");
@@ -122,9 +122,9 @@ describe("runLogSession", () => {
     for (const { logEvents } of axiomRequests) {
       const name = String(logEvents[0].eventName)[0];
       expect(logEvents.map((logEvent) => logEvent.eventName)).toEqual([`${name}.start`, `${name}.end`]);
-      expect(new Set(logEvents.map((logEvent) => logEvent.traceId)).size).toBe(1);
+      expect(new Set(logEvents.map((logEvent) => logEvent.trace_id)).size).toBe(1);
     }
-    expect(new Set(axiomRequests.map((axiomRequest) => axiomRequest.logEvents[0].traceId))).toEqual(
+    expect(new Set(axiomRequests.map((axiomRequest) => axiomRequest.logEvents[0].trace_id))).toEqual(
       new Set([traceIdA, traceIdB]),
     );
   });

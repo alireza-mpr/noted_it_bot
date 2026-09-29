@@ -48,7 +48,7 @@ export class Logger<EventName extends string> {
         severityText: level.toUpperCase(),
         eventName,
         "scope.name": this.scopeName,
-        traceId: logEvent?.traceId,
+        trace_id: logEvent?.trace_id,
         "log_session.seq": logEvent?.["log_session.seq"],
         ...shortLogAttributes,
       }),

@@ -196,7 +196,7 @@ Log events use OpenTelemetry (OTel) names. See ADR-9 in
 
 | Part | Rule | Example |
 |---|---|---|
-| The event's own fields | The field names of an OTel log record | `severityText`, `eventName`, `traceId`, `scope.name` |
+| The event's own fields | The field names of an OTel log record; the trace id is `trace_id`, OTel's name for it outside OTLP | `severityText`, `eventName`, `trace_id`, `scope.name` |
 | Event names | One name per kind of event. Each logger lists its names in a union: `Logger<EventName>` | `quota.consumed` |
 | Attributes | OTel's name, when OTel has one | `user.id`, `http.response.status_code` |
 | Our own names | Start with our area. Never start with an OTel namespace (e.g. `user.`, `http.`, `error.`, `event.`, `session.`, `message.`, `service.`): check the [OTel registry](https://opentelemetry.io/docs/specs/semconv/registry/attributes/) | `telegram.chat.id`, `extraction.message_text` |

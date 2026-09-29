@@ -147,7 +147,7 @@ this list is called the "ubiquitous language".
 | Log attribute | A named value in a log event, with an OpenTelemetry name, e.g. `user.id`. | `LogAttributes` |
 | Scope | The part of the code that logs, e.g. `user-activity`. | `scope.name` |
 | Log session | The log events of one request. They are sent to Axiom together, at the end. | `runLogSession` |
-| Trace id | The id of a log session. Every log event of the session has it. | `traceId` |
+| Trace id | The id of a log session. Every log event of the session has it. | `trace_id` in log events; `traceId`, `currentTraceId` in code |
 | User activity | A log event for one thing a user did, e.g. `user_activity.time_zone_set`. | `UserActivity`, `logUserActivity` |
 
 ## Code structure

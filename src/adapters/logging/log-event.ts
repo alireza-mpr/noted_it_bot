@@ -13,7 +13,7 @@ export interface LogEvent extends LogAttributes {
   severityText: string;
   severityNumber: number;
   eventName: string;
-  traceId: string;
+  trace_id: string;
   "scope.name": string;
   "service.name": string;
   "service.version": string | null;

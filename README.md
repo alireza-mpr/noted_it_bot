@@ -359,7 +359,7 @@ in [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md#logging).
 **One request is one log session:**
 
 - `runLogSession` (in `worker.ts`) gives every event of a request the same
-  `traceId`. It uses `AsyncLocalStorage` (the `nodejs_als` flag in
+  `trace_id`. It uses `AsyncLocalStorage` (the `nodejs_als` flag in
   [wrangler.toml](wrangler.toml)), so parallel requests never mix.
 - The events are sent to Axiom as one batch, after the response
   (`waitUntil`). So logging adds no delay for the user.
@@ -421,7 +421,7 @@ token.
 **Example queries** (APL needs quotes around names with dots):
 
 ```
-['app-logs'] | where traceId == "<id>" | sort by _time asc, ['log_session.seq'] asc
+['app-logs'] | where trace_id == "<id>" | sort by _time asc, ['log_session.seq'] asc
 ['app-logs'] | where ['user.id'] == 42 and eventName startswith "user_activity." | sort by _time asc
 ['app-logs'] | where eventName == "user_activity.bot_started" | summarize count() by ['telegram.reply_language_source']
 ['app-logs'] | where eventName == "user_activity.unknown_command_sent" | summarize count() by ['user_activity.command']
