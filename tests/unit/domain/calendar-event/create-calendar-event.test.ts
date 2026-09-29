@@ -225,18 +225,34 @@ describe("a relative date", () => {
   });
 
   it("is counted from today in the event's time zone", () => {
-    // 20:00 UTC on 26 Sep is already 27 Sep in Melbourne.
+    // 20:00 UTC on 26 Sep is already 27 Sep in Melbourne, but 26 Sep in London.
     const now = new Date("2026-09-26T20:00:00Z");
     expect(calendarEventOf(createAt(draftWith({ timeZone: MELBOURNE, date: tonight }), now)).date).toEqual({
       year: 2026,
       month: 9,
       day: 27,
     });
-    expect(calendarEventOf(createAt(draftWith({ timeZone: null, date: tonight }), now)).date).toEqual({
-      year: 2026,
-      month: 9,
-      day: 26,
+    const londonUserContext = { userTimeZone: timeZoneNamed("Europe/London"), now, floatingTimeZone: UTC };
+    expect(
+      calendarEventOf(createCalendarEvent(draftWith({ timeZone: null, date: tonight }), TEST_EVENT_UID, londonUserContext)).date,
+    ).toEqual({ year: 2026, month: 9, day: 26 });
+  });
+
+  it("needs a time zone: without one, today is unknown", () => {
+    expect(createAt(draftWith({ timeZone: null, date: tonight }), MON_NOON)).toMatchObject({
+      ok: false,
+      reason: "time-zone-needed",
     });
+    const weeklyFromTomorrow = draftWith({
+      timeZone: null,
+      date: relativeDate({ kind: "days-from-today", days: 1 }),
+      repeat: WEEKLY_ON_THURSDAY,
+    });
+    expect(createAt(weeklyFromTomorrow, MON_NOON)).toMatchObject({ ok: false, reason: "time-zone-needed" });
+  });
+
+  it("needs no time zone for a written date", () => {
+    expect(createAt(draftWith({ timeZone: null, date: writtenDate(9, 23, 2026) }), MON_NOON)).toMatchObject({ ok: true });
   });
 
   it("finds next Friday in the week after today's", () => {

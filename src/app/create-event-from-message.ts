@@ -5,7 +5,10 @@ import { extractDraft } from "../adapters/models/extraction/extract-draft";
 import type { Router } from "../adapters/models/router";
 import type { Replier } from "../adapters/telegram/replier";
 import { APP_CONFIG } from "../config/app-config";
-import { createCalendarEvent } from "../domain/calendar-event/create-calendar-event";
+import {
+  createCalendarEvent,
+  type CalendarEventResult,
+} from "../domain/calendar-event/create-calendar-event";
 import { eventUidOf } from "../domain/calendar-event/event-uid-rule";
 import type { DailyQuota } from "../domain/quota/daily-quota";
 import {
@@ -29,6 +32,16 @@ import { updateUser } from "./update-user";
 
 const LOGGER = new Logger<EventRequestEventName>("create-event-from-message");
 const FLOATING_TIME_ZONE = timeZoneNamed(APP_CONFIG.floatingTimeZoneName);
+const NO_EVENT_MESSAGE_IDS: Record<NoEventReason, BotMessageId> = {
+  "no-event": "NO_CALENDAR_EVENT_MESSAGE",
+  "repeat-declined": "REPEAT_DECLINED_MESSAGE",
+  "time-zone-needed": "TIME_ZONE_NEEDED_MESSAGE",
+};
+const NO_EVENT_OUTCOMES: Record<NoEventReason, EventRequestedOutcome> = {
+  "no-event": "no_event",
+  "repeat-declined": "repeat_declined",
+  "time-zone-needed": "time_zone_needed",
+};
 
 // Represents a message that asks for a calendar event: the user who sent it,
 // and its text. The text is null when the message has none, e.g. a sticker.
@@ -235,17 +248,13 @@ async function sendExtractingNotice(
 }
 
 async function replyWithNoEvent(
-  reason: "no-event" | "repeat-declined",
+  reason: NoEventReason,
   remainingQuota: number | null,
   eventRequestContext: EventRequestContext,
 ): Promise<void> {
   const { replier, language } = eventRequestContext;
-  logEventRequested(reason === "no-event" ? "no_event" : "repeat_declined");
-  const botMessageId: BotMessageId =
-    reason === "no-event"
-      ? "NO_CALENDAR_EVENT_MESSAGE"
-      : "REPEAT_DECLINED_MESSAGE";
-  const replyText = translate(botMessageId, language);
+  logEventRequested(NO_EVENT_OUTCOMES[reason]);
+  const replyText = translate(NO_EVENT_MESSAGE_IDS[reason], language);
   await replier.sendText(
     remainingQuota === null
       ? replyText
@@ -286,12 +295,7 @@ async function refundQuota(
 }
 
 function logEventRequested(
-  outcome:
-    | "created"
-    | "no_event"
-    | "repeat_declined"
-    | "no_model"
-    | "unusable_answer",
+  outcome: EventRequestedOutcome,
   outcomeAttributes: Record<string, boolean> = {},
 ): void {
   logUserActivity("event_requested", {
@@ -299,3 +303,14 @@ function logEventRequested(
     ...outcomeAttributes,
   });
 }
+
+// Represents why a message gives no calendar event, as the reply tells it.
+type NoEventReason = Extract<CalendarEventResult, { ok: false }>["reason"];
+
+type EventRequestedOutcome =
+  | "created"
+  | "no_event"
+  | "repeat_declined"
+  | "time_zone_needed"
+  | "no_model"
+  | "unusable_answer";

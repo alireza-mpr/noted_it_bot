@@ -15,8 +15,9 @@ Groq) read the events.
 - The model reads: title, date, weekday, start and end time, time zone,
   location, and how confident it is.
 - **Relative dates:** "today", "tonight", "tomorrow", "the day after
-  tomorrow", "Friday" and "next Friday", counted from now. Other relative
-  dates (e.g. "in two weeks") give no event for now. See
+  tomorrow", "Friday" and "next Friday", counted from now. They need a time
+  zone: without one, the bot asks the user to set `/tz` first. Other
+  relative dates (e.g. "in two weeks") give no event for now. See
   [EDGE_CASES.md](EDGE_CASES.md#relative-dates).
 - **Dates in other calendars** (Solar Hijri / Persian, Hebrew, Buddhist,
   Indian national) are converted to Gregorian. All calendars follow the same

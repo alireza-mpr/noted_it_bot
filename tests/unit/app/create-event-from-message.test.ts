@@ -304,6 +304,27 @@ describe("createEventFromMessage", () => {
     expect(storedQuotaUsage()).toMatchObject({ kind: "used", remainingQuota: 4 });
   });
 
+  it("asks for the time zone when a relative date has none, e.g. tonight", async () => {
+    const tonightAnswer = answerWith({
+      date_kind: "relative",
+      calendar: null,
+      year: null,
+      month: null,
+      day: null,
+      relative_date: { days_from_today: 0, weekday: null, which_week: null },
+    });
+    const withNoTimeZone = await sendMessage("text", {
+      isDailyQuotaShown: false,
+      modelResult: { ...modelAnswerOf(GEMINI_MODELS[0]), text: tonightAnswer },
+    });
+    expect(withNoTimeZone.fakeReplier.texts.at(-1)).toBe(translate("TIME_ZONE_NEEDED_MESSAGE", "en"));
+    expect(withNoTimeZone.fakeReplier.calendarFiles).toHaveLength(0);
+
+    const { icsContent } = await sentCalendarFileOf(tonightAnswer, { userTimeZone: timeZoneNamed("Europe/London") });
+    // 02:00 UTC on 28 Sep is 03:00 on 28 Sep in London.
+    expect(icsContent).toContain("DTSTART;TZID=Europe/London:20260928T200000");
+  });
+
   it("adds no quota line when the daily quota is off", async () => {
     const { fakeReplier } = await sendMessage("text", { remainingQuota: null });
 

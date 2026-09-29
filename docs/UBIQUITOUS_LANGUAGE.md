@@ -23,6 +23,7 @@ this list is called the "ubiquitous language".
 | Calendar event | An event created from a draft: Gregorian dates, each with a year. Ready for output. | `CalendarEvent` |
 | No event | Creating the calendar event found no usable date. | `reason: "no-event"` |
 | Declined repeat | The repeat can't be trusted, so the bot does not guess it. | `repeatDeclineReason`, `reason: "repeat-declined"` |
+| Time zone needed | A relative date with no time zone from the message or the user. The bot asks the user to set `/tz`. | `reason: "time-zone-needed"` |
 | Title | The event's name. `null` when the message gives none; the output then says "Event" in the reply language. | `title`, `eventTitleOf` |
 | Location | Where the event happens. `null` when the message gives none. | `location` |
 | Confidence | How sure the model is about the event, from 0 to 1. | `confidence` |

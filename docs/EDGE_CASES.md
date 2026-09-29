@@ -110,6 +110,13 @@ moment the bot gets the message. "Today" is today in the event's time zone
 (see [Time zones](#time-zones)). So 20:00 UTC on 26 Sep is already 27 Sep for
 an event in Melbourne.
 
+**A relative date needs a time zone.** If neither the message nor the user's
+`/tz` gives one, the bot makes no event. It asks the user to set `/tz` and to
+send the message again. It does not use the floating time zone (UTC): at any
+moment, "today" is two different dates around the world. So UTC gives a
+wrong date for some hours of every day (e.g. 00:00–10:00 in Melbourne,
+20:00–24:00 in New York). A written date ("19 Sep") needs no time zone.
+
 **The model classifies, our code counts.** The model only says which kind of
 relative date the message writes. It never works out the date: small models
 often get weekday math wrong, and a wrong date looks like a right one.

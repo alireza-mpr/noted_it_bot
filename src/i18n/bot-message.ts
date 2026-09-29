@@ -2,7 +2,8 @@
 // use the same ids. {0}, {1}, … are filled in after translation.
 export const BOT_MESSAGES = {
   // {0} is the user's first name, {1} the bot's name. The example is a
-  // message the bot can read: an exact date, not "tomorrow". Its place has no
+  // message the bot can read: an exact date, not "tomorrow", which needs a
+  // time zone that a new user has not set yet. Its place has no
   // city, because a city would set the event's time zone.
   START_MESSAGE: `Hi {0}! 👋 I'm {1} 😊
 📆 Forward me any message about an event (like a meeting or a get-together with friends), or just type it here, and I'll quickly turn it into a calendar event you can add with one tap.
@@ -14,9 +15,8 @@ export const BOT_MESSAGES = {
 
 📆 Forward me any message with an event in it. I'll pull out the details and send you a one-tap link to add it to Google Calendar, plus a file for Apple Calendar, Outlook, or anywhere else.
 
-🕙 For now I read explicit dates only
-("19 Sep - 8pm"), not "tomorrow".
-I work out the time zone from the message. If it doesn't say, set yours with the /tz command.
+🕙 I read dates like "19 Sep - 8pm", and also "tonight", "tomorrow" or "next Friday".
+I work out the time zone from the message. If it doesn't say, set yours with the /tz command. I need it for dates like "tomorrow".
 
 🔁 Repeating events work too ("every Thursday, 7:30pm"). The link adds today's session everywhere; open it on a computer to get the whole series, or set the repeat yourself on a phone using the pattern I send.
 
@@ -90,6 +90,9 @@ I work out the time zone from the message. If it doesn't say, set yours with the
 
   NO_CALENDAR_EVENT_MESSAGE: "🤷🏻‍♂️ I couldn't turn this into a calendar event.",
 
+  TIME_ZONE_NEEDED_MESSAGE:
+    '🌎 To work out dates like "tonight" or "tomorrow", I need your time zone. Please set it with /tz, then send me the message again.',
+
   NO_TEXT_MESSAGE: "⚠️ Sorry! I couldn't find any text in your message.",
 
   EXTRACTING_EVENT_MESSAGE:
@@ -124,7 +127,7 @@ I work out the time zone from the message. If it doesn't say, set yours with the
     "Got it — I'll use the {0} time zone for you from now on.",
 
   USER_DAILY_QUOTA_EXCEEDED:
-    "🙅🏻‍♂️ You don't have enough daily quota left for today. Try again in {0}.",
+    "🙅🏻‍♂️ I'm so sorry, but don't have enough daily quota left for today. Try again in {0}.",
 
   USER_DAILY_QUOTA_REMAINING: "🔢 You have {0} remaining request(s) for today.",
 

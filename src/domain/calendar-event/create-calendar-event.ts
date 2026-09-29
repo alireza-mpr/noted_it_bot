@@ -32,7 +32,11 @@ import { pickEndYear, pickYear } from "./year-rule";
 // or the reason why there is none. The detail is for the logs.
 export type CalendarEventResult =
   | { ok: true; calendarEvent: CalendarEvent }
-  | { ok: false; reason: "no-event" | "repeat-declined"; detail: string };
+  | {
+      ok: false;
+      reason: "no-event" | "repeat-declined" | "time-zone-needed";
+      detail: string;
+    };
 
 // Represents what creating a calendar event needs besides the draft and its
 // UID.
@@ -42,7 +46,8 @@ export interface EventCreationContext {
   floatingTimeZone: IanaTimeZone;
 }
 
-// Returns the calendar event for a draft, or the reason why there is none.
+// Returns the calendar event for a draft, or the reason why there is none,
+// e.g. a relative date needs the user's time zone.
 export function createCalendarEvent(
   draft: CalendarEventDraft,
   eventUid: EventUid,
@@ -50,6 +55,15 @@ export function createCalendarEvent(
 ): CalendarEventResult {
   const { userTimeZone, now, floatingTimeZone } = eventCreationContext;
   const eventTimeZone = eventTimeZoneOf(draft.timeZone, userTimeZone);
+  // A relative date is counted from today, and without a time zone, today
+  // is unknown. See "Relative dates" in docs/EDGE_CASES.md.
+  if (draft.date?.kind === "relative" && eventTimeZone.kind === "floating") {
+    return {
+      ok: false,
+      reason: "time-zone-needed",
+      detail: "a relative date with no time zone",
+    };
+  }
   const localNow = localDateTimeIn(
     eventTimeZone.kind === "floating"
       ? floatingTimeZone
