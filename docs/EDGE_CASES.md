@@ -217,10 +217,16 @@ still wrong.
 - "Nunawading" is only in Melbourne. But it depends on the model:
   `gemini-3.1-flash-lite` answers `Australia/Melbourne`, and
   `gemini-3.5-flash-lite` answers nothing.
-- Both answers are safe, because a missing time zone uses the rules above.
-- We do not push the models to guess more. That would give wrong time zones for
-  places like "Notting Hill".
-- The live tests accept both answers when the place is a suburb.
+- A missing time zone is not always safe. The rules above then use the
+  user's `/tz`. A user in Melbourne who forwards an event in Tehran gets it
+  at the right hour, but in Melbourne time: 6.5 hours off.
+- So the prompt asks the model to place a street, venue or area that is in
+  only one city, even when the message doesn't name the city (e.g. a talk on
+  "Karimkhan Street", with no city: Tehran). A place in several cities, like
+  "Notting Hill", still gets no time zone.
+- The live tests check both: the Tehran streets give `Asia/Tehran`, and
+  "Notting Hill" never gives London. They accept both answers for a suburb
+  like "Nunawading".
 
 **The live tests share the dev Gemini quota with the dev bot.** Each run makes
 about 12 calls. Frequent runs push requests to later models, which are

@@ -120,8 +120,30 @@ const CASES: [messageText: string, expectedResult: object][] = [
     },
   ],
   [
-    // No year, but the written weekday ("شنبه", Saturday) pins it. The place
-    // names no city, so the time zone is not checked.
+    // A book review in Tehran: the streets (Karimkhan, Iranshahr) are only in
+    // Tehran, but the message never names the city.
+    `📚 نقد و بررسی کتاب «ایدئالیسم تحلیلی»
+
+در این نشست، کتاب ایدئالیسم تحلیلی اثر برناردو کاستروپ با حضور مترجم کتاب بررسی خواهد شد.
+
+🗓 یکشنبه ۵ مهر ۱۴۰۵ | ساعت ۱۸
+📍 «فضای در عین حال»
+خیابان کریمخان، ایرانشهر، سمندریان، پلاک ۳۱۲۳، بالای کتابفروشی دی`,
+    {
+      ok: true,
+      draft: {
+        writtenInCalendar: "persian",
+        // The weekday is not checked: models often leave it out here.
+        date: { kind: "written", writtenDate: { year: 1405, month: 7, day: 5 } },
+        time: { kind: "timed", start: { hour: 18, minute: 0 } },
+        timeZone: "Asia/Tehran",
+      },
+    },
+  ],
+  [
+    // No year, but the written weekday ("شنبه", Saturday) pins it. Notting
+    // Hill is in London and in Melbourne, so it alone must not pick London;
+    // the dollar price may point a model to Melbourne.
     "🎲 گیم‌نایت شنبه ۲۶ سپتامبر\n\n در\n Notting Hill Neighbourhood House \n\nبا بوردگیم، بازی‌های گروهی و فضای بازی برای بچه‌ها.\n\n🕕 ساعت ۶:۰۰ تا ۹:۳۰ شب\n\nبرای این برنامه فعلاً فقط سالن اصلی با ظرفیت حدود ۴۰ نفر رزرو شده.\n\nتا سه‌شنبه ۲۲ سپتامبر بر اساس تعداد ثبت‌نام‌های قطعی تصمیم می‌گیریم که برنامه فقط در سالن اصلی برگزار بشه یا در صورت بیشتر بودن تعداد شرکت‌کننده‌ها، دو اتاق جانبی رو هم به رزرو اضافه کنیم.\n\n💰 هزینه ثبت‌نام:\n برای افراد بالای ۵ سال، ۸ دلار",
     {
       ok: true,
@@ -129,6 +151,7 @@ const CASES: [messageText: string, expectedResult: object][] = [
         writtenInCalendar: "gregory",
         date: { kind: "written", writtenDate: { year: null, month: 9, day: 26, weekday: "SA" } },
         time: { kind: "timed", start: { hour: 18, minute: 0 }, end: { hour: 21, minute: 30 } },
+        timeZone: expect.toBeOneOf(["Australia/Melbourne", null]),
         title: PERSIAN_TITLE,
         // An English place name in a Persian message stays in English.
         location: "Notting Hill Neighbourhood House",
