@@ -3,8 +3,9 @@
 Noted is a Telegram bot. You forward it a message with an event. It replies
 with a one-tap "add to Google Calendar" link and a calendar file.
 
-Status: **Beta**. It runs on Cloudflare Workers. Free LLM models (Gemini, then
-Groq) read the events.
+Status: **Live**, version 1. It runs on Cloudflare Workers. Free LLM models
+(Gemini, then Groq) read the events. What changed in each version is in
+[CHANGELOG.md](../CHANGELOG.md).
 
 ## Delivered
 
@@ -194,9 +195,6 @@ Every deploy registers the visible commands with Telegram, so they show in the
       (e.g. a Persian speaker with an English Telegram app gets English).
 - [ ] Show the daily quota again (`APP_CONFIG.showDailyQuota`) once usage
       grows.
-- [ ] **Launch the Persian edition:** create @noted_it_fa_bot (and a dev
-      bot) in BotFather, and set up the `dev-fa` and `prod-fa` GitHub
-      Environments. The code and the deploys are ready (ADR-10).
 - [ ] More relative dates ("this weekend", "in two weeks", "end of the
       month").
 - [ ] Date ranges as one event (e.g. "from 5 Oct, zinc tablets, until 10

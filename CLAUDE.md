@@ -104,7 +104,10 @@ Follow [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md) for every change:
 - [docs/ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md): why the main parts work the way they do; the quota and its D1 cost.
 - [docs/EDGE_CASES.md](docs/EDGE_CASES.md): the general rules for dates, calendars and time zones.
 - [docs/UBIQUITOUS_LANGUAGE.md](docs/UBIQUITOUS_LANGUAGE.md): the words we use, and the words we don't.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version. Add a line under
+  "Unreleased" for every change users notice; move them under a version at a
+  prod release.
 
 Docs describe the current bot. Keep what was learnt (edge cases, user
 behaviour, technical challenges); leave out history (old code, what replaced
-what, finished migrations).
+what, finished migrations). CHANGELOG.md is the one place for history.
