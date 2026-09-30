@@ -167,7 +167,7 @@ describe("handleUpdate: a message", () => {
     });
     expect(fakeTelegramClient.sentTexts).toHaveLength(1);
     expect(fakeTelegramClient.sentTexts[0]).toMatch(
-      /^سلام Alice! 👋 من ربات Noted هستم/,
+      /^سلام Alice\. 👋 من ربات Noted هستم/,
     );
   });
 
@@ -198,7 +198,7 @@ describe("handleUpdate: a message", () => {
       { botEdition: "persian" },
     );
 
-    expect(fakeTelegramClient.sentTexts[0]).toMatch(/^سلام Alice! 👋 من ربات Noted هستم/);
+    expect(fakeTelegramClient.sentTexts[0]).toMatch(/^سلام Alice\. 👋 من ربات Noted هستم/);
     expect(eventNamed(logEvents, "user_activity.bot_started")).toMatchObject({
       "telegram.reply_language": "fa",
       "telegram.reply_language_source": "edition_default",

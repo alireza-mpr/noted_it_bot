@@ -6,6 +6,7 @@ export const BOT_MESSAGES = {
   // time zone that a new user has not set yet. Its place has no
   // city, because a city would set the event's time zone.
   START_MESSAGE: `Hi {0}! 👋 I'm {1} 😊
+
 📆 Forward me any message about an event (like a meeting or a get-together with friends), or just type it here, and I'll quickly turn it into a calendar event you can add with one tap.
 
 🚀 Try it now, e.g. send me "Dinner with Sam, 19 Sep, 8pm, Olive Tree Restaurant".
