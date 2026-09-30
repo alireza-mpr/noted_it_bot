@@ -202,6 +202,13 @@ Every deploy registers the visible commands with Telegram, so they show in the
 - [ ] Date ranges as one event (e.g. "from 5 Oct, zinc tablets, until 10
       Oct").
 - [ ] Several events in one message.
+- [ ] **`/privacy`:** a short text in the user's language: what is stored,
+      where messages go (the model providers, the logs) and for how long.
+      Also set it as the bot's privacy policy link in BotFather. First store
+      and log less (e.g. no last name, no `user.full_name` in the logs), so
+      the policy says less.
+- [ ] **`/forget`:** deletes the user's data (their row in the `users`
+      table), so users can leave for good.
 - [ ] Monthly and yearly repeats in other calendars (for example "every 1st
       of the Persian month"). Their months do not match Gregorian months.
 
