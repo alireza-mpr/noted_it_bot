@@ -70,8 +70,12 @@ function calendarEventOf(calendarEventResult: CalendarEventResult): CalendarEven
 }
 
 describe("a one-off event", () => {
-  it("has no event without a date", () => {
-    expect(createAt(draftWith(), MON_NOON)).toMatchObject({ ok: false, reason: "no-event" });
+  it("has no event with neither a date nor a time", () => {
+    expect(createAt(draftWith({ time: { kind: "all-day" } }), MON_NOON)).toMatchObject({
+      ok: false,
+      reason: "no-event",
+      detail: "no date",
+    });
   });
 
   it("has no event when the date does not exist", () => {
@@ -264,6 +268,37 @@ describe("a relative date", () => {
     const nextThursday = relativeDate({ kind: "weekday", weekday: "TH", week: "next" });
     const draft = draftWith({ date: nextThursday, repeat: WEEKLY_ON_THURSDAY });
     expect(calendarEventOf(createAt(draft, MON_NOON)).date).toEqual({ year: 2026, month: 10, day: 1 });
+  });
+});
+
+describe("a time with no date, e.g. lunch at 1", () => {
+  // A 19:30 event in Melbourne, with no date, by default.
+  const timeOnly = draftWith();
+
+  it("is today when the time has not passed yet", () => {
+    const calendarEvent = calendarEventOf(createAt(timeOnly, MON_NOON));
+    expect(calendarEvent.date).toEqual({ year: 2026, month: 9, day: 21 });
+    expect(calendarEvent.inPast).toBe(false);
+  });
+
+  it("is tomorrow when the time has passed", () => {
+    // 20:00 on Thursday 24 Sep, after 19:30.
+    expect(calendarEventOf(createAt(timeOnly, THU_8PM)).date).toEqual({ year: 2026, month: 9, day: 25 });
+  });
+
+  it("needs a time zone: without one, today is unknown", () => {
+    expect(createAt(draftWith({ timeZone: null }), MON_NOON)).toEqual({
+      ok: false,
+      reason: "time-zone-needed",
+      detail: "a time with no date and no time zone",
+    });
+  });
+
+  it("uses the user's time zone when the message has none", () => {
+    // 12:00 in Melbourne is 03:00 in London, the same Monday.
+    const londonUserContext = { userTimeZone: timeZoneNamed("Europe/London"), now: MON_NOON, floatingTimeZone: UTC };
+    const calendarEvent = calendarEventOf(createCalendarEvent(draftWith({ timeZone: null }), TEST_EVENT_UID, londonUserContext));
+    expect(calendarEvent.date).toEqual({ year: 2026, month: 9, day: 21 });
   });
 });
 

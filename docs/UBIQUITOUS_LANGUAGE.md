@@ -41,6 +41,7 @@ this list is called the "ubiquitous language".
 | Written weekday | The weekday the message writes next to a date (e.g. "Saturday 26 Sep"). | `WrittenDate.weekday` |
 | Relative date | A date the message gives relative to now: a number of days from today (e.g. "tomorrow"), or a weekday this week or next week (e.g. "next Friday"). Our code works out the date. See [EDGE_CASES.md](EDGE_CASES.md#relative-dates). | `RelativeDate`, `dateOfRelativeDate` |
 | Draft date | The start date of a draft: a written date or a relative date. | `DraftDate` |
+| Time with no date | A one-off event with a start time but no date (e.g. "lunch at 1"). It is today, or tomorrow if the time has passed. See [EDGE_CASES.md](EDGE_CASES.md#a-time-with-no-date). | `dateOfTimeWithoutDate` |
 | Wrong guess notes | The caption notes about a guess that may be wrong: 🤔 wrong weekday, 💡 in the past. Only one-off events get them. | `WrongGuessNotes` |
 | Wrong weekday | A written weekday that doesn't match the date. The caption shows 🤔. | `wrongWeekday` |
 | Year rule | How a date without a year gets one. See [EDGE_CASES.md](EDGE_CASES.md#a-missing-year). | `pickYear`, `pickEndYear` |

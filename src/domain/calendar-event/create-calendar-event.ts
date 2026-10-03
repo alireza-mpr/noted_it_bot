@@ -21,12 +21,18 @@ import { dateOfRelativeDate } from "./relative-date-rule";
 import type { Repeat, RepeatEnd } from "./repeat";
 import { repeatWorksInCalendar } from "./repeat-calendar-rule";
 import { repeatDeclineReason } from "./repeat-decline-rule";
+import { dateOfTimeWithoutDate } from "./time-without-date-rule";
 import { eventTimeZoneOf } from "./time-zone-order-rule";
 import {
   wrongGuessNotesOfOneOffEvent,
   wrongGuessNotesOfRepeatingEvent,
 } from "./wrong-guess-rule";
 import { pickEndYear, pickYear } from "./year-rule";
+
+const TIME_ZONE_NEEDED_DETAILS: Record<DateCountedFromToday, string> = {
+  "relative-date": "a relative date with no time zone",
+  "time-without-date": "a time with no date and no time zone",
+};
 
 // Represents the result of creating a calendar event: the calendar event,
 // or the reason why there is none. The detail is for the logs.
@@ -55,13 +61,14 @@ export function createCalendarEvent(
 ): CalendarEventResult {
   const { userTimeZone, now, floatingTimeZone } = eventCreationContext;
   const eventTimeZone = eventTimeZoneOf(draft.timeZone, userTimeZone);
-  // A relative date is counted from today, and without a time zone, today
-  // is unknown. See "Relative dates" in docs/EDGE_CASES.md.
-  if (draft.date?.kind === "relative" && eventTimeZone.kind === "floating") {
+  const dateCountedFromToday = dateCountedFromTodayOf(draft);
+  // Without a time zone, today is unknown. See "Relative dates" in
+  // docs/EDGE_CASES.md.
+  if (dateCountedFromToday !== null && eventTimeZone.kind === "floating") {
     return {
       ok: false,
       reason: "time-zone-needed",
-      detail: "a relative date with no time zone",
+      detail: TIME_ZONE_NEEDED_DETAILS[dateCountedFromToday],
     };
   }
   const localNow = localDateTimeIn(
@@ -78,37 +85,69 @@ export function createCalendarEvent(
     timeZone: eventTimeZone,
   };
   return draft.repeat === null
-    ? createOneOffEvent(draft, eventDetails, localNow.date)
+    ? createOneOffEvent(draft, eventDetails, localNow)
     : createRepeatingEvent(draft, draft.repeat, eventDetails, localNow);
+}
+
+// Returns which kind of date the draft counts from today, e.g. a relative
+// date for "tonight", or null for a written date or a repeat.
+function dateCountedFromTodayOf(
+  draft: CalendarEventDraft,
+): DateCountedFromToday | null {
+  if (draft.date?.kind === "relative") {
+    return "relative-date";
+  }
+  const isOneOffTimeWithoutDate =
+    draft.date === null && draft.repeat === null && draft.time.kind === "timed";
+  return isOneOffTimeWithoutDate ? "time-without-date" : null;
 }
 
 function createOneOffEvent(
   draft: CalendarEventDraft,
   eventDetails: EventDetails,
-  today: DateOnly,
+  localNow: LocalDateTime,
 ): CalendarEventResult {
-  if (draft.date === null) {
-    return noEvent("no date");
+  const today = localNow.date;
+  const draftDate = draft.date;
+  if (draftDate === null) {
+    return draft.time.kind === "timed"
+      ? oneOffEventOn(
+          dateOfTimeWithoutDate(draft.time.start, localNow),
+          null,
+          eventDetails,
+          today,
+        )
+      : noEvent("no date");
   }
   const gregorianDate = gregorianDateOf(
     draft.writtenInCalendar,
-    draft.date,
+    draftDate,
     today,
   );
   if (gregorianDate === null) {
     return noEvent("the date does not exist");
   }
+  return oneOffEventOn(
+    gregorianDate,
+    writtenWeekdayOf(draftDate),
+    eventDetails,
+    today,
+  );
+}
+
+function oneOffEventOn(
+  date: DateOnly,
+  writtenWeekday: Weekday | null,
+  eventDetails: EventDetails,
+  today: DateOnly,
+): CalendarEventResult {
   return {
     ok: true,
     calendarEvent: {
       ...eventDetails,
-      date: gregorianDate,
+      date,
       repeat: null,
-      ...wrongGuessNotesOfOneOffEvent(
-        writtenWeekdayOf(draft.date),
-        gregorianDate,
-        today,
-      ),
+      ...wrongGuessNotesOfOneOffEvent(writtenWeekday, date, today),
     },
   };
 }
@@ -232,3 +271,8 @@ type EventDetails = Pick<
   CalendarEvent,
   "uid" | "title" | "location" | "time" | "timeZone"
 >;
+
+// Represents a date that is counted from today: a relative date (e.g.
+// "tonight"), or a one-off event's start time with no date (e.g. "lunch at
+// 1").
+type DateCountedFromToday = "relative-date" | "time-without-date";

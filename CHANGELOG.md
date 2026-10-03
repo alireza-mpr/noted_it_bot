@@ -11,6 +11,9 @@ What changed in Noted, for each version. The newest version is first.
 
 ## Unreleased (on the dev bots only)
 
+- **A time with no date** (e.g. "lunch with friends at 1, Sadaf restaurant")
+  is now an event: today, or tomorrow if the time has passed. Before, it gave
+  no event. Like relative dates, it needs a time zone.
 - **Places without a city name.** A street, venue or area that is in only one
   city now sets the event's time zone, even when the message doesn't name the
   city (e.g. a talk on "Karimkhan Street" is in Tehran). A place in several

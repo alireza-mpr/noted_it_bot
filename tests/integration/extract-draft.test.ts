@@ -79,6 +79,21 @@ const CASES: [messageText: string, expectedResult: object][] = [
     },
   ],
   [
+    // "At 1, Sadaf restaurant Melbourne, lunch with friends": a time with no
+    // date. "Lunch" makes 1 mean 13:00.
+    "ساعت ۱ \nرستوران صدف ملبورن\nنهار با دوستان",
+    {
+      ok: true,
+      draft: {
+        date: null,
+        time: { kind: "timed", start: { hour: 13, minute: 0 } },
+        timeZone: "Australia/Melbourne",
+        repeat: null,
+        title: PERSIAN_TITLE,
+      },
+    },
+  ],
+  [
     // A relative date the bot does not read yet.
     "Brunch with Sam in two weeks",
     { ok: false, reason: "no-event" },

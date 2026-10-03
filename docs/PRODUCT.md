@@ -20,6 +20,9 @@ Status: **Live**, version 1. It runs on Cloudflare Workers. Free LLM models
   zone: without one, the bot asks the user to set `/tz` first. Other
   relative dates (e.g. "in two weeks") give no event for now. See
   [EDGE_CASES.md](EDGE_CASES.md#relative-dates).
+- **A time with no date** ("lunch at 1") is today, or tomorrow if the time
+  has passed. It also needs a time zone. See
+  [EDGE_CASES.md](EDGE_CASES.md#a-time-with-no-date).
 - **Dates in other calendars** (Solar Hijri / Persian, Hebrew, Buddhist,
   Indian national) are converted to Gregorian. All calendars follow the same
   rules. A plain "Hijri" is refused: it means a different calendar in

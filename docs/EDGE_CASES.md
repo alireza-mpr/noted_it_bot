@@ -140,6 +140,25 @@ often get weekday math wrong, and a wrong date looks like a right one.
   month", "yesterday") gives no event.
 - A relative date with no time is an all-day event, like any other date.
 
+### A time with no date
+
+A one-off event with a start time but no date (e.g. "lunch with friends at
+1, Sadaf restaurant") means the next time that time comes:
+
+| Sent at | "Lunch at 1" (13:00) is on |
+|---|---|
+| 10:00 | today |
+| 13:00 | today |
+| 15:00 | tomorrow |
+
+- Like a relative date, it is counted from now in the event's time zone, so
+  it needs a time zone. Without one, the bot asks the user to set `/tz`.
+- A message with neither a date nor a time still gives no event.
+- A repeat with no start date ("every Thursday at 7:30pm") follows its own
+  rule (see [Repeats](#repeats)).
+- The model needs no change: it answers `date_kind` "none" with a start time.
+  People often write today's plans with only a time, e.g. "lunch at 1".
+
 ### Not solved yet
 
 - Around New Year: "9 January" with no weekday, sent in December, gets the

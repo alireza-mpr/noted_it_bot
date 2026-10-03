@@ -391,8 +391,10 @@ describe("createEventFromMessage", () => {
   });
 
   it.each([
-    // The model reads the event, but the message gives no date.
-    ["a draft with no date", { date_kind: "none" as const }, "no_event", "no date"],
+    // The model reads the event, but the message gives neither a date nor a time.
+    ["a draft with no date and no time", { date_kind: "none" as const, start_time: null }, "no_event", "no date"],
+    // e.g. "lunch at 1", from a user with no /tz.
+    ["a time with no date and no time zone", { date_kind: "none" as const }, "time_zone_needed", "a time with no date and no time zone"],
     // The model finds a relative date the bot does not read, e.g. "this weekend".
     ["a relative date the bot does not read", { date_kind: "relative" as const }, "no_event", "a relative date the bot does not read yet"],
     [
