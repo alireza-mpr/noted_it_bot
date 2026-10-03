@@ -196,6 +196,7 @@ async function replyWithCalendarEvent(
       case "repeat-declined":
         await replyWithNoEvent(
           extractionResult.reason,
+          extractionResult.detail,
           remainingQuota,
           eventRequestContext,
         );
@@ -215,6 +216,7 @@ async function replyWithCalendarEvent(
   if (!calendarEventResult.ok) {
     await replyWithNoEvent(
       calendarEventResult.reason,
+      calendarEventResult.detail,
       remainingQuota,
       eventRequestContext,
     );
@@ -247,13 +249,18 @@ async function sendExtractingNotice(
   }
 }
 
+// Tells the user why there is no calendar event. The problem says why in
+// detail, for the logs only, e.g. "no date".
 async function replyWithNoEvent(
   reason: NoEventReason,
+  problem: string,
   remainingQuota: number | null,
   eventRequestContext: EventRequestContext,
 ): Promise<void> {
   const { replier, language } = eventRequestContext;
-  logEventRequested(NO_EVENT_OUTCOMES[reason]);
+  logEventRequested(NO_EVENT_OUTCOMES[reason], {
+    "user_activity.problem": problem,
+  });
   const replyText = translate(NO_EVENT_MESSAGE_IDS[reason], language);
   await replier.sendText(
     remainingQuota === null
@@ -296,7 +303,7 @@ async function refundQuota(
 
 function logEventRequested(
   outcome: EventRequestedOutcome,
-  outcomeAttributes: Record<string, boolean> = {},
+  outcomeAttributes: Record<string, boolean | string> = {},
 ): void {
   logUserActivity("event_requested", {
     "user_activity.outcome": outcome,

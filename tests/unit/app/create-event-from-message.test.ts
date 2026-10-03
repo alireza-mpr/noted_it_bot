@@ -389,4 +389,35 @@ describe("createEventFromMessage", () => {
       "user_activity.outcome": "no_model",
     });
   });
+
+  it.each([
+    // The model reads the event, but the message gives no date.
+    ["a draft with no date", { date_kind: "none" as const }, "no_event", "no date"],
+    // The model finds a relative date the bot does not read, e.g. "this weekend".
+    ["a relative date the bot does not read", { date_kind: "relative" as const }, "no_event", "a relative date the bot does not read yet"],
+    [
+      "a relative date with no time zone",
+      { date_kind: "relative" as const, relative_date: { days_from_today: 0, weekday: null, which_week: null } },
+      "time_zone_needed",
+      "a relative date with no time zone",
+    ],
+  ])("logs why there is no event: %s", async (_caseName, answerOverrides, expectedOutcome, expectedProblem) => {
+    const noDateAnswer = answerWith({ calendar: null, year: null, month: null, day: null, ...answerOverrides });
+    const logEvents = await axiomEventsOf(() =>
+      sendMessage("text", { modelResult: { ...modelAnswerOf(GEMINI_MODELS[0]), text: noDateAnswer } }),
+    );
+
+    expect(logEvents.find((logEvent) => logEvent.eventName === "user_activity.event_requested")).toMatchObject({
+      "user_activity.outcome": expectedOutcome,
+      "user_activity.problem": expectedProblem,
+    });
+  });
+
+  it("logs no problem when the event is created", async () => {
+    const logEvents = await axiomEventsOf(() => sendMessage("text"));
+
+    const eventRequestedLogEvent = logEvents.find((logEvent) => logEvent.eventName === "user_activity.event_requested");
+    expect(eventRequestedLogEvent).toMatchObject({ "user_activity.outcome": "created" });
+    expect(eventRequestedLogEvent).not.toHaveProperty(["user_activity.problem"]);
+  });
 });
