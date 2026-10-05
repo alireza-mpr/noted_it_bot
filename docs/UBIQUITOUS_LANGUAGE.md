@@ -23,7 +23,7 @@ this list is called the "ubiquitous language".
 | Calendar event | An event created from a draft: Gregorian dates, each with a year. Ready for output. | `CalendarEvent` |
 | No event | Creating the calendar event found no usable date. | `reason: "no-event"` |
 | Declined repeat | The repeat can't be trusted, so the bot does not guess it. | `repeatDeclineReason`, `reason: "repeat-declined"` |
-| Time zone needed | A relative date with no time zone from the message or the user. The bot asks the user to set `/tz`. | `reason: "time-zone-needed"` |
+| Time zone needed | A relative date, or a time with no date, and no time zone from the message or the user. The bot can't know "today", so it asks the user to set `/tz`. | `reason: "time-zone-needed"` |
 | Title | The event's name. `null` when the message gives none; the output then says "Event" in the reply language. | `title`, `eventTitleOf` |
 | Location | Where the event happens. `null` when the message gives none. | `location` |
 | Confidence | How sure the model is about the event, from 0 to 1. | `confidence` |
@@ -53,7 +53,7 @@ this list is called the "ubiquitous language".
 | Word | Meaning | In code |
 |---|---|---|
 | Calendar | A system for counting dates: Gregorian, Persian (Solar Hijri), Hebrew, Buddhist, Indian. | `CalendarId` |
-| Written-in calendar | The calendar that a message writes its dates in (e.g. Persian for "9 Mehr"). | `draft.writtenInCalendar` |
+| Written-in calendar | The calendar that a message writes its dates in (e.g. Persian for "9 Mehr"). | `CalendarEventDraft.writtenInCalendar` |
 | Gregorian | The only calendar that calendar apps accept. Creating a calendar event turns every date into a Gregorian date. | `"gregory"` |
 | Calendar app | Google Calendar, Apple Calendar, Outlook, and others. | — |
 | Calendar file | The `.ics` file the bot sends. | `CalendarFile`, `calendarFileOf` |
@@ -68,7 +68,7 @@ this list is called the "ubiquitous language".
 |---|---|---|
 | Time zone | An IANA time zone name in its standard spelling, e.g. "Australia/Melbourne". | `IanaTimeZone` |
 | Event time zone | Where the event's time zone comes from: the message, the user's setting, or nowhere. | `EventTimeZone`, `eventTimeZoneOf` |
-| Message time zone | The time zone the message states or suggests. | `draft.timeZone`, `kind: "from-message"` |
+| Message time zone | The time zone the message states, or a place in only one city suggests. | `CalendarEventDraft.timeZone`, `kind: "from-message"` |
 | User time zone | The time zone the user set with `/tz`. | `userTimeZone`, `parseUserTimeZoneName`, `saveUserTimeZone`, `kind: "from-user"` |
 | Time zone page | The web page that `/tz` links to. The user confirms the device's time zone, or picks another one. | `timeZonePageOf`, `openTimeZonePage`, `saveTimeZoneFromPage` |
 | Time zone link token | The signed token in the `/tz` link and on the page: which user, in which language, for opening or saving, and until when. | `TimeZoneLinkTokenPayload`, `signTimeZoneLinkToken`, `verifyTimeZoneLinkToken` |
@@ -88,7 +88,7 @@ this list is called the "ubiquitous language".
 | Day of the month | For a monthly repeat: the same day as the first date, a fixed day (e.g. "the 15th"), or a weekday of a week (e.g. "the first Friday"). | `MonthlyDay` |
 | Week of the month | 1, 2, 3, 4 or "last". | `WeekOfMonth` |
 | Repeat end | Never, until a date, or after a number of times. | `RepeatEnd` |
-| Start date | The date the message writes for a repeat. It can be missing. | `draft.date` |
+| Start date | The date the message gives for a repeat. It can be missing. | `CalendarEventDraft.date` |
 | First date | The first day that matches the pattern, on or after the start date (or today). | `firstDateOf` |
 
 ## Users
@@ -105,7 +105,7 @@ this list is called the "ubiquitous language".
 | Blocked, unblocked | The user blocks or unblocks the bot in a private chat. Telegram sends this as a `my_chat_member` update with the status `kicked` or `member`. | `kind: "bot-blocked"`, `kind: "bot-unblocked"` |
 | Reply | What the bot sends back to a chat: a text, a text with a link button, or the calendar file with its caption. | `Replier`, `TelegramReplier` |
 | User settings | The language and time zone the user chose. A value object that belongs to one user. `null` means not chosen. | `UserSettings` |
-| Reply language | The language of the bot's messages: the user's choice, else Telegram's language (English edition only), else the edition's default language. The source says which one. | `replyLanguageOf`, `ReplyLanguageSource` |
+| Reply language | The language of the bot's messages. The source says where it came from: the user's choice, Telegram's language, or the edition's default. See [EDGE_CASES.md](EDGE_CASES.md#the-reply-language). | `replyLanguageOf`, `ReplyLanguageSource` |
 | Bot edition | One Telegram bot, run by its own Worker from the same code, for the users of one language: `english` (@noted_it_bot) or `persian` (@noted_it_fa_bot). Set by `BOT_EDITION`. | `BotEdition`, `parseBotEdition` |
 | Default language | The language an edition replies in when the user chose none: English or Persian. | `defaultLanguageOf` |
 | Supported language | A language the bot replies in (16 of them). A value object in the domain. | `SupportedLanguage`, `parseLanguageCode` |

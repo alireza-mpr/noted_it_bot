@@ -149,12 +149,12 @@ implements it, and `app/` connects the two.
 | Rule | Example |
 |---|---|
 | Results are a union with an `ok` field | `{ ok: true; … } \| { ok: false; … }` |
-| A failure carries its own details | `ProviderFailure` has `ok: false`, `kind`, `detail` |
+| A failure carries its own details | `ModelFailure` has `ok: false`, `kind`, `detail` |
 | Parse once, then use typed values | `createCalendarEvent` turns a `CalendarEventDraft` into a `CalendarEvent` |
 | One type per idea | `DateOnly` for every date, not three look-alike types |
 | No test-only code in `src/` | helpers only tests use go in `tests/` |
 | Comments: MSDN wording, `//` style | `// Represents a date in a message where …` |
-| Every name explains itself: types, functions, variables, fields, files | rename instead of explaining with a comment (`statedWeekday`, not `stated` + a comment) |
+| Every name explains itself: types, functions, variables, fields, files | rename instead of explaining with a comment (`writtenWeekday`, not `weekday` + a comment) |
 | No comments on fields | the field's name explains it |
 | Variable names follow their type, in camelCase | `calendarEventResult: CalendarEventResult`, not `checked` or `result` |
 | Several values of one type: the role comes first | `startDate`, `untilDate` (both `DateOnly`) |
@@ -219,12 +219,12 @@ The attribute names every area shares:
 
 ## How the rules are checked
 
-- **Import rule:** a unit test (`tests/unit/code-structure.test.ts`) reads every
-  source file. It fails if a file in `generic/`, `domain/`, `output/`,
-  `i18n/`, `config/` or `adapters/` imports from a folder that the "Who may import whom" table
-  does not allow.
-- **Casing:** the same test fails if a folder or file is not kebab-case.
-- **Types:** `npm run typecheck` in CI.
-- **Behaviour:** every commit keeps all unit and live tests passing.
+- **Imports and casing:** `tests/unit/code-structure.test.ts` reads every
+  source file. It fails when a file imports from a folder that "Who may import
+  whom" doesn't allow, or when a file or folder name is not kebab-case.
+- **Types:** `npm run typecheck`, in CI too.
+- **Behaviour:** every commit keeps the offline tests passing. Run the live
+  tests when a change affects what the model reads (the prompt, the schema,
+  the parser).
 - **Review:** the project `CLAUDE.md` tells Claude Code to follow this file for
   every change.

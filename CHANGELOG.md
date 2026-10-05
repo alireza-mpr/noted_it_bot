@@ -1,26 +1,28 @@
 # Changelog
 
-What changed in Noted, for each version. The newest version is first.
+What changed in Noted, newest first. Each section is one prod release.
 
-- **Product version** (e.g. 1.0): what users get. It changes when a prod
-  release brings something new for users.
-- **Build** (e.g. `v1.0.128-8863977`): one deploy. `/ver` shows it, and git
-  has a tag with the same name.
-- A prod build is one that was deployed to the prod bots. The other builds ran
-  only on the dev bots.
+Every deploy is a **build**, e.g. `v1.0.135-6fb8240`: `/ver` shows it, and
+git has a tag with the same name. A prod release lists its prod builds; the
+builds in between ran only on the dev bots.
 
 ## Unreleased (on the dev bots only)
 
+Nothing yet.
+
+## 1.0.135 (3 Oct 2026)
+
+Prod builds: `v1.0.134`, `v1.0.135`.
+
 - **A time with no date** (e.g. "lunch with friends at 1, Sadaf restaurant")
-  is now an event: today, or tomorrow if the time has passed. Before, it gave
-  no event. Like relative dates, it needs a time zone.
-- **Places without a city name.** A street, venue or area that is in only one
-  city now sets the event's time zone, even when the message doesn't name the
-  city (e.g. a talk on "Karimkhan Street" is in Tehran). A place in several
-  cities, like "Notting Hill", still gets no time zone.
+  is now an event: today, or tomorrow if the time has passed. Like relative
+  dates, it needs a time zone.
+- **Places without a city name.** A street, venue or area in only one city now
+  sets the event's time zone (e.g. a talk on "Karimkhan Street" is in
+  Tehran). A place in several cities, like "Notting Hill", still gets none.
 - A blank line after the `/start` greeting, and new Persian wording.
-- The logs name the trace id `trace_id`, OpenTelemetry's name for it outside
-  OTLP.
+- Logs: the trace id is now `trace_id`, and a request that gives no event logs
+  why (`user_activity.problem`, e.g. "no date").
 
 ## 1.0 — the rewrite (28–29 Sep 2026)
 
@@ -102,8 +104,8 @@ steps, next to the old code, and then replaced it.
   and Groq. A new provider is a new adapter.
 - **Logs with OpenTelemetry names**, e.g. `user.id`, `eventName`,
   `severityText`, and one trace id per request. See ADR-9.
-- **Tests:** about 440 offline tests at 1.0.0 (now over 540), plus live tests
-  that call the real models.
+- **Tests:** about 440 offline tests, plus live tests that call the real
+  models.
 - **Docs in simple English:** the architecture decision registry (ADR-1 to
   ADR-10), the code structure rules, the edge cases, and the glossary.
 
