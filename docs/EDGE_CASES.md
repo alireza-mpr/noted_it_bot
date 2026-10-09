@@ -228,18 +228,21 @@ adding a copy. Any change to the text, even one character, makes a new event.
 
 | Date | Message | What went wrong | Rule now |
 |---|---|---|---|
-| 27 Sep 2026 | "🎲 گیم‌نایت شنبه ۲۶ سپتامبر …" (game night, Saturday 26 Sep, no year) | The event was in 2027: the date had just passed, so the bot took next year. | A missing year |
+| 27 Sep 2026 | "Game night, Saturday 26 Sep", no year | The event was in 2027: the date had just passed, so the bot took next year. | A missing year |
 | 27 Sep 2026 | The same message, at "Notting Hill Neighbourhood House" | No time zone, so UTC: 18:00 became 4:00 the next morning in Melbourne. | Time zones (floating time) |
 | 27 Sep 2026 | A book-club post at "Nunawading Community Hub" | The live test failed when another model answered. | Time zones (models differ) |
 | 27 Sep 2026 | "Thursday 9 Mehr" (film night, Solar Hijri, no year) | No event: other calendars needed a written year. | One conversion step, for every calendar |
 | 29 Sep 2026 | "Tonight dinner with Sam" | No event: relative dates were not read. | Relative dates |
 | 29 Sep 2026 | A book review on "Karimkhan Street", no city | No time zone, so the user's Melbourne time was used. | Time zones (places in one city) |
-| 29 Sep 2026 | «از پنج اکتبر شروع قرص زینک پایان ده اکتبر» (zinc tablets, 5 to 10 Oct) | Not read as one event. | Not solved yet |
-| 3 Oct 2026 | «ساعت ۱ رستوران صدف ملبورن نهار با دوستان» (lunch at 1, no date) | No event: the message has no date. | A time with no date |
+| 29 Sep 2026 | "Zinc tablets, 5 to 10 Oct" | Not read as one event. | Not solved yet |
+| 3 Oct 2026 | "Lunch at 1 at Karma restaurant", no date) | No event: the message has no date. | A time with no date |
 
 **Where the tests are:**
 - `tests/unit/domain/calendar-event/`: one test file per rule (e.g.
   `year-rule.test.ts`, `relative-date-rule.test.ts`), and
-  `create-calendar-event.test.ts` for whole messages, e.g. the game night.
+  `create-calendar-event.test.ts` for whole drafts.
 - `tests/integration/extract-draft.test.ts`: what the live models answer for
   real messages.
+- Tests of Persian messages are in `*.fa.test.ts` files next to these, e.g.
+  `create-calendar-event.fa.test.ts` (the game night) and
+  `extract-draft.fa.test.ts`.

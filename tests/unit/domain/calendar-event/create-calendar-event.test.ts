@@ -1,28 +1,28 @@
 import { describe, expect, it } from "vitest";
 import type { Weekday } from "../../../../src/generic/date-time/date-only";
-import type { CalendarEvent, EventUid } from "../../../../src/domain/calendar-event/calendar-event";
 import type {
   CalendarEventDraft,
   DraftDate,
   WrittenEndDate,
 } from "../../../../src/domain/calendar-event/calendar-event-draft";
-import { createCalendarEvent, type CalendarEventResult } from "../../../../src/domain/calendar-event/create-calendar-event";
+import { createCalendarEvent } from "../../../../src/domain/calendar-event/create-calendar-event";
 import type { RelativeDate } from "../../../../src/domain/calendar-event/relative-date";
 import type { Repeat } from "../../../../src/domain/calendar-event/repeat";
 import { timeZoneNamed } from "../../../../src/generic/date-time/time-zone";
+import {
+  calendarEventOf,
+  createAt,
+  draftWith,
+  MELBOURNE,
+  MON_NOON,
+  TEST_EVENT_UID,
+  UTC,
+  writtenDate,
+} from "./create-at";
 
-// Only eventUidOf creates a real one. The tests need no real hash.
-const TEST_EVENT_UID = "test@notedit" as EventUid;
-const MELBOURNE = timeZoneNamed("Australia/Melbourne");
-const UTC = timeZoneNamed("UTC");
-
-// Monday 21 Sep 2026, 12:00 in Melbourne (AEST, UTC+10).
-const MON_NOON = new Date("2026-09-21T02:00:00Z");
 // Thursday 24 Sep 2026, 17:00 and 20:00 in Melbourne.
 const THU_5PM = new Date("2026-09-24T07:00:00Z");
 const THU_8PM = new Date("2026-09-24T10:00:00Z");
-// Sunday 27 September 2026, 12:00 in Melbourne.
-const SUN_SEP_27_2026 = new Date("2026-09-27T02:00:00Z");
 // 20 January is a Monday in 2025, a Tuesday in 2026 and a Wednesday in 2027.
 const DEC_15_2026 = new Date("2026-12-15T02:00:00Z");
 const FEB_1_2026 = new Date("2026-02-01T02:00:00Z");
@@ -32,41 +32,9 @@ const WEEKLY_ON_THURSDAY: Repeat<WrittenEndDate> = {
   end: { kind: "never" },
 };
 
-// A 19:30 event in Melbourne, with no date and no repeat, by default.
-function draftWith(overrides: Partial<CalendarEventDraft> = {}): CalendarEventDraft {
-  return {
-    title: "Event",
-    location: null,
-    writtenInCalendar: "gregory",
-    date: null,
-    time: { kind: "timed", start: { hour: 19, minute: 30 }, end: { hour: 20, minute: 30 } },
-    timeZone: MELBOURNE,
-    repeat: null,
-    confidence: 0.95,
-    ...overrides,
-  };
-}
-
-// Returns the date as the message writes it.
-function writtenDate(month: number, day: number, year: number | null = null, weekday: Weekday | null = null): DraftDate {
-  return { kind: "written", writtenDate: { year, month, day, weekday } };
-}
-
 // Returns a date relative to now, e.g. relativeDate({ kind: "days-from-today", days: 1 }) for "tomorrow".
 function relativeDate(relativeDate: RelativeDate): DraftDate {
   return { kind: "relative", relativeDate };
-}
-
-function createAt(draft: CalendarEventDraft, now: Date): CalendarEventResult {
-  return createCalendarEvent(draft, TEST_EVENT_UID, { userTimeZone: null, now, floatingTimeZone: UTC });
-}
-
-// Returns the calendar event, or fails the test if there is none.
-function calendarEventOf(calendarEventResult: CalendarEventResult): CalendarEvent {
-  if (!calendarEventResult.ok) {
-    throw new Error(`${calendarEventResult.reason}: ${calendarEventResult.detail}`);
-  }
-  return calendarEventResult.calendarEvent;
 }
 
 describe("a one-off event", () => {
@@ -96,24 +64,6 @@ describe("a one-off event", () => {
       wrongWeekday: null,
       inPast: false,
     });
-  });
-});
-
-describe("the Persian game night message", () => {
-  // The answer for "🎲 گیم‌نایت شنبه ۲۶ سپتامبر …": Saturday 26 Sep, no year.
-  const gameNight = draftWith({ title: "گیم‌نایت", date: writtenDate(9, 26, null, "SA") });
-
-  it("lands on Saturday 26 September 2026, in the past, with the weekday matching", () => {
-    const calendarEvent = calendarEventOf(createAt(gameNight, SUN_SEP_27_2026));
-    expect(calendarEvent.date).toEqual({ year: 2026, month: 9, day: 26 });
-    expect(calendarEvent.inPast).toBe(true);
-    expect(calendarEvent.wrongWeekday).toBeNull();
-  });
-
-  it("without the weekday, uses the current year too", () => {
-    const calendarEvent = calendarEventOf(createAt(draftWith({ date: writtenDate(9, 26) }), SUN_SEP_27_2026));
-    expect(calendarEvent.date).toEqual({ year: 2026, month: 9, day: 26 });
-    expect(calendarEvent.inPast).toBe(true);
   });
 });
 
@@ -404,38 +354,5 @@ describe("a repeating event that cannot be trusted", () => {
       repeat: { pattern: { frequency: "weekly", interval: 0, weekdays: ["TH"] }, end: { kind: "never" } },
     });
     expect(createAt(draft, MON_NOON)).toEqual({ ok: false, reason: "repeat-declined", detail: "invalid interval 0" });
-  });
-});
-
-describe("the Persian radio programme", () => {
-  // Every night at 20:00 Melbourne time, from Wednesday 1 Mehr 1405 (23 Sep
-  // 2026).
-  const dailyRadio = draftWith({
-    title: "جام جهان‌نما",
-    timeZone: MELBOURNE,
-    time: { kind: "timed", start: { hour: 20, minute: 0 }, end: { hour: 21, minute: 0 } },
-    date: writtenDate(9, 23, 2026),
-    repeat: { pattern: { frequency: "daily", interval: 1 }, end: { kind: "never" } },
-    confidence: 0.9,
-  });
-  const jalaliRadio = { ...dailyRadio, writtenInCalendar: "persian" as const, date: writtenDate(7, 1, 1405) };
-
-  it("gives the same event for the Persian date as for the Gregorian one", () => {
-    const calendarEvent = calendarEventOf(createAt(jalaliRadio, MON_NOON));
-    expect(calendarEvent.date).toEqual({ year: 2026, month: 9, day: 23 });
-    expect(calendarEvent).toEqual(calendarEventOf(createAt(dailyRadio, MON_NOON)));
-  });
-
-  it("gives a Persian date with no year the current Persian year", () => {
-    const withoutYear = { ...jalaliRadio, date: writtenDate(7, 1) };
-    expect(calendarEventOf(createAt(withoutYear, MON_NOON))).toEqual(calendarEventOf(createAt(jalaliRadio, MON_NOON)));
-  });
-
-  it("has no event for a monthly repeat in the Persian calendar", () => {
-    const monthly = {
-      ...jalaliRadio,
-      repeat: { pattern: { frequency: "monthly", interval: 1, dayOfMonth: { kind: "fixed-day", day: 1 } }, end: { kind: "never" } },
-    } satisfies CalendarEventDraft;
-    expect(createAt(monthly, MON_NOON)).toMatchObject({ ok: false, reason: "no-event" });
   });
 });

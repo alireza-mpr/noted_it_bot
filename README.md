@@ -81,10 +81,16 @@ every webhook call fails with 401.
 | Kind | Where | Run |
 |---|---|---|
 | Offline unit tests | `tests/unit/`, in the same folders as `src/` | `npx vitest run tests/unit` |
-| Live tests: real messages through the real router and models | `tests/integration/extract-draft.test.ts` | part of `npm test` |
+| Live tests: real messages through the real router and models | `tests/integration/extract-draft.test.ts` (English) and `extract-draft.fa.test.ts` (Persian) | part of `npm test` |
 | Manual: fills the Gemini quota on purpose, to check that the router moves on | `tests/manual/quota-fill.test.ts` | `npm run test:quota-fill` (never in CI) |
 
 - All tests run inside the Workers runtime (`@cloudflare/vitest-plugin`).
+- **Tests of Persian messages go in `*.fa.test.ts` files,** next to the
+  English ones (e.g. `create-calendar-event.fa.test.ts`). Their shared helpers
+  are in plain `.ts` files beside them (e.g. `create-at.ts`,
+  `send-message.ts`, `expect-extraction.ts`). To run only the Persian tests:
+  `npx vitest run fa.test --exclude "tests/integration/**"` (offline), or
+  `npx vitest run fa.test` (the live ones too, which use the quota).
 - `tests/unit/code-structure.test.ts` checks the import rule and the file name
   casing.
 - The live tests check only the fields they list (`toMatchObject`). When a
