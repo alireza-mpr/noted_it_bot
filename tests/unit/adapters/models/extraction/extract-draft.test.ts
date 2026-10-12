@@ -204,6 +204,14 @@ describe("extractDraft, an unsure answer", () => {
     expect(escalationOf(logEvents)).toMatchObject({ "extraction.escalation_outcome": "strong_answer_unusable" });
   });
 
+  it("uses the limit given in the options instead of APP_CONFIG's", async () => {
+    const fakeRouter = new FakeRouter([answerWithText(yogaAnswerWith(0.9), LIGHT_MODEL), answerWithText(YOGA_ANSWER_TEXT, STRONG_MODEL)]);
+
+    await extractDraft(fakeRouter, MESSAGE_TEXT, undefined, { escalateBelowConfidence: 0.95 });
+
+    expect(fakeRouter.routeOptionsOfAsks).toEqual([{}, { onlyTier: "strong" }]);
+  });
+
   it("is final when it already came from a strong model, e.g. Groq's 120b", async () => {
     const fakeRouter = routerAnswering(answerWithText(yogaAnswerWith(0.5), GROQ_MODELS[0]));
 

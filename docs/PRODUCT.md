@@ -121,17 +121,23 @@ An unknown command gets no reply, but it is logged.
 
 ## Backlog
 
-### Next up
-- [ ] **Route tasks to models by difficulty, to control cost.**
-  - Today every task (event extraction, `/diag`) uses the same models in the
-    same order.
-  - Try a cheap, fast model first. Use a stronger one only when confidence is
-    low or the answer doesn't match the schema (e.g. unclear messages, several
-    events in one message).
-  - Measure the savings with the model and tokens that
-    `router.model_answered` already logs, and check "thinking" tokens on tasks
-    that don't need them.
-  - Add tests to make sure quality stays the same on cheaper models.
+### Orchestration
+How the bot uses LLMs today is in [ORCHESTRATION.md](ORCHESTRATION.md).
+- [ ] **Measure disagreement:** also log the first answer in
+      `extraction.escalated`, to see how often the strong model changes the
+      result, per confidence band. Then tune
+      `APP_CONFIG.escalateBelowConfidence`.
+- [ ] **Measure cost:** compare models' tokens (`router.model_answered`
+      already logs them), and check "thinking" tokens on tasks that don't need
+      them.
+- [ ] **Several events in one message:** one call that returns a list of
+      events. Split into several calls only if one call proves unreliable.
+- [ ] **A checker step:** a second model checks a draft before the reply, for
+      risky cases (e.g. repeats).
+- [ ] **Follow-up edits** ("move it to 8pm"): a small, bounded tool loop, with
+      our rules checking every result.
+- [ ] **Tests for quality on cheaper models,** so a model change can't
+      quietly make answers worse.
 
 ### Product
 - [ ] **Why do users start the bot but never try it?** Compare
@@ -143,7 +149,6 @@ An unknown command gets no reply, but it is logged.
 - [ ] More relative dates ("this weekend", "in two weeks", "end of the
       month").
 - [ ] Date ranges as one event (e.g. "zinc tablets from 5 Oct until 10 Oct").
-- [ ] Several events in one message.
 - [ ] Monthly and yearly repeats in other calendars (e.g. "every 1st of the
       Persian month").
 - [ ] **`/privacy`:** a short text in the user's language: what is stored,
@@ -158,6 +163,7 @@ An unknown command gets no reply, but it is logged.
       Interactions API, once structured output works there.
 - [ ] Keep the product version (`1.0` in `ci.yml` and `package.json`) in one
       place.
-- [ ] A real approval step before prod. It needs a paid GitHub plan for a
-      private repo; for now, the manual start is the guard.
+- [ ] A real approval step before prod: "required reviewers" on the `prod`
+      and `prod-fa` GitHub Environments. Free now that the repo is public;
+      until then, the manual start is the guard.
 - [ ] Clean up dev tags: every dev deploy adds one.

@@ -128,14 +128,5 @@ escalation outcome happens:
 | summarize count() by ['extraction.escalation_outcome'], bin(['extraction.first_confidence'], 0.1)
 ```
 
-## Next (planned, not built)
-
-- **Measure disagreement:** also log the first answer in
-  `extraction.escalated`, to see how often the strong model changes the
-  result, per confidence band.
-- **Several events in one message:** one call that returns a list of events.
-  Splitting into several calls only if one call proves unreliable.
-- **A checker step:** a second model checks a draft before the reply, for
-  risky cases (e.g. repeats).
-- **Follow-up edits** ("move it to 8pm"): a small, bounded tool loop, with our
-  rules checking every result.
+What comes next is in the "Orchestration" section of the backlog, in
+[PRODUCT.md](PRODUCT.md#orchestration).

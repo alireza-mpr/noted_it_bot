@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { extractDraft, type ExtractionResult } from "../../src/adapters/models/extraction/extract-draft";
 import { expectExtraction, liveRouter, LIVE_TEST_TIMEOUT_MS, type ExtractionCase } from "./expect-extraction";
 
@@ -128,5 +128,32 @@ describe("extractDraft, with the real models", () => {
 
     const readsNoDate = extractionResult.ok ? extractionResult.draft.date === null : extractionResult.reason === "no-event";
     expect(readsNoDate).toBe(true);
+  });
+
+  it("asks a strong model again when a light model's answer is unsure", { timeout: 2 * LIVE_TEST_TIMEOUT_MS }, async () => {
+    // A light model rarely says it is unsure, so a limit above 1 makes every
+    // light answer unsure, and the real escalation runs. It uses one call of
+    // the strong models' small daily budget.
+    const consoleInfo = vi.spyOn(console, "info");
+    const extractionResult = await extractDraft(liveRouter(), "Yoga every Tuesday at 6pm", undefined, {
+      escalateBelowConfidence: 1.01,
+    });
+    // Every log event is also printed as one JSON line; read them from there.
+    const escalationLines = consoleInfo.mock.calls
+      .map(([printedLine]) => String(printedLine))
+      .filter((printedLine) => printedLine.startsWith("{"))
+      .map((printedLine) => JSON.parse(printedLine))
+      .filter((printedEvent) => printedEvent.eventName === "extraction.escalated");
+    consoleInfo.mockRestore();
+
+    expect(escalationLines).toEqual([expect.objectContaining({ "extraction.escalation_outcome": "strong_answer_used" })]);
+    expect(extractionResult).toMatchObject({
+      ok: true,
+      modelAnswer: { model: { tier: "strong" } },
+      draft: {
+        time: { kind: "timed", start: { hour: 18, minute: 0 } },
+        repeat: { pattern: { frequency: "weekly", interval: 1, weekdays: ["TU"] }, end: { kind: "never" } },
+      },
+    });
   });
 });

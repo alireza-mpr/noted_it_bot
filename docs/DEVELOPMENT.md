@@ -88,7 +88,8 @@ every webhook call fails with 401.
   model fails, the router moves on, so the test still passes if a later model
   answers well.
 - **The live tests use the dev Gemini quota, which the dev bot shares.** A run
-  makes about 20 calls. Frequent runs push requests to later, sometimes weaker
+  makes about 22 calls, one of them from the strong models' small budget (the
+  escalation test). Frequent runs push requests to later, sometimes weaker
   models. To run one case: `npx vitest run tests/integration -t "<part of the
   message>"`.
 
@@ -140,9 +141,9 @@ points the bot's webhook at it, and sets:
 
 ### Deploy to prod
 
-**`.github/workflows/deploy.yml` never runs by itself.** GitHub's "required
-reviewers" are not free for private repos, so the guard is a deliberate manual
-start, from a tag.
+**`.github/workflows/deploy.yml` never runs by itself.** The guard is a
+deliberate manual start, from a tag. (GitHub's "required reviewers" are free
+now that the repo is public; see the backlog.)
 
 1. Let `deploy-dev` check what is on `main`.
 2. **Check for database changes.** If the release needs a D1 change, make it

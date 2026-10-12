@@ -26,6 +26,12 @@ export type ExtractionResult =
       modelAnswer: ModelAnswer;
     };
 
+// Represents how an extraction runs. escalateBelowConfidence is the limit
+// for asking a strong model again; a test can raise it to force escalation.
+export interface ExtractionOptions {
+  escalateBelowConfidence?: number;
+}
+
 // Sends the message to the models, and turns the model answer into a draft.
 // An unsure answer from a light model is asked again of a strong model.
 // beforeFirstTry runs just before the first model is tried (see Router.ask).
@@ -35,7 +41,9 @@ export async function extractDraft(
   router: Pick<Router, "ask">,
   messageText: string,
   beforeFirstTry?: () => Promise<void>,
+  extractionOptions: ExtractionOptions = {},
 ): Promise<ExtractionResult> {
+  const { escalateBelowConfidence = APP_CONFIG.escalateBelowConfidence } = extractionOptions;
   const modelRequest: ModelRequest = {
     systemPrompt: eventExtractionPrompt,
     userPrompt: messageText,
@@ -48,7 +56,7 @@ export async function extractDraft(
   }
 
   const firstAnswer = parsedAnswerOf(modelResult);
-  const usedAnswer = isUnsure(firstAnswer)
+  const usedAnswer = isUnsure(firstAnswer, escalateBelowConfidence)
     ? await answerOfStrongModel(router, modelRequest, firstAnswer)
     : firstAnswer;
   return extractionResultOf(messageText, usedAnswer);
@@ -78,12 +86,12 @@ async function answerOfStrongModel(
 
 // Returns true when a light model gave a draft with a confidence below the
 // limit. A draft from a strong model is final.
-function isUnsure(parsedAnswer: ParsedAnswer): boolean {
+function isUnsure(parsedAnswer: ParsedAnswer, escalateBelowConfidence: number): boolean {
   const { modelAnswer, draftResult } = parsedAnswer;
   return (
     modelAnswer.model.tier === "light" &&
     draftResult.ok &&
-    draftResult.draft.confidence < APP_CONFIG.escalateBelowConfidence
+    draftResult.draft.confidence < escalateBelowConfidence
   );
 }
 
