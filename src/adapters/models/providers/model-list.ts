@@ -24,17 +24,17 @@ export const GEMINI_DAY_TIME_ZONE = timeZoneNamed("America/Los_Angeles");
 // Represents Gemini's models, in the order the router tries them. The router
 // tries all of Gemini's models before Groq's.
 export const GEMINI_MODELS: readonly Model[] = [
-  { provider: "gcp.gemini", name: "gemini-3.1-flash-lite", limits: GEMINI_LITE_LIMITS },
-  { provider: "gcp.gemini", name: "gemini-3.5-flash-lite", limits: GEMINI_LITE_LIMITS },
-  { provider: "gcp.gemini", name: "gemini-3.8-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gcp.gemini", name: "gemini-3.7-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gcp.gemini", name: "gemini-3.6-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gcp.gemini", name: "gemini-3.5-flash", limits: GEMINI_FLASH_LIMITS },
-  { provider: "gcp.gemini", name: "gemini-3-flash-preview", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.1-flash-lite", tier: "light", limits: GEMINI_LITE_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.5-flash-lite", tier: "light", limits: GEMINI_LITE_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.8-flash", tier: "strong", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.7-flash", tier: "strong", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.6-flash", tier: "strong", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3.5-flash", tier: "strong", limits: GEMINI_FLASH_LIMITS },
+  { provider: "gcp.gemini", name: "gemini-3-flash-preview", tier: "strong", limits: GEMINI_FLASH_LIMITS },
 ];
 
 // Represents Groq's models, in the order the router tries them.
 export const GROQ_MODELS: readonly Model[] = [
-  { provider: "groq", name: "openai/gpt-oss-120b", limits: GROQ_LIMITS },
-  { provider: "groq", name: "openai/gpt-oss-20b", limits: GROQ_LIMITS },
+  { provider: "groq", name: "openai/gpt-oss-120b", tier: "strong", limits: GROQ_LIMITS },
+  { provider: "groq", name: "openai/gpt-oss-20b", tier: "light", limits: GROQ_LIMITS },
 ];

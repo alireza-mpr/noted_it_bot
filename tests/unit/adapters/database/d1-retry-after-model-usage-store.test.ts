@@ -7,8 +7,8 @@ import { modelAnswerOf } from "../models/model-answer-of";
 
 const TEST_DB = (env as unknown as { TEST_DB: D1Database }).TEST_DB;
 const LIMITS = { requestsPerMinute: 30, tokensPerMinute: 8_000, requestsPerDay: 1_000 };
-const FIRST_MODEL: Model = { provider: "groq", name: "first-model", limits: LIMITS };
-const SECOND_MODEL: Model = { provider: "groq", name: "second-model", limits: LIMITS };
+const FIRST_MODEL: Model = { provider: "groq", name: "first-model", tier: "light", limits: LIMITS };
+const SECOND_MODEL: Model = { provider: "groq", name: "second-model", tier: "light", limits: LIMITS };
 const NOW_MS = 1_800_000_000_000;
 
 const at = (ms: number) => new Date(ms);

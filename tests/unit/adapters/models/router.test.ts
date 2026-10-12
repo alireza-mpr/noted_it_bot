@@ -13,9 +13,9 @@ import { modelAnswerOf } from "./model-answer-of";
 
 const MODEL_REQUEST: ModelRequest = { systemPrompt: null, userPrompt: "ping", responseSchema: null };
 const LIMITS = { requestsPerMinute: 1, tokensPerMinute: 1, requestsPerDay: 1 };
-const GEMINI_A: Model = { provider: "gcp.gemini", name: "gemini-a", limits: LIMITS };
-const GEMINI_B: Model = { provider: "gcp.gemini", name: "gemini-b", limits: LIMITS };
-const GROQ_A: Model = { provider: "groq", name: "groq-a", limits: LIMITS };
+const GEMINI_A: Model = { provider: "gcp.gemini", name: "gemini-a", tier: "light", limits: LIMITS };
+const GEMINI_B: Model = { provider: "gcp.gemini", name: "gemini-b", tier: "strong", limits: LIMITS };
+const GROQ_A: Model = { provider: "groq", name: "groq-a", tier: "light", limits: LIMITS };
 
 const UNAVAILABLE: ModelFailure = { ok: false, kind: "unavailable", httpStatus: 503, detail: "busy" };
 const UNAUTHORIZED: ModelFailure = { ok: false, kind: "unauthorized", httpStatus: 401, detail: "bad key" };
@@ -91,6 +91,30 @@ describe("Router", () => {
 
     expect(await router.ask(MODEL_REQUEST)).toBe(groqAnswer);
     expect(geminiClient.calledModelNames).toEqual(["gemini-a"]);
+  });
+
+  it("tries only the models of one tier when asked, e.g. strong ones for a second opinion", async () => {
+    const strongAnswer = modelAnswerOf(GEMINI_B);
+    const geminiClient = new FakeProviderClient({ "gemini-a": modelAnswerOf(GEMINI_A), "gemini-b": strongAnswer });
+    const groqClient = new FakeProviderClient({ "groq-a": modelAnswerOf(GROQ_A) });
+    const router = new Router([
+      { providerClient: geminiClient, modelUsageStore: new FakeModelUsageStore([GEMINI_A, GEMINI_B]) },
+      { providerClient: groqClient, modelUsageStore: new FakeModelUsageStore([GROQ_A]) },
+    ]);
+
+    expect(await router.ask(MODEL_REQUEST, undefined, { onlyTier: "strong" })).toBe(strongAnswer);
+    expect(geminiClient.calledModelNames).toEqual(["gemini-b"]);
+  });
+
+  it("says that no model is under its limits when no model of the tier is available", async () => {
+    const router = new Router([
+      { providerClient: new FakeProviderClient({ "groq-a": modelAnswerOf(GROQ_A) }), modelUsageStore: new FakeModelUsageStore([GROQ_A]) },
+    ]);
+
+    expect(await router.ask(MODEL_REQUEST, undefined, { onlyTier: "strong" })).toMatchObject({
+      ok: false,
+      detail: "no model is under its limits",
+    });
   });
 
   it("returns the last failure when no model answers", async () => {

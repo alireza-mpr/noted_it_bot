@@ -112,7 +112,7 @@ An unknown command gets no reply, but it is logged.
 
 - **D1:** one row per user: the Telegram username, first and last name and app
   language, the chosen language and time zone, and the quota usage.
-- **Logs (Axiom, kept about 2 days):** every message text, the model's answer,
+- **Logs (Axiom):** every message text, the model's answer,
   and what users do (commands, settings, event requests, blocking the bot),
   with the user's id, username and full name.
 - **Models:** the message text goes to Gemini, or Groq when Gemini is busy.

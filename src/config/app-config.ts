@@ -4,6 +4,7 @@ export interface AppConfig {
   dailyQuota: number;
   showDailyQuota: boolean;
   floatingTimeZoneName: string;
+  escalateBelowConfidence: number;
 }
 
 // Represents the settings the bot runs with.
@@ -14,4 +15,7 @@ export const APP_CONFIG: AppConfig = {
   // A user who used up the quota is still told why.
   showDailyQuota: false,
   floatingTimeZoneName: "UTC",
+  // A light model's answer with a lower confidence is asked again of a strong
+  // model. A first guess: tune it with the extraction.escalated logs.
+  escalateBelowConfidence: 0.7,
 };

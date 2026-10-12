@@ -1,3 +1,4 @@
+import type { ModelTier } from "./model";
 import type { ModelFailure, ModelRequest, ModelResult } from "./model-result";
 import type { ModelUsageStore } from "./model-usage-store";
 import type { ProviderClient } from "./provider-client";
@@ -26,6 +27,12 @@ export interface RoutedProvider {
   modelUsageStore: ModelUsageStore;
 }
 
+// Represents how the router picks models for one request. onlyTier limits it
+// to the models of one tier, e.g. "strong" for a second opinion.
+export interface RouteOptions {
+  onlyTier?: ModelTier;
+}
+
 // Represents the router: tries the models in order until one answers. See
 // ADR-4 in ARCHITECTURE_DECISIONS_REGISTRY.md.
 export class Router {
@@ -38,9 +45,10 @@ export class Router {
   async ask(
     modelRequest: ModelRequest,
     beforeFirstTry: () => Promise<void> = async () => {},
+    routeOptions: RouteOptions = {},
   ): Promise<ModelResult> {
     try {
-      return await this.tryProviders(modelRequest, beforeFirstTry);
+      return await this.tryProviders(modelRequest, beforeFirstTry, routeOptions);
     } catch (error) {
       logRouterFailed(error);
       return {
@@ -55,11 +63,15 @@ export class Router {
   private async tryProviders(
     modelRequest: ModelRequest,
     beforeFirstTry: () => Promise<void>,
+    routeOptions: RouteOptions,
   ): Promise<ModelResult> {
     let lastModelFailure = NO_MODEL_AVAILABLE;
     let firstTryDone = false;
+    const { onlyTier } = routeOptions;
     for (const { providerClient, modelUsageStore } of this.routedProviders) {
-      const availableModels = await modelUsageStore.availableModels(new Date());
+      const availableModels = (await modelUsageStore.availableModels(new Date())).filter(
+        (model) => onlyTier === undefined || model.tier === onlyTier,
+      );
       logModelsListed(availableModels);
       for (const model of availableModels) {
         if (!firstTryDone) {

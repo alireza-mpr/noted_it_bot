@@ -204,8 +204,14 @@ model's usage, and tries the next model that still has room (ADR-4).
 - Everything calls `Router.ask` (`src/adapters/models/router.ts`), never a
   provider directly.
 - The router tries Gemini's models in order, then Groq's. The models, their
-  limits and their order are in `src/adapters/models/providers/model-list.ts`.
+  tier ("light" or "strong"), limits and order are in
+  `src/adapters/models/providers/model-list.ts`.
 - Only `src/adapters/models/providers/` knows the names Gemini and Groq.
+- **Escalation** (`extractDraft`): when a light model's draft has a confidence
+  below `APP_CONFIG.escalateBelowConfidence` (0.7), the message is asked again
+  of strong models only (`RouteOptions.onlyTier`). Their usable answer is
+  used, even if it is unsure too; with no usable strong answer, the first one
+  is kept. Each escalation logs `extraction.escalated`.
 
 | Result | What the router does |
 |---|---|
@@ -324,7 +330,8 @@ the user from the signed token.
 | `router.models_listed`, `router.model_tried`, `router.model_answered` | `router.available_models`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.*` | the router's steps |
 | `router.model_failed` (`WARN`; `ERROR` for a bad request, a bad key or our bug) | `router.failure_kind`, `router.failure_detail`, `router.limit_window`, `router.retry_after_seconds` | a model gave no answer |
 | `router.no_model_answered` (`ERROR`) | | every model failed |
-| `extraction.completed` (`WARN` when the answer is not usable) | `extraction.message_text`, `extraction.model_answer`, `gen_ai.request.model`, `extraction.outcome`, `extraction.problem` | a message went to a model |
+| `extraction.completed` (`WARN` when the answer is not usable) | `extraction.message_text`, `extraction.model_answer`, `gen_ai.request.model`, `extraction.outcome`, `extraction.problem` | a message went to a model; the answer used |
+| `extraction.escalated` | `extraction.first_model`, `extraction.first_confidence`, `extraction.strong_model`, `extraction.strong_confidence`, `extraction.escalation_outcome` (`strong_answer_used`, `no_strong_model`, `strong_answer_unusable`) | an unsure answer was asked again of a strong model |
 | `quota.consumed`, `quota.refunded` | `quota.remaining` | a unit was used, or given back |
 | `time_zone_page.token_refused` (`WARN`) | `time_zone_page.token_purpose`, `time_zone_page.refusal_reason` | a `/tz` token was refused |
 | `language_command.not_supported` | `language_command.language_text` | `/lang` with a language the bot doesn't have |

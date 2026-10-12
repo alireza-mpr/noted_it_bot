@@ -8,8 +8,8 @@ import { modelAnswerOf } from "../models/model-answer-of";
 
 const TEST_DB = (env as unknown as { TEST_DB: D1Database }).TEST_DB;
 const LIMITS = { requestsPerMinute: 2, tokensPerMinute: 100, requestsPerDay: 3 };
-const FIRST_MODEL: Model = { provider: "gcp.gemini", name: "first-model", limits: LIMITS };
-const SECOND_MODEL: Model = { provider: "gcp.gemini", name: "second-model", limits: LIMITS };
+const FIRST_MODEL: Model = { provider: "gcp.gemini", name: "first-model", tier: "light", limits: LIMITS };
+const SECOND_MODEL: Model = { provider: "gcp.gemini", name: "second-model", tier: "light", limits: LIMITS };
 const NOON_UTC = new Date("2026-09-28T12:00:00Z");
 // 23:59 on 27 Sep 2026 in Los Angeles (PDT, UTC-7); a minute later, a new
 // Pacific day starts.
