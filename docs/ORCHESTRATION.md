@@ -6,6 +6,10 @@ ask, when to ask again, which answer to trust, and does every date
 calculation. This is orchestration, not an agent: the model never picks the
 next step.
 
+It has two parts, both common patterns: a **failover chain** (try the next
+model when one fails) and a **confidence-based model cascade** (try a cheap
+model first, and a stronger one only when the cheap answer is unsure).
+
 ## The principle: the model reads, our code decides
 
 | The model does | Our code does |
@@ -26,7 +30,7 @@ message
    v
 +----------------------------------------------------------------+
 | 1. Failover: try light models first, then the next free model  |
-|    gemini-3.1-flash-lite -> gemini-3.5-flash-lite -> ...        |
+|    gemini-3.1-flash-lite -> gemini-3.5-flash-lite -> ...       |
 +----------------------------------------------------------------+
    |  a draft (JSON) + the model's confidence
    v
@@ -35,7 +39,7 @@ message
    | no                      | yes
    |                         v
    |   +---------------------------------------------------------+
-   |   | 2. Escalation: ask again, strong models only            |
+   |   | 2. Cascade: ask again, strong models only               |
    |   |    usable answer?  -> use it                            |
    |   |    none, or bad?   -> keep the first answer             |
    |   +---------------------------------------------------------+
@@ -50,7 +54,7 @@ message
 reply: Google Calendar link + .ics file
 ```
 
-## 1. Failover: 9 free models from 2 providers
+## 1. A failover chain: 9 free models from 2 providers
 
 The free model plans have small limits per model: requests per minute,
 requests per day, tokens per minute. One model runs out within hours. So a
@@ -75,9 +79,15 @@ Details: ADR-4 in
 [ARCHITECTURE_DECISIONS_REGISTRY.md](ARCHITECTURE_DECISIONS_REGISTRY.md) and
 "Models and routing" in [DEVELOPMENT.md](DEVELOPMENT.md#models-and-routing).
 
-## 2. Escalation: a second opinion for unsure answers
+## 2. A model cascade: a second opinion for unsure answers
 
-Light models are fast and have high limits, so they answer first. When a
+A **model cascade** sends each request to a cheap model first, and moves up
+to a stronger, more expensive model only when the cheap answer isn't good
+enough. Most requests stop at the first step, so strong models are used only
+where they help. In the code, moving up a step is called **escalation**.
+
+Noted's cascade has two steps, and its check is the model's own confidence:
+light models are fast and have high limits, so they answer first. When a
 light model's draft has a confidence below `APP_CONFIG.escalateBelowConfidence`
 (0.7), our code asks again, this time of **strong models only**
 (`RouteOptions.onlyTier`).
@@ -93,6 +103,18 @@ So escalation never makes a reply worse than without it. It costs one more
 model call, only for unsure messages; for the user, a message is still one
 unit of their daily quota. Code: `extractDraft` in
 `src/adapters/models/extraction/extract-draft.ts`. Decision: ADR-11.
+
+**A cascade is only as good as its check.** The model's own confidence is
+free, but small models are often sure and wrong. Stronger checks, from
+cheapest: rules on the answer (e.g. a date with no calendar), asking the
+cheap model twice and comparing (self-consistency), or a scorer model that
+judges the answer. The best-known example of the pattern is the FrugalGPT
+paper (Stanford, 2023), which used a learned scorer as its check.
+
+**A cascade is not a router.** A router picks one model *before* any call, by
+guessing how hard the request is. A cascade decides *after* the cheap answer,
+by judging it. Noted's router is a failover chain: it moves on when a model
+fails, not when a request is hard.
 
 ## Why orchestration, not an agent
 

@@ -340,10 +340,12 @@ than a slower reply.
 | Option | Good | Bad |
 |---|---|---|
 | Use strong models first | Better answers | Their free limits (20 a day per Gemini model) run out within hours |
-| **Ask strong models again only when the light answer is unsure** | Strong calls go where they help; most messages cost one call | One more call and a few seconds for unsure messages |
+| A router that picks the model before the call, by guessing how hard the message is | Always one call | A wrong guess sends a hard message to a weak model |
+| **A model cascade: ask strong models again only when the light answer is unsure** | Strong calls go where they help; most messages cost one call | One more call and a few seconds for unsure messages |
 | An agent that decides when to check | Flexible | Many calls, unpredictable cost, hard to test (see [ORCHESTRATION.md](ORCHESTRATION.md)) |
 
-**Decision.**
+**Decision.** A two-step, confidence-based **model cascade** (see
+[ORCHESTRATION.md](ORCHESTRATION.md)):
 - Each model has a tier: light or strong (`Model.tier`). The router can be
   asked to try one tier only (`RouteOptions.onlyTier`).
 - When a light model's draft has a confidence below

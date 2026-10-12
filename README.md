@@ -6,9 +6,9 @@ Neighbourhood House"), and it replies with a one-tap Google Calendar link and
 an `.ics` file for any other calendar app.
 
 **Built on an [LLM orchestration layer](docs/ORCHESTRATION.md):** failover
-across 9 free models from 2 providers, and escalation of unsure answers to
-stronger models, while our code, not the model, decides every step and does
-all date math.
+across 9 free models from 2 providers, and a confidence-based model cascade
+that escalates unsure answers to stronger models, while our code, not the
+model, decides every step and does all date math.
 
 Try it: [@noted_it_bot](https://t.me/noted_it_bot) (English) or
 [@noted_it_fa_bot](https://t.me/noted_it_fa_bot) (Persian).
@@ -52,7 +52,7 @@ Try it: [@noted_it_bot](https://t.me/noted_it_bot) (English) or
 
 | Doc | What is in it |
 |---|---|
-| [ORCHESTRATION.md](docs/ORCHESTRATION.md) | How the bot uses LLMs: failover, escalation, and why not an agent |
+| [ORCHESTRATION.md](docs/ORCHESTRATION.md) | How the bot uses LLMs: failover, a model cascade, and why not an agent |
 | [PRODUCT.md](docs/PRODUCT.md) | Features, commands, and the backlog |
 | [EDGE_CASES.md](docs/EDGE_CASES.md) | The rules for dates, calendars, repeats and time zones, and the real messages behind them |
 | [ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md) | Why the main parts work the way they do |

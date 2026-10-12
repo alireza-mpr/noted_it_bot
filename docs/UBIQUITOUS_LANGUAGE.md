@@ -135,7 +135,9 @@ this list is called the "ubiquitous language".
 | Model | One model of a provider, e.g. `gemini-3.5-flash-lite`. | `Model`, `GEMINI_MODELS`, `GROQ_MODELS` |
 | Model limits | A model's free limits (per minute and per day). A model at its limit is "used up". | `ModelLimits`, `LimitWindow` |
 | Model tier | How able a model is: "light" (fast, high free limits) or "strong" (reads better, low free limits). | `ModelTier`, `Model.tier` |
-| Escalation | Asking a strong model again when a light model's answer is unsure (its confidence is below `APP_CONFIG.escalateBelowConfidence`). The strong answer is used if it is usable. | `extractDraft`, `RouteOptions.onlyTier` |
+| Escalation | Asking a strong model again when a light model's answer is unsure (its confidence is below `APP_CONFIG.escalateBelowConfidence`). The strong answer is used if it is usable. It is one step of a model cascade. | `extractDraft`, `RouteOptions.onlyTier` |
+| Model cascade | The common name for the pattern: a cheap model first, and a stronger one only when the cheap answer isn't good enough. Noted's cascade has two steps (light, then strong), and its check is the model's confidence. See [ORCHESTRATION.md](ORCHESTRATION.md). | — |
+| Failover chain | Trying the next model when one fails (e.g. a rate limit). What the router does. Not a cascade: it moves on when a model fails, not when an answer is unsure. | `Router` |
 | Model failure | Why a model gave no answer, e.g. rate limited or unavailable. | `ModelFailure` |
 | Model usage | How much a model was used: counts per minute and per day, or a retry time. It says which models are used up. | `ModelUsageStore`, `D1CountedModelUsageStore`, `D1RetryAfterModelUsageStore` |
 | Router | Tries the models in order: Gemini first, then Groq. | `Router`, `RoutedProvider` |
