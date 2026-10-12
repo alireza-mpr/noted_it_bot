@@ -99,7 +99,8 @@ Follow [docs/CODE_STRUCTURE.md](docs/CODE_STRUCTURE.md) for every change:
 
 ## Other docs
 
-- [README.md](README.md): setup, tests, CI/CD and deployment.
+- [README.md](README.md): a short public overview of the project.
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): setup, tests, CI/CD, deployment, storage, models and logs.
 - [docs/PRODUCT.md](docs/PRODUCT.md): features, and what comes next.
 - [docs/ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md): why the main parts work the way they do; the quota and its D1 cost.
 - [docs/EDGE_CASES.md](docs/EDGE_CASES.md): the general rules for dates, calendars and time zones.

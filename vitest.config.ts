@@ -3,7 +3,7 @@ import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { configDefaults, defineConfig } from "vitest/config";
 
 // An environment variable wins; otherwise the local, gitignored secrets/dev.json
-// (see the README), whose keys use the same names.
+// (see docs/DEVELOPMENT.md), whose keys use the same names.
 function secret(name: string): string | undefined {
   if (process.env[name]) {
     return process.env[name];

@@ -142,7 +142,7 @@ or removed.
 Groq's. It counts each model's usage in D1, in the provider's own time windows
 (e.g. Gemini's day ends at midnight Pacific time), and skips a model that is
 already at its limit without calling it. How it reacts to each error is in the
-[README](../README.md#models-and-routing).
+[DEVELOPMENT.md](DEVELOPMENT.md#models-and-routing).
 
 **Trade-offs.**
 - Nothing is reserved before a call, so parallel requests can go slightly over
@@ -166,7 +166,7 @@ already at its limit without calling it. How it reacts to each error is in the
 page reads the device's time zone and asks the user to confirm it with one
 tap, or to search all zones. It knows the user only from a signed token (HMAC)
 and never trusts anything the browser sends. `/tz Australia/Melbourne` skips
-the page. How it works is in the [README](../README.md#the-tz-page).
+the page. How it works is in [DEVELOPMENT.md](DEVELOPMENT.md#the-tz-page).
 
 **Trade-offs.**
 - The user needs one tap and one page load.
@@ -268,7 +268,7 @@ reworded.
 
 **What to monitor (draft).** The alert levels are first guesses; set them after
 a few weeks of normal traffic. The events are listed in the
-[README](../README.md#logs).
+[DEVELOPMENT.md](DEVELOPMENT.md#logs).
 
 | Risk | What to watch | Where | Alert when |
 |---|---|---|---|
