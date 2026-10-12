@@ -5,6 +5,11 @@ Forward it a post ("Game night, Saturday 26 Sep, 6–9:30pm, Notting Hill
 Neighbourhood House"), and it replies with a one-tap Google Calendar link and
 an `.ics` file for any other calendar app.
 
+**Built on an [LLM orchestration layer](docs/ORCHESTRATION.md):** failover
+across 9 free models from 2 providers, and escalation of unsure answers to
+stronger models, while our code, not the model, decides every step and does
+all date math.
+
 Try it: [@noted_it_bot](https://t.me/noted_it_bot) (English) or
 [@noted_it_fa_bot](https://t.me/noted_it_fa_bot) (Persian).
 
@@ -23,7 +28,9 @@ Try it: [@noted_it_bot](https://t.me/noted_it_bot) (English) or
 
 - **Cloudflare Workers and D1**, called by Telegram's webhook. No server.
 - **Free LLM models** (Gemini, then Groq) only *read* the message. Our code
-  does all date math, so a model never invents a date.
+  does all date math, so a model never invents a date. When a light model is
+  unsure, a stronger one is asked again
+  ([ORCHESTRATION.md](docs/ORCHESTRATION.md)).
 - **Pure rules in the middle, input and output at the edges:** dates, time
   zones, repeats and the quota are pure functions, tested offline (550+
   tests). Live tests run real messages through the real models.
@@ -45,6 +52,7 @@ Try it: [@noted_it_bot](https://t.me/noted_it_bot) (English) or
 
 | Doc | What is in it |
 |---|---|
+| [ORCHESTRATION.md](docs/ORCHESTRATION.md) | How the bot uses LLMs: failover, escalation, and why not an agent |
 | [PRODUCT.md](docs/PRODUCT.md) | Features, commands, and the backlog |
 | [EDGE_CASES.md](docs/EDGE_CASES.md) | The rules for dates, calendars, repeats and time zones, and the real messages behind them |
 | [ARCHITECTURE_DECISIONS_REGISTRY.md](docs/ARCHITECTURE_DECISIONS_REGISTRY.md) | Why the main parts work the way they do |

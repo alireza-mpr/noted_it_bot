@@ -8,7 +8,9 @@ builds in between ran only on the dev bots.
 
 ## Unreleased (on the dev bots only)
 
-Nothing yet.
+- **A second opinion for unsure answers.** When a light model is unsure about
+  a message (confidence below 0.7), a stronger model reads it again, and its
+  answer is used. See [ORCHESTRATION.md](docs/ORCHESTRATION.md).
 
 ## 1.0.135 (3 Oct 2026)
 

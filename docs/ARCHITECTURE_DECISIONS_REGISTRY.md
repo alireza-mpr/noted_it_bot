@@ -1,5 +1,10 @@
 # Architecture Decision Registry
 
+> **How Noted uses LLMs** (failover across 9 free models, and escalation of
+> unsure answers to stronger models, with our code in control) is explained
+> in [ORCHESTRATION.md](ORCHESTRATION.md). The decisions behind it are ADR-4
+> and ADR-11.
+
 The main design decisions of Noted, and why we made them. After the
 decisions, [The daily quota in detail](#the-daily-quota-in-detail) gives the
 quota's rules and what each message costs in D1.
@@ -47,6 +52,7 @@ quota's rules and what each message costs in D1.
 | 8 | Always answer Telegram with 200 after the auth check | NFR2, NFR4 |
 | 9 | Logging and monitoring: OpenTelemetry names, sent to Axiom | NFR1, NFR2, NFR4 |
 | 10 | One code base, one Worker per bot edition | FR4, NFR1 |
+| 11 | Ask a strong model again when a light model's answer is unsure | FR1, NFR1, NFR4 |
 
 ---
 
@@ -323,6 +329,37 @@ model keys and database.
   and new keys (maybe a new Cloudflare account) in its GitHub Environment. No
   code changes. Its users start with fresh settings unless their rows are
   copied.
+
+### ADR-11 — Ask a strong model again when a light model's answer is unsure
+
+**Problem.** Light models answer first: they are fast and have high free
+limits. But once one gives any answer, that answer is final, even when the
+model itself says it is unsure. A wrong date in someone's calendar is worse
+than a slower reply.
+
+| Option | Good | Bad |
+|---|---|---|
+| Use strong models first | Better answers | Their free limits (20 a day per Gemini model) run out within hours |
+| **Ask strong models again only when the light answer is unsure** | Strong calls go where they help; most messages cost one call | One more call and a few seconds for unsure messages |
+| An agent that decides when to check | Flexible | Many calls, unpredictable cost, hard to test (see [ORCHESTRATION.md](ORCHESTRATION.md)) |
+
+**Decision.**
+- Each model has a tier: light or strong (`Model.tier`). The router can be
+  asked to try one tier only (`RouteOptions.onlyTier`).
+- When a light model's draft has a confidence below
+  `APP_CONFIG.escalateBelowConfidence` (0.7), the message is asked again of
+  strong models only. Their usable answer is used, even if it is unsure too.
+- With no strong model free, or an unusable strong answer, the first answer
+  is kept. So escalation never makes a reply worse.
+- Unusable first answers are not escalated: they stay as before (the unit is
+  given back).
+
+**Trade-offs.**
+- A model's own confidence is a weak signal: small models are often sure and
+  wrong. So 0.7 is a first guess, to tune with the `extraction.escalated`
+  logs.
+- Escalations share the strong models' small budget (about 100 Gemini calls a
+  day) with failover. When it runs out, escalation stops quietly.
 
 ---
 
