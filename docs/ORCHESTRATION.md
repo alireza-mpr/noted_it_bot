@@ -61,6 +61,31 @@ requests per day, tokens per minute. One model runs out within hours. So a
 router (`src/adapters/models/router.ts`) tries the models in a fixed order,
 and moves on when one fails.
 
+```
+ request
+    |
+    v
+ Gemini   [light ]  gemini-3.1-flash-lite  ---answers---+
+    | fails                                             |
+    v                                                   |
+          [light ]  gemini-3.5-flash-lite  ---answers---+
+    | fails                                             |
+    v                                                   |
+          [strong]  5 flash models         ---answers---+
+    | all fail                                          |
+    v                                                   v
+ Groq     [strong]  gpt-oss-120b           ---answers---> the first answer
+    | fails                                             ^
+    v                                                   |
+          [light ]  gpt-oss-20b            ---answers---+
+    | fails
+    v
+ no model answered: "busy" reply, and the quota unit is given back
+
+ skipped with no call: a model at its limit (usage counted in D1)
+ 401 or 403 (a bad API key): the rest of that provider is skipped
+```
+
 | Tier | Models | Free limit per model |
 |---|---|---|
 | **light** | `gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`, Groq `gpt-oss-20b` | 500–1,000 requests a day |
@@ -91,6 +116,33 @@ light models are fast and have high limits, so they answer first. When a
 light model's draft has a confidence below `APP_CONFIG.escalateBelowConfidence`
 (0.7), our code asks again, this time of **strong models only**
 (`RouteOptions.onlyTier`).
+
+```
+                         message
+                            |
+                            v
+                 +---------------------+
+   step 1        |  a light model      |   fast; 500+ requests a day each
+                 +---------------------+
+                            |
+                  a draft + its confidence
+                            |
+                            v
+              confidence >= 0.7 ?  ----yes---->  use it  (most messages)
+                            |
+                            no
+                            v
+                 +---------------------+
+   step 2        |  a strong model     |   better; about 100 Gemini
+                 +---------------------+   requests a day in total
+                            |
+                            v
+              a usable answer ?  ------yes---->  use it, even if unsure
+                            |
+                            no, or no strong model free
+                            v
+                 keep the step 1 answer
+```
 
 | Case | Answer used |
 |---|---|

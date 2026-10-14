@@ -26,6 +26,30 @@ Try it: [@noted_it_bot](https://t.me/noted_it_bot) (English) or
 
 ## How it works
 
+```
+  Telegram user                          browser
+      |   ^                                 |  /tz page, signed token
+      |   |  link + .ics file               |
+      v   |                                 v
+  +----------+   webhook + secret   +---------------------------------+
+  | Telegram | -------------------> | Cloudflare Worker               |
+  | Bot API  | <------------------- | one per edition: English,       |
+  +----------+   the reply          | Persian                         |
+                                    |                                 |
+                                    |  app/       use cases           |
+                                    |  domain/    pure rules          |
+                                    |  output/    .ics, link, text    |
+                                    |  adapters/  the edges           |
+                                    +---------------------------------+
+                                       |              |             |
+                                       v              v             v
+                                 +-----------+ +---------------+ +--------+
+                                 | D1        | | LLM           | | Axiom  |
+                                 | users,    | | orchestration:| | logs   |
+                                 | model use | | Gemini, Groq  | |        |
+                                 +-----------+ +---------------+ +--------+
+```
+
 - **Cloudflare Workers and D1**, called by Telegram's webhook. No server.
 - **Free LLM models** (Gemini, then Groq) only *read* the message. Our code
   does all date math, so a model never invents a date. When a light model is
